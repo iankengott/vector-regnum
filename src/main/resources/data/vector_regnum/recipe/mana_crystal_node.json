@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "ALA",
+    "LCL",
+    "ALA"
+  ],
+  "key": {
+    "A": { "item": "minecraft:amethyst_block" },
+    "L": { "item": "minecraft:lapis_block" },
+    "C": { "item": "minecraft:crying_obsidian" }
+  },
+  "result": {
+    "id": "vector_regnum:mana_crystal_node",
+    "count": 1
+  }
+}

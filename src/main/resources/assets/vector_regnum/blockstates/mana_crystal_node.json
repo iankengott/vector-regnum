@@ -1,0 +1,5 @@
+{
+  "multipart": [
+    { "apply": { "model": "vector_regnum:block/mana_crystal_node" } }
+  ]
+}

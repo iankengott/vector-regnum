@@ -1,0 +1,21 @@
+{
+  "display": {
+    "icon": { "id": "vector_regnum:mana_crystal_shard" },
+    "title": "Crystal Harvesting",
+    "description": "Consume a mana crystal shard at a source to grow your capacity",
+    "frame": "task",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "criteria": {
+    "obtain_shard": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          { "items": "vector_regnum:mana_crystal_shard" }
+        ]
+      }
+    }
+  }
+}

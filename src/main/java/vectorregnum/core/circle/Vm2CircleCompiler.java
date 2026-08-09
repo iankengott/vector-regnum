@@ -1,0 +1,250 @@
+package vectorregnum.core.circle;
+
+import vectorregnum.core.vm2.Instruction;
+import vectorregnum.core.vm2.Program;
+import vectorregnum.core.vm2.RuntimeValue;
+import vectorregnum.core.vm2.SourceLocation;
+import vectorregnum.core.vm2.Vector3;
+import vectorregnum.core.vm2.WorldAccess;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
+/** Direct clockwise/inward lowering for the typed player-authored VM language. */
+public final class Vm2CircleCompiler {
+    private static final Set<String> SIMPLE = Set.of(
+            "VM_POP", "VM_DUP", "VM_ADD", "VM_SUBTRACT", "VM_MULTIPLY", "VM_DIVIDE",
+            "VM_EQUALS", "VM_LESS_THAN", "VM_GREATER_THAN", "VM_NOT", "VM_AND", "VM_OR");
+
+    private Vm2CircleCompiler() {
+    }
+
+    public static Vm2CircleCompilation compile(MagicCircle circle, Context context) {
+        List<PlacedSigil> ordered = circle.executionOrder();
+        List<CircleDiagnostic> diagnostics = new ArrayList<>();
+        List<Instruction> instructions = new ArrayList<>();
+        if (ordered.isEmpty()) {
+            diagnostics.add(error("EMPTY_CIRCLE", "Place at least one vm2 sigil", null, -1));
+        }
+        for (int index = 0; index < ordered.size(); index++) {
+            PlacedSigil sigil = ordered.get(index);
+            try {
+                instructions.add(lower(sigil, index, context));
+            } catch (CompileFault fault) {
+                diagnostics.add(error(fault.code, fault.getMessage(), sigil.coordinate(), index));
+            } catch (RuntimeException exception) {
+                diagnostics.add(error("INVALID_VM_INSTRUCTION", safeMessage(exception),
+                        sigil.coordinate(), index));
+            }
+        }
+        if (!ordered.isEmpty() && !ordered.getLast().type().equals("EXECUTE")) {
+            diagnostics.add(error("MISSING_TERMINAL_EXECUTE",
+                    "A vm2 circle must end with EXECUTE", ordered.getLast().coordinate(), ordered.size() - 1));
+        }
+        for (int index = 0; index < Math.max(0, ordered.size() - 1); index++) {
+            if (ordered.get(index).type().equals("EXECUTE")) {
+                diagnostics.add(error("EARLY_EXECUTE", "EXECUTE must be the final sigil",
+                        ordered.get(index).coordinate(), index));
+            }
+        }
+        if (!diagnostics.isEmpty()) {
+            return new Vm2CircleCompilation(ordered, null, diagnostics);
+        }
+        try {
+            return new Vm2CircleCompilation(ordered, new Program(instructions), diagnostics);
+        } catch (RuntimeException exception) {
+            diagnostics.add(error("INVALID_CONTROL_FLOW", safeMessage(exception), null, -1));
+            return new Vm2CircleCompilation(ordered, null, diagnostics);
+        }
+    }
+
+    public static boolean isVm2Circle(MagicCircle circle) {
+        return circle.sigils().stream().anyMatch(sigil -> sigil.type().startsWith("VM_"));
+    }
+
+    private static Instruction lower(PlacedSigil sigil, int index, Context context) {
+        String type = sigil.type();
+        SourceLocation source = new SourceLocation(index, sigil.coordinate().ring() + 1,
+                sigil.coordinate().clockwiseSlot() + 1, type);
+        if (SIMPLE.contains(type)) {
+            requireCount(sigil, 0);
+            return switch (type) {
+                case "VM_POP" -> Instruction.pop(source);
+                case "VM_DUP" -> Instruction.dup(source);
+                case "VM_ADD" -> Instruction.add(source);
+                case "VM_SUBTRACT" -> Instruction.subtract(source);
+                case "VM_MULTIPLY" -> Instruction.multiply(source);
+                case "VM_DIVIDE" -> Instruction.divide(source);
+                case "VM_EQUALS" -> Instruction.equalsValue(source);
+                case "VM_LESS_THAN" -> Instruction.lessThan(source);
+                case "VM_GREATER_THAN" -> Instruction.greaterThan(source);
+                case "VM_NOT" -> Instruction.not(source);
+                case "VM_AND" -> Instruction.and(source);
+                case "VM_OR" -> Instruction.or(source);
+                default -> throw new AssertionError(type);
+            };
+        }
+        return switch (type) {
+            case "VM_PUSH_SELF" -> push(sigil, new RuntimeValue.EntityValue(context.casterEntityId()), source);
+            case "VM_PUSH_ORIGIN" -> push(sigil, new RuntimeValue.PointValue(context.origin()), source);
+            case "VM_PUSH_LOOK" -> push(sigil, new RuntimeValue.VectorValue(context.lookVector()), source);
+            case "VM_PUSH_NUMBER" -> {
+                requireCount(sigil, 1);
+                yield Instruction.push(new RuntimeValue.NumberValue(number(sigil, 0)), source);
+            }
+            case "VM_PUSH_BOOLEAN" -> {
+                requireCount(sigil, 1);
+                if (!(sigil.parameters().getFirst() instanceof CircleValue.BooleanValue value)) {
+                    throw fault("PARAMETER_TYPE", "VM_PUSH_BOOLEAN needs true or false");
+                }
+                yield Instruction.push(new RuntimeValue.BooleanValue(value.value()), source);
+            }
+            case "VM_PUSH_VECTOR" -> {
+                requireCount(sigil, 3);
+                yield Instruction.push(new RuntimeValue.VectorValue(new Vector3(
+                        number(sigil, 0), number(sigil, 1), number(sigil, 2))), source);
+            }
+            case "VM_PUSH_POINT" -> {
+                requireCount(sigil, 3);
+                yield Instruction.push(new RuntimeValue.PointValue(new Vector3(
+                        number(sigil, 0), number(sigil, 1), number(sigil, 2))), source);
+            }
+            case "VM_PUSH_ENTITY" -> {
+                requireCount(sigil, 1);
+                if (!(sigil.parameters().getFirst() instanceof CircleValue.TextValue value)) {
+                    throw fault("PARAMETER_TYPE", "VM_PUSH_ENTITY needs text:<uuid>");
+                }
+                yield Instruction.push(new RuntimeValue.EntityValue(value.value()), source);
+            }
+            case "VM_PUSH_POINT_LIST" -> pointList(sigil, source);
+            case "VM_JUMP" -> Instruction.jump(oneInteger(sigil), source);
+            case "VM_JUMP_IF_FALSE" -> Instruction.jumpIfFalse(oneInteger(sigil), source);
+            case "VM_LOOP" -> {
+                requireCount(sigil, 2);
+                yield Instruction.loop(integer(sigil, 0), integer(sigil, 1), source);
+            }
+            case "VM_DELAY" -> Instruction.delay(oneInteger(sigil), source);
+            case "VM_DURATION" -> Instruction.duration(oneInteger(sigil), source);
+            case "VM_SELECT_RADIUS", "VM_SELECT_HOSTILE" -> {
+                requireCount(sigil, 2);
+                WorldAccess.SelectionFilter filter = type.equals("VM_SELECT_HOSTILE")
+                        ? new WorldAccess.SelectionFilter(Optional.empty(), Set.of("hostile"), false)
+                        : WorldAccess.SelectionFilter.ANY;
+                yield Instruction.select(filter, number(sigil, 0), integer(sigil, 1), source);
+            }
+            case "VM_RAYCAST_ENTITIES" -> {
+                requireCount(sigil, 2);
+                yield Instruction.raycast(WorldAccess.SelectionFilter.ANY,
+                        number(sigil, 0), integer(sigil, 1), source);
+            }
+            case "VM_IMPULSE" -> physics(sigil, source, Physics.IMPULSE);
+            case "VM_ACCELERATION" -> physics(sigil, source, Physics.ACCELERATION);
+            case "VM_DAMPING" -> physics(sigil, source, Physics.DAMPING);
+            case "VM_FOLLOW_PATH" -> physics(sigil, source, Physics.FOLLOW_PATH);
+            case "VM_MOVE_TOWARD" -> physics(sigil, source, Physics.MOVE_TOWARD);
+            case "VM_KEEP_DISTANCE" -> physics(sigil, source, Physics.KEEP_DISTANCE);
+            case "EXECUTE" -> {
+                requireCount(sigil, 0);
+                yield Instruction.halt(source);
+            }
+            default -> throw fault("UNKNOWN_VM_SIGIL", "Unknown vm2 sigil " + type);
+        };
+    }
+
+    private static Instruction push(PlacedSigil sigil, RuntimeValue value, SourceLocation source) {
+        requireCount(sigil, 0);
+        return Instruction.push(value, source);
+    }
+
+    private static Instruction pointList(PlacedSigil sigil, SourceLocation source) {
+        if (sigil.parameters().isEmpty() || sigil.parameters().size() % 3 != 0) {
+            throw fault("PARAMETER_COUNT", "VM_PUSH_POINT_LIST needs x,y,z triples");
+        }
+        List<RuntimeValue> points = new ArrayList<>();
+        for (int index = 0; index < sigil.parameters().size(); index += 3) {
+            points.add(new RuntimeValue.PointValue(new Vector3(number(sigil, index),
+                    number(sigil, index + 1), number(sigil, index + 2))));
+        }
+        return Instruction.push(new RuntimeValue.ListValue(points), source);
+    }
+
+    private static Instruction physics(PlacedSigil sigil, SourceLocation source, Physics physics) {
+        requireCount(sigil, 2);
+        double work = number(sigil, 0);
+        double rarity = number(sigil, 1);
+        return switch (physics) {
+            case IMPULSE -> Instruction.impulse(work, rarity, source);
+            case ACCELERATION -> Instruction.acceleration(work, rarity, source);
+            case DAMPING -> Instruction.damping(work, rarity, source);
+            case FOLLOW_PATH -> Instruction.followPath(work, rarity, source);
+            case MOVE_TOWARD -> Instruction.moveToward(work, rarity, source);
+            case KEEP_DISTANCE -> Instruction.keepDistance(work, rarity, source);
+        };
+    }
+
+    private static double number(PlacedSigil sigil, int index) {
+        if (index >= sigil.parameters().size()
+                || !(sigil.parameters().get(index) instanceof CircleValue.NumberValue value)) {
+            throw fault("PARAMETER_TYPE", sigil.type() + " parameter " + (index + 1) + " must be numeric");
+        }
+        double result = value.value().doubleValue();
+        if (!Double.isFinite(result)) throw fault("INVALID_NUMBER", "Number must be finite");
+        return result;
+    }
+
+    private static int integer(PlacedSigil sigil, int index) {
+        double value = number(sigil, index);
+        if (value != Math.rint(value) || value < 0 || value > Integer.MAX_VALUE) {
+            throw fault("PARAMETER_TYPE", "Control parameters must be non-negative integers");
+        }
+        return (int) value;
+    }
+
+    private static int oneInteger(PlacedSigil sigil) {
+        requireCount(sigil, 1);
+        return integer(sigil, 0);
+    }
+
+    private static void requireCount(PlacedSigil sigil, int expected) {
+        if (sigil.parameters().size() != expected) {
+            throw fault("PARAMETER_COUNT", sigil.type() + " expects " + expected
+                    + " parameter(s), got " + sigil.parameters().size());
+        }
+    }
+
+    private static CircleDiagnostic error(
+            String code, String message, CircleCoordinate coordinate, int sourceIndex) {
+        return new CircleDiagnostic(CircleDiagnostic.Severity.ERROR, code, message,
+                coordinate, sourceIndex);
+    }
+
+    private static CompileFault fault(String code, String message) {
+        return new CompileFault(code, message);
+    }
+
+    private static String safeMessage(RuntimeException exception) {
+        return exception.getMessage() == null ? exception.getClass().getSimpleName() : exception.getMessage();
+    }
+
+    public record Context(String casterEntityId, Vector3 origin, Vector3 lookVector) {
+        public Context {
+            if (casterEntityId == null || casterEntityId.isBlank()) {
+                throw new IllegalArgumentException("caster entity id cannot be blank");
+            }
+            if (origin == null || lookVector == null) throw new NullPointerException("vm2 context vectors");
+        }
+    }
+
+    private enum Physics { IMPULSE, ACCELERATION, DAMPING, FOLLOW_PATH, MOVE_TOWARD, KEEP_DISTANCE }
+
+    private static final class CompileFault extends RuntimeException {
+        private final String code;
+
+        private CompileFault(String code, String message) {
+            super(message, null, false, false);
+            this.code = code;
+        }
+    }
+}

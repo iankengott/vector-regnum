@@ -26,6 +26,11 @@ public final class CastService {
     }
 
     public static CastResult cast(ServerPlayerEntity player, List<Sigil> sigils, boolean chargeMana) {
+        return castAt(player, sigils, chargeMana, player.getEyePos(), player.getRotationVec(1.0F));
+    }
+
+    public static CastResult castAt(ServerPlayerEntity player, List<Sigil> sigils,
+            boolean chargeMana, Vec3d origin, Vec3d direction) {
         if (chargeMana && ManaData.isChannelLocked(player)) {
             long ticks = ManaData.remainingLockTicks(player);
             player.sendMessage(Text.literal("Mana channel locked for " + ticks + " more ticks")
@@ -34,15 +39,13 @@ public final class CastService {
         }
 
         CompiledSpell program = SpellCompiler.compile(sigils);
-        Vec3d origin = player.getEyePos();
-        Vec3d look = player.getRotationVec(1.0F);
         long seed = player.getServerWorld().getTime()
                 ^ player.getUuid().getMostSignificantBits()
                 ^ player.getUuid().getLeastSignificantBits();
         CastContext context = new CastContext(
                 player.getUuidAsString(),
                 toCore(origin),
-                toCore(look),
+                toCore(direction),
                 seed);
         CastResult result = ENGINE.cast(program, context);
 
@@ -53,7 +56,8 @@ public final class CastService {
             return result;
         }
 
-        if (chargeMana && !ManaData.trySpend(player, result.manaCost())) {
+        if (chargeMana && (!ManaData.ensureAvailable(player, result.manaCost())
+                || !ManaData.trySpend(player, result.manaCost()))) {
             ManaData.drain(player);
             ManaData.lockChannel(player, 200L);
             EffectCommand.WildMagic starvation = new EffectCommand.WildMagic(

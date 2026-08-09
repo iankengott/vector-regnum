@@ -1,3 +1,21 @@
 {
-  "item.vector_regnum.sigil_tome": "Firebolt Sigil Tome"
+  "item.vector_regnum.sigil_tome": "Firebolt Sigil Tome",
+  "item.vector_regnum.spell_scroll": "Blank Spell Scroll",
+  "item.vector_regnum.spell_book": "Blank Spellbook",
+  "item.vector_regnum.mana_crystal_shard": "Mana Crystal Shard",
+  "block.vector_regnum.mana_crystal_node": "Mana Crystal Source",
+  "block.vector_regnum.carved_spell_tablet": "Carved Spell Tablet",
+  "message.vector_regnum.progression_unlocked": "New magical principle understood: %s",
+  "message.vector_regnum.capacity_full": "Your mana channels cannot grow any further.",
+  "message.vector_regnum.capacity_grew": "Your mana capacity grows by %s.",
+  "message.vector_regnum.node_empty": "This source has been exhausted.",
+  "message.vector_regnum.no_mana_space": "The source cannot reach or fill your current channel.",
+  "message.vector_regnum.drew_mana": "Drew %s mana from the source.",
+  "unlock.vector_regnum.crystal_harvest": "Crystal Harvesting",
+  "unlock.vector_regnum.mana_storage": "Mana Storage",
+  "unlock.vector_regnum.combat_weaving": "Combat Weaving",
+  "unlock.vector_regnum.defensive_weaving": "Defensive Weaving",
+  "unlock.vector_regnum.movement_weaving": "Movement Weaving",
+  "unlock.vector_regnum.perception_weaving": "Perception Weaving",
+  "unlock.vector_regnum.automation_weaving": "Automation Weaving"
 }

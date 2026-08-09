@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "vector_regnum:block/mage_light" }
+  }
+}

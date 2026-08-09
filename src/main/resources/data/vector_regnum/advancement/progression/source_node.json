@@ -1,0 +1,22 @@
+{
+  "parent": "vector_regnum:progression/crystal_harvest",
+  "display": {
+    "icon": { "id": "vector_regnum:mana_crystal_node" },
+    "title": "A Font, Not a Flask",
+    "description": "Place an immovable mana source and build your magic around it",
+    "frame": "goal",
+    "show_toast": true,
+    "announce_to_chat": false,
+    "hidden": false
+  },
+  "criteria": {
+    "obtain_source": {
+      "trigger": "minecraft:inventory_changed",
+      "conditions": {
+        "items": [
+          { "items": "vector_regnum:mana_crystal_node" }
+        ]
+      }
+    }
+  }
+}
