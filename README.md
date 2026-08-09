@@ -1,62 +1,149 @@
-# Vector-Regnum (The Realm of Direction)
+# Vector-Regnum
 
-> **Status: early prototype.** This repository is a standalone Java simulation of
-> the spell compiler + virtual machine, not yet a loadable Minecraft mod. The
-> classes under `net/minecraft/` are lightweight **mocks** so the engine can run
-> and be tested outside the game. Everything below the "Design Vision" heading is
-> the target design; the "Current Prototype" section documents what is actually
-> implemented today. Run it with:
->
-> ```
-> javac -d out $(find . -name '*.java' -not -path './out/*')
-> java -cp out vectorregnum.Main
-> ```
+*The Realm of Direction* is a Fabric 1.21.1 programming-magic mod in active
+development. Spells are ordered sigil programs: valid programs become
+server-authoritative world effects, while invalid programs fail at a precise
+source sigil and can trigger dangerous Wild Magic.
 
-## Current Prototype (implemented)
+The current release is a playable vertical slice, not the finished magic
+system. It proves the full path from sigils to a real Minecraft cast while the
+larger typed, tick-driven spell VM is built out.
 
-The prototype compiles an ordered list of `Sigil`s into VM instructions and
-executes them against a `SpellState`; invalid logic "breaks" the spell and the
-`WildMagicEngine` produces a context-aware chaotic effect. Implemented sigils:
+## Confirmed working
 
-- **`ORIGIN_SELF`** — ground the spell at the caster (must come first).
-- **`ELEMENT_<name>`** — apply an element, e.g. `ELEMENT_FIRE`, `ELEMENT_FROST`.
-- **`SHAPE_<name>`** — resolve a shape, e.g. `SHAPE_PROJECTILE`, `SHAPE_AURA`
-  (`SHAPE_PROJECTILE` requires a direction vector first).
-- **`VECTOR_FORWARD`** — set a direction (currently a `Vec3d.ZERO` placeholder).
-- **`EXPAND <double>`** — grow the radius (needs a resolved shape).
-- **`AMPLIFY <double>`** — multiply magnitude (needs an element or shape).
-- **`EXECUTE`** — finalize; requires both an origin and a shape.
+- Fabric Loader 0.18.3, Fabric API 0.116.7+1.21.1, Yarn
+  1.21.1+build.3, Loom 1.14.8, Gradle 9.2.1, and Java 21.
+- A Minecraft-independent compiler/runtime under `vectorregnum.core` and a
+  Fabric adapter under `vectorregnum.fabric`.
+- Nine original prototype scenarios preserved as assertion-based compatibility
+  fixtures, plus hardening tests for malformed programs and immutability.
+  There are currently 25 passing JUnit tests.
+- Exact source-index faults, mandatory terminal `EXECUTE`, finite positive
+  modifiers, dynamic non-zero caster look vectors, supported element/shape
+  validation, and deterministic Wild Magic selection.
+- A real **Sigil Tome** item. Right-click casts Firebolt with a server-enforced
+  cooldown.
+- Persistent, server-authoritative mana. Players start with 500 mana, casts
+  debit it, invalid/non-finite values are rejected, and there is intentionally
+  no passive regeneration.
+- Firebolt projectile collision, damage, fire/frost payloads, Frost Nova's
+  radial aura, and three context-sensitive Wild Magic effect families.
+- An animated magic circle/pentagram used by the development visual checkpoint.
+- Development commands for inspecting mana and exercising preset spells.
 
-An unknown/typo'd sigil is a hard compile error that breaks the spell at that
-sigil's position. `DIVIDE` (multi-casting) is defined but not yet implemented.
+The dedicated Hermes workflow has also been exercised end-to-end: remote tests
+and build pass under Java 21, a loopback-only server loads the mod, the client
+quick-joins it, and the actual magic circle, flame sigil, checkpoint text, and
+Sigil Tome have been visually inspected in the live game window.
+
+## Build and test
+
+Java 21 is required:
+
+```bash
+./gradlew --no-daemon test build
+```
+
+The remapped mod JAR is written to `build/libs/`. On the main NixOS PC, where
+the ambient shell may still expose Java 8, use the declared JDK without
+installing an imperative profile:
+
+```bash
+task_jdk=$(nix eval --raw nixpkgs#jdk21.outPath)
+JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" ./gradlew --no-daemon test build
+```
+
+## Playing the development slice
+
+The checked-in Hermes workflow is the reproducible path:
+
+```bash
+scripts/hermes-sync.sh
+scripts/hermes-build.sh
+scripts/hermes-client.sh restart
+scripts/hermes-client.sh logs
+scripts/hermes-screenshot.sh window
+scripts/hermes-client.sh stop
+```
+
+It uses only
+`ian-kengott@100.88.229.63:/home/ian-kengott/projects/vector-regnum`, owns two
+transient user services named `vector-regnum-dev-server.service` and
+`vector-regnum-dev-client.service`, and binds the test server to
+`127.0.0.1:25575`. It does not touch port 25565, existing Minecraft tmux
+sessions, or the normal Hermes launcher. See [scripts/README.md](scripts/README.md)
+for the safety checks and recovery commands.
+
+In a development environment, joining the test server automatically gives the
+player a Sigil Tome and stages a 60-second visual checkpoint. The automation is
+guarded by Fabric's development-environment flag and is absent from normal
+release behavior.
+
+Useful in-game commands:
+
+```text
+/vectorregnum
+/vectorregnum cast firebolt
+/vectorregnum cast frost_nova
+/vectorregnum cast amplified_firebolt
+/vectorregnum mana
+```
+
+The following development/admin commands require permission level 2:
+
+```text
+/vectorregnum mana refill
+/vectorregnum give_tome
+/vectorregnum showcase
+/vectorregnum miscast internal|unstructured|violent
+```
+
+## Current compatibility sigils
+
+- `ORIGIN_SELF` grounds the spell at the caster and must come first.
+- `ELEMENT_<name>` selects `FIRE`, `FROST`, `ARCANE`, or `VOID`.
+- `VECTOR_FORWARD` resolves the caster's live look vector at cast time.
+- `SHAPE_<name>` selects `PROJECTILE` or `AURA`.
+- `EXPAND <number>` grows a resolved shape's radius.
+- `AMPLIFY <number>` multiplies magnitude after an element or shape exists.
+- `EXECUTE` must be the final sigil and materializes an effect command.
+
+Unknown sigils are compile faults. Invalid order, missing state, non-finite or
+non-positive modifiers, zero direction vectors, and instructions after
+`EXECUTE` all fail explicitly instead of silently producing an effect.
+
+## Architecture
+
+```text
+List<Sigil>
+    -> SpellCompiler
+    -> immutable CompiledSpell
+    -> SpellEngine + CastContext
+    -> CastResult
+    -> EffectCommand
+    -> Fabric world-effect adapter
+```
+
+The core has no `net.minecraft` imports, which keeps spell semantics fast to
+test and lets Minecraft remain a thin server-authoritative execution boundary.
+Engine failures are distinguished from player-authored spell failures so an
+internal bug cannot masquerade as intended Wild Magic.
+
+## Design direction
+
+The intended system is still much larger: geometric circles read clockwise and
+inward, typed stack memory (`Push`/`Pop`), points/vectors/entities as runtime
+values, tick/delay/duration control, logic gates and branches, bounded loops,
+raycasts and selection, physics operations, redstone/remote activation,
+multithreaded circles, data bridges, and stone/scroll/book implementation
+methods. Mana remains a finite extracted resource rather than a regenerating
+bar, and costs should emerge from physical work, range, rarity, memory, and
+control-flow complexity.
+
+The next architectural milestone is the typed ticked stack VM and its first
+player-authored circle representation. The seven compatibility sigils remain a
+useful vertical-slice frontend, but they are not the final language.
 
 ---
 
-## Design Vision
-*The sections below describe the intended full system. Most of it is **planned /
-roadmap**, not yet implemented in the prototype above.*
-
-## Concept
-A hardcore "Programming Magic" mod where spells are constructed using geometric magic circles and sigils. The system relies on linear algebra, vector calculus, and logical sequencing to manifest reality-altering effects.
-
-## Core Pillars
-- **Sequencing:** Magic circles are read in a clockwise direction, moving inward.
-- **Visual Compilation:** Spells use matrix transformations (Rotation, Scaling, Translation) for their animations, making every cast visually unique.
-- **Hardcore Economy:** No natural mana regeneration. Mana is a finite resource extracted from Mana Crystals (the "Oil" of this magic world).
-- **Failure States:** Unstable spell logic leads to unpredictable and dangerous "compiler errors" in-game.
-
-## Implementation Methods — *planned*
-1. **Carving (Stone Tablets):** High power, high cost, permanent installations.
-2. **Writing (Scrolls):** Quick, weak, single-use.
-3. **Prepping (Spell Books):** Balanced, repeatable, higher initial cost.
-
-## Sigil System (Programming Logic) — *planned*
-- **Star:** Start Command.
-- **Create/CreateO:** Spawns objects/elements.
-- **Form:** Defines the shape of the creation.
-- **Logic Gates:** YES, NOT, AND, NAND, OR, NOR, XOR, XNOR for complex branching.
-- **Control Flow:** If-Else, LoopFori, Select.
-- **Spatial:** Direction, Pathfinding, MoveTowardsPoint, KeepDistance.
-
----
-*Inspired by Hard Science and High Fantasy.*
+Inspired by hard science and high fantasy.

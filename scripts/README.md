@@ -56,6 +56,13 @@ After `hermes-client.sh start` or `restart` reports that port 25575 is ready,
 the Loom client opens and quick-plays the dedicated Vector-Regnum server. The
 two exact development units must remain running while the scene is inspected.
 
+On the very first Minecraft launch for this worktree, the game may stop at its
+accessibility welcome screen before honoring quick-play. Select **Continue**
+once through Hermes's desktop; the choice persists in the excluded
+`run/client/` state. A later portal screenshot can leave Minecraft's game menu
+open because the portal temporarily takes focus. Return to the game before the
+next capture if that happens.
+
 Focus Minecraft through Hermes's remote desktop, then capture its window:
 
 ```bash
