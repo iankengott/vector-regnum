@@ -57,7 +57,8 @@ public final class DevShowcaseController {
         player.sendMessage(Text.literal("VECTOR-REGNUM • AUTOMATED VISUAL CHECKPOINT")
                 .formatted(Formatting.GOLD, Formatting.BOLD), false);
         VectorRegnumMod.LOGGER.info(
-                "VISUAL_CHECKPOINT_READY player={} duration_ticks=240",
-                player.getGameProfile().getName());
+                "VISUAL_CHECKPOINT_READY player={} duration_ticks={}",
+                player.getGameProfile().getName(),
+                SpellVisualManager.DEV_SHOWCASE_DURATION_TICKS);
     }
 }

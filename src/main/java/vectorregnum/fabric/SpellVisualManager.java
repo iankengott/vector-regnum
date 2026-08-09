@@ -27,6 +27,7 @@ import java.util.SplittableRandom;
 
 /** Turns deterministic core effect commands into authoritative world changes and particle traces. */
 public final class SpellVisualManager {
+    static final int DEV_SHOWCASE_DURATION_TICKS = 1200;
     private static final List<ActiveVisual> ACTIVE = new ArrayList<>();
     private static boolean initialized;
 
@@ -275,7 +276,7 @@ public final class SpellVisualManager {
 
         @Override
         public boolean tick() {
-            if (age++ >= 240 || player.isRemoved()) {
+            if (age++ >= DEV_SHOWCASE_DURATION_TICKS || player.isRemoved()) {
                 return false;
             }
             Vec3d forward = player.getRotationVec(1.0F).normalize();
