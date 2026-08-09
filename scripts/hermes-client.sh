@@ -163,7 +163,11 @@ stage_server_config() {
 start_server() {
     assert_owned_unit_if_loaded "$server_unit" runServer
     if [[ "$(unit_load_state "$server_unit")" != "not-found" ]]; then
-        printf '%s already exists; use restart so its JDK binding is recreated\n' "$server_unit" >&2
+        if systemctl --user is-active --quiet "$server_unit"; then
+            printf '%s is already active; reusing it\n' "$server_unit"
+            return 0
+        fi
+        printf '%s exists but is not active; use restart to replace it\n' "$server_unit" >&2
         exit 1
     fi
     if port_is_listening; then
@@ -203,11 +207,14 @@ wait_for_server() {
 
 start_client() {
     assert_owned_unit_if_loaded "$client_unit" runClient
-    [[ "$(unit_load_state "$client_unit")" == "not-found" ]] || {
-        unit="$client_unit"
-        printf '%s already exists; use restart\n' "$unit" >&2
+    if [[ "$(unit_load_state "$client_unit")" != "not-found" ]]; then
+        if systemctl --user is-active --quiet "$client_unit"; then
+            printf '%s is already active; reusing it\n' "$client_unit"
+            return 0
+        fi
+        printf '%s exists but is not active; use restart to replace it\n' "$client_unit" >&2
         exit 1
-    }
+    fi
 
     manager_environment="$(systemctl --user show-environment)"
     grep -q '^DISPLAY=:0$' <<< "$manager_environment" || {
