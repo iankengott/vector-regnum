@@ -1,0 +1,24 @@
+{
+  "schemaVersion": 1,
+  "id": "vector_regnum",
+  "version": "${version}",
+  "name": "Vector-Regnum",
+  "description": "A dangerous programming-magic system built from ordered geometric sigils.",
+  "authors": [
+    "Ian Kengott"
+  ],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "vectorregnum.fabric.VectorRegnumMod"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.3",
+    "fabric-api": "*",
+    "minecraft": "~1.21.1",
+    "java": ">=21"
+  }
+}
