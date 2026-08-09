@@ -1,69 +1,89 @@
 # Vector-Regnum roadmap
 
-Vector-Regnum is a tested playable vertical slice, not a finished mod. The
-current seven-sigil frontend proves that a program can compile into a
-server-authoritative Minecraft effect. The remaining work turns that proof into
-the full player-authored programming-magic system.
+The priorities 1–10 milestone is implemented as a playable alpha. A checked item
+means its first coherent end-to-end pass exists; it does not mean final balance,
+art, UX, or production hardening is complete.
 
-## Working vertical slice
+## Working foundations
 
-- [x] Fabric 1.21.1 build, dedicated server, and one-click local launch.
-- [x] Minecraft-independent compiler/runtime with exact source faults.
-- [x] Compatibility sigils: origin, element, forward vector, shape, expand,
-  amplify, and terminal execute.
-- [x] Persistent finite mana with no passive regeneration.
-- [x] Sigil Tome, Firebolt, Frost Nova, block collision, damage/status effects,
-  Wild Magic, particles, commands, and cooldowns.
-- [x] First-join tutorial book and starter Tome.
-- [x] Automated tests plus local and Hermes visual-test workflows.
+- [x] Fabric 1.21.1 build, dedicated server, guarded Hermes workflow, and
+  one-click local launch.
+- [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
+- [x] Persistent tutorial guide, Sigil Tome, Firebolt, Frost Nova, effects,
+  collision, cooldowns, and finite server-authoritative mana.
+- [x] 73 pure/contract tests plus real local/Hermes server boots and Hermes
+  visual inspection.
 
-## Language and runtime
+## Priorities 1–10 milestone
 
-- [ ] Replace/extend the compatibility frontend with typed runtime values:
-  numbers, booleans, points, vectors, entities, elements, shapes, and lists.
-- [ ] Implement stack memory and explicit `Push`/`Pop` operations.
-- [ ] Implement ticked execution, delay, duration, and resumable spell state.
-- [ ] Add logic gates, comparison, branching, bounded loops, and termination
-  budgets that cannot freeze a server.
-- [ ] Add perception, raycasting, entity/block selection, and filtering.
-- [ ] Add physics operations such as impulse, acceleration, damping, paths,
-  move-toward-point, and keep-distance.
-- [ ] Add creation/form operations with rarity/material constraints.
-- [ ] Implement the full cost model for work, range, inverse-square perception,
-  rarity, memory, duration, and control-flow complexity.
-- [ ] Expand compiler diagnostics and Wild Magic coverage for the new language.
+1. [x] Typed, tick-driven spell VM: closed runtime values, stack memory,
+   resumable delays/durations, and immutable loader-neutral bytecode.
+2. [x] Player-authored spell format: geometric ring/slot circles, deterministic
+   checksummed saving, persistent per-player draft, and typed parameters.
+3. [x] Circle editor/compiler feedback: place/remove/parameterize/undo/show,
+   exact physical diagnostics, cost preview, and animated execution order.
+4. [x] Control flow/server safety: comparisons, boolean logic, jumps, bounded
+   loops, termination budgets, duration caps, result/range limits, and visual
+   deduplication.
+5. [x] Selection/perception: stable entity snapshots, radius filters, hostile
+   filtering, capped results, and block-occluded entity raycasts.
+6. [x] Physics/movement: impulse, acceleration, damping, ordered paths,
+   move-toward, keep-distance, and Fabric-side validation/application.
+7. [x] Mana-cost model: named work/range/duration/rarity/memory/perception/
+   control dimensions, inverse-square range cost, and repeated loop-body quote.
+8. [x] Scrolls, spellbooks, and stone tablets: recipes, checksummed payloads,
+   single-use/reusable/permanent lifecycles, persistent tablet block entity, and
+   verified world-anchor casting.
+9. [x] Mana-crystal progression: zero start, capacity shards, finite permanent
+   source nodes, elemental tuning, inverse-square local/remote draw,
+   same-dimension loaded-source validation, research, recipes, and advancements.
+10. [x] Expanded spell library: 15 playable programs across combat, defense,
+    movement, utility, detection, and automation, all quoted by vm2 cost
+    dimensions.
+
+## Language/runtime follow-up
+
+- [x] Direct clockwise circle-to-vm2 lowering for typed values, memory,
+  arithmetic/logic, control/time, perception, and physics sigils.
+- [x] Fabric tick scheduler and read-only perception/world-effect boundary.
+- [ ] Static stack-type analysis before execution (runtime faults are already
+  precise and bounded).
+- [ ] Creation/form opcodes with concrete material/rarity constraints.
+- [ ] Generic lowering/execution for every semantic library opcode; several
+  library effects remain intentionally purpose-built Fabric adapters.
+- [ ] Multithreaded circles and explicit concurrency/data ownership rules.
 
 ## Player authoring and teaching
 
-- [ ] Create the actual clockwise/inward magic-circle representation.
-- [ ] Build a player-facing circle editor and sigil placement interaction.
-- [ ] Encode, save, copy, inspect, and validate player-authored programs.
-- [ ] Implement stone tablets/carving, single-use scrolls, and reusable spell
-  books with distinct power/cost tradeoffs.
-- [ ] Add **Create-style spell/scroll Ponders**: pondering a spell or scroll
-  opens a staged animated scene that shows its sigils compiling and the spell
-  working step by step, including mana cost and representative failure states.
-- [ ] Connect the Field Manual to recipes, circle editing, Ponders, and a proper
-  progression/tutorial sequence.
+- [x] Command-based server-authoritative editor and persistent draft.
+- [x] Save, inspect, validate, copy into media, and recover via checksums.
+- [x] Animated actual circle topology with compiler order/error highlighting.
+- [x] Versioned Field Manual v2 with exact crystal/media recipes and commands.
+- [ ] Graphical/in-world placement editor with discoverable sigil palette.
+- [ ] **Create-style spell/scroll Ponders** showing compilation, execution,
+  mana breakdown, and representative failure states step by step.
+- [ ] Advancements/tutorial sequence that guides the complete survival arc.
 
 ## World, progression, and automation
 
-- [ ] Add mana crystals, world generation, extraction, transport, and storage.
-- [ ] Balance finite-mana survival progression and recovery after Wild Magic.
-- [ ] Add recipes, research/unlocks, advancement guidance, and loot integration.
-- [ ] Add redstone logic, remote activation, multithreaded circles, and data
-  bridges described in the design documents.
-- [ ] Decide how circles interact with chunks, unloaded areas, claims, and
-  multiplayer permissions.
+- [x] Constructible finite crystal sources, capacity growth, extraction,
+  elemental compatibility, attunement, and loaded-source remote draw.
+- [x] First survival recipes, seven persistent research unlocks, and two
+  advancement guidance entries.
+- [ ] Natural crystal world generation, geology/rarity balance, transport,
+  storage blocks, and source recharge/growth rules.
+- [ ] Redstone logic expansion, remote activation, data bridges, and
+  multithreaded automation described in the design documents.
+- [ ] Formal chunk-unload, claim, team, and multiplayer permission policy.
 
 ## Content and release quality
 
-- [ ] Add a useful library of spells beyond the three development presets.
-- [ ] Replace placeholder vanilla particles/sounds and the book item model with
-  a coherent Vector-Regnum visual/audio language.
-- [ ] Add configuration, balancing, GameTests/integration tests, profiler limits,
-  localization, accessibility, and multiplayer abuse protection.
-- [ ] Test survival play, death/copy behavior, multiple simultaneous casters,
-  server restarts, upgrades, and mod compatibility.
-- [ ] Produce release packaging, changelog, screenshots/video, and installation
-  documentation for non-development Minecraft instances.
+- [x] Initial useful 15-spell library with concrete bounded world effects.
+- [x] Persisted scheduled expiry for temporary light/redstone spell blocks.
+- [ ] Original Vector-Regnum block/item textures, particles, sounds, and UI.
+- [ ] Fabric GameTests for commands, attachments, media/block-entity round
+  trips, crystal interactions, timers, and multiplayer behavior.
+- [ ] Configuration, balancing, profiling, localization beyond English,
+  accessibility, and broader abuse protection.
+- [ ] Survival playtest, death/copy/restart/upgrade tests, mod compatibility,
+  release packaging, changelog, screenshots/video, and installation docs.
