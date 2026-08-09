@@ -41,6 +41,34 @@ art, UX, or production hardening is complete.
     movement, utility, detection, and automation, all quoted by vm2 cost
     dimensions.
 
+## Next priorities (canonical order)
+
+When choosing new work, take the first unfinished item in this list unless Ian
+explicitly reprioritizes it. The detailed sections below describe the broader
+acceptance scope.
+
+11. [ ] Create-style spell/scroll **Ponders**: animated compilation order,
+    execution, mana breakdown, and representative fault/miscast states.
+12. [ ] Graphical in-world circle editor with a discoverable sigil palette,
+    parameter editing, diagnostics, and media binding without command fluency.
+13. [ ] Natural mana-crystal world generation plus balanced geology, source
+    growth/recharge, transport, and storage progression.
+14. [ ] Fabric GameTests for commands, attachments, media/block-entity round
+    trips, crystals, scheduled effects, restart behavior, and multiplayer.
+15. [ ] Complete the spell language: static stack-type analysis,
+    creation/form opcodes, and generic lowering/execution for every curated
+    semantic opcode.
+16. [ ] Formal multiplayer lifecycle and security: chunk unloads, death/copy,
+    teams, claims, permissions, abuse cases, and upgrade migration.
+17. [ ] Expand programmable automation with redstone logic, remote activation,
+    data bridges, and explicit multithread/concurrency ownership rules.
+18. [ ] Replace placeholder presentation with original textures, particles,
+    sounds, UI, localization, and accessibility work.
+19. [ ] Configuration, balancing, profiling, survival/multiplayer playtests,
+    and compatibility testing with representative Fabric mods.
+20. [ ] Release packaging: installation guide, changelog, screenshots/video,
+    versioning, and distributable artifacts.
+
 ## Language/runtime follow-up
 
 - [x] Direct clockwise circle-to-vm2 lowering for typed values, memory,

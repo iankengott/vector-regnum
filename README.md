@@ -186,6 +186,15 @@ balancing/configuration/accessibility, and release packaging.
 
 See [ROADMAP.md](ROADMAP.md) for the detailed status.
 
+## Continuing development
+
+A fresh AI or developer should begin with [AGENTS.md](AGENTS.md). It records
+the machine boundaries, canonical priority queue, required NixOS and Hermes
+verification ladder, visual-inspection requirement, regression invariants, and
+documentation handoff rules. In a new session, asking for "the next unfinished
+Vector-Regnum priorities" is sufficient; the numbered queue in
+[ROADMAP.md](ROADMAP.md) controls the order.
+
 ---
 
 Inspired by hard science and high fantasy.
