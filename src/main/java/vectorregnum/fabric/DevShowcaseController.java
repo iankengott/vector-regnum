@@ -101,8 +101,7 @@ public final class DevShowcaseController {
         var circle = CircleAuthoringService.session(player).current();
         var typedCompilation = CircleAuthoringService.compile(player);
         if (typedCompilation.hasErrors()
-                || !CircleAuthoringService.activateCircleAt(
-                        player, circle, false, player.getEyePos())) {
+                || !FabricVmService.launchVectorStep(player, false, 250, 0.25)) {
             throw new IllegalStateException("typed authored circle visual preflight failed");
         }
 
