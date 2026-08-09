@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Play Vector-Regnum
+Comment=Launch the isolated Vector-Regnum Minecraft world
+Exec=/run/current-system/sw/bin/bash "/home/iank/Desktop/my mods/mods-editing/vector-regnum/scripts/local-play.sh"
+Path=/home/iank/Desktop/my mods/mods-editing/vector-regnum
+Icon=applications-games
+Terminal=true
+StartupNotify=true
+Categories=Game;
+Keywords=Minecraft;Fabric;Magic;Vector-Regnum;

@@ -55,7 +55,26 @@ JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" ./gradlew --no-daemon test buil
 
 ## Playing the development slice
 
-The checked-in Hermes workflow is the reproducible path:
+### Main PC: one click
+
+Double-click **Play Vector-Regnum** on the desktop. The shortcut runs
+`scripts/local-play.sh`, which:
+
+- resolves the declared Java 21 without changing the user's Nix profile;
+- rejects unexpected JARs in the client or server `mods/` directories;
+- stages the isolated flat world on loopback port 25575;
+- waits for the private server and starts Minecraft through `steam-run` so
+  NixOS graphics drivers are available;
+- quick-plays the Vector-Regnum world; and
+- stops and collects the private server when Minecraft closes.
+
+The normal Minecraft launcher, saves, and modpacks are not involved. A second
+click while the Vector-Regnum world is already active is rejected rather than
+starting a competing server.
+
+### Hermes
+
+The checked-in Hermes workflow provides the remote equivalent:
 
 ```bash
 scripts/hermes-sync.sh

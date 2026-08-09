@@ -1,4 +1,22 @@
-# Hermes development workflow
+# Development launch workflows
+
+## Main PC one-click launcher
+
+`scripts/local-play.sh` backs the executable **Play Vector-Regnum** shortcut at
+`~/Desktop/Vector-Regnum.desktop`. It resolves Java 21 declaratively, stages the
+same checked-in test-world configuration used on Hermes, starts the server in
+the owned transient unit `vector-regnum-local-server.service`, waits for
+`127.0.0.1:25575`, and launches the quick-play client through `steam-run` for
+NixOS graphics-driver access.
+
+Closing Minecraft triggers the launcher's cleanup trap, which stops and
+collects the server unit. The launcher refuses unexpected JARs in either dev
+`mods/` directory, a second active launcher, and any pre-existing port-25575
+listener. The desktop entry calls `/run/current-system/sw/bin/bash`, not a
+versioned `/nix/store` system path, so weekly Nix garbage collection cannot
+break it.
+
+## Hermes development workflow
 
 These scripts synchronize Vector-Regnum to a dedicated development worktree on
 Hermes, verify it with JDK 21, launch an isolated Loom server and client, and
