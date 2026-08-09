@@ -1,0 +1,93 @@
+# Hermes development workflow
+
+These scripts synchronize Vector-Regnum to a dedicated development worktree on
+Hermes, verify it with JDK 21, launch an isolated Loom server and client, and
+bring visual evidence back to this repository. They do not install Fabric into
+Hermes's normal Minecraft launcher and do not control any production server,
+tmux session, or dashboard service.
+
+The default destination is fixed:
+
+```text
+ian-kengott@100.88.229.63:/home/ian-kengott/projects/vector-regnum
+```
+
+## Normal loop
+
+From the repository root:
+
+```bash
+scripts/hermes-sync.sh
+scripts/hermes-build.sh
+scripts/hermes-client.sh restart
+scripts/hermes-client.sh logs
+```
+
+The first real sync may create the destination only when it is absent or empty.
+It writes `.vector-regnum-hermes-worktree`; every later rsync deletion requires
+the expected remote identity, a validated path, and an exact marker match.
+
+The launch controller copies `dev/hermes/eula.txt` and `server.properties` into
+the excluded remote `run/server/` directory, starts `runServer` as
+`vector-regnum-dev-server.service`, waits until its isolated port **25575** is
+listening, and only then starts the client. The client is already configured to
+quick-play `localhost:25575` and runs as `vector-regnum-dev-client.service`.
+Both transient user units survive the SSH command ending.
+
+The controller never addresses port 25565 or any tmux session. It refuses to
+start if another process owns 25575, and refuses to stop either unit unless its
+command is this worktree's Gradle wrapper plus the expected `runServer` or
+`runClient` task.
+
+Useful client commands:
+
+```bash
+scripts/hermes-client.sh start
+scripts/hermes-client.sh restart
+scripts/hermes-client.sh status
+scripts/hermes-client.sh logs
+scripts/hermes-client.sh logs-follow
+scripts/hermes-client.sh stop
+```
+
+## Visual evidence
+
+After `hermes-client.sh start` or `restart` reports that port 25575 is ready,
+the Loom client opens and quick-plays the dedicated Vector-Regnum server. The
+two exact development units must remain running while the scene is inspected.
+
+Focus Minecraft through Hermes's remote desktop, then capture its window:
+
+```bash
+scripts/hermes-screenshot.sh window
+```
+
+For context around the game, capture the full desktop:
+
+```bash
+scripts/hermes-screenshot.sh desktop
+```
+
+Screenshots are copied to the repository's ignored `visual-evidence/` directory
+and the evidence directory is excluded from the source sync. A successful
+capture is evidence that GNOME produced an image; someone must still open and
+inspect that image before describing the feature as visually verified.
+
+The remote worktree guard is the exact marker
+`.vector-regnum-hermes-worktree`, containing
+`vector-regnum-hermes-worktree-v1`. The screenshot command also requires that
+marker before creating or copying evidence.
+
+## Safe configuration overrides
+
+The scripts accept these environment variables, but validate them before use:
+
+- `VR_HERMES_HOST`: must be an `ian-kengott@IPv4` destination and the connected
+  machine must report the expected hostname.
+- `VR_HERMES_EXPECTED_HOSTNAME`: letters, digits, dots, and hyphens only.
+- `VR_REMOTE_DIR`: exactly one named child under
+  `/home/ian-kengott/projects/`; deletion still requires the ownership marker.
+- `VR_SSH_TIMEOUT`: integer from 1 through 60 seconds.
+
+Preview a later sync with `scripts/hermes-sync.sh --dry-run`. Dry-run mode never
+creates the remote marker, so the destination must already be initialized.
