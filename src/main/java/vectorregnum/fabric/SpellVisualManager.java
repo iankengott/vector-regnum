@@ -27,7 +27,7 @@ import java.util.SplittableRandom;
 
 /** Turns deterministic core effect commands into authoritative world changes and particle traces. */
 public final class SpellVisualManager {
-    static final int DEV_SHOWCASE_DURATION_TICKS = 1200;
+    static final int DEV_SHOWCASE_DURATION_TICKS = 300;
     private static final List<ActiveVisual> ACTIVE = new ArrayList<>();
     private static boolean initialized;
 
@@ -267,11 +267,21 @@ public final class SpellVisualManager {
     private static final class CircleVisual implements ActiveVisual {
         private final ServerPlayerEntity player;
         private final ServerWorld world;
+        private final Vec3d center;
+        private final Vec3d right;
+        private final Vec3d up;
         private int age;
 
         private CircleVisual(ServerPlayerEntity player) {
             this.player = player;
             this.world = player.getServerWorld();
+            Vec3d forward = player.getRotationVec(1.0F).normalize();
+            Vec3d horizontal = forward.crossProduct(new Vec3d(0.0, 1.0, 0.0));
+            this.right = horizontal.lengthSquared() < 1.0e-6
+                    ? new Vec3d(1.0, 0.0, 0.0)
+                    : horizontal.normalize();
+            this.up = right.crossProduct(forward).normalize();
+            this.center = player.getEyePos().add(forward.multiply(5.0));
         }
 
         @Override
@@ -279,16 +289,6 @@ public final class SpellVisualManager {
             if (age++ >= DEV_SHOWCASE_DURATION_TICKS || player.isRemoved()) {
                 return false;
             }
-            Vec3d forward = player.getRotationVec(1.0F).normalize();
-            Vec3d right = forward.crossProduct(new Vec3d(0.0, 1.0, 0.0));
-            if (right.lengthSquared() < 1.0e-6) {
-                right = new Vec3d(1.0, 0.0, 0.0);
-            } else {
-                right = right.normalize();
-            }
-            Vec3d up = right.crossProduct(forward).normalize();
-            Vec3d center = player.getEyePos().add(forward.multiply(5.0));
-
             if (age % 4 == 0) {
                 drawRing(world, center, right, up, 2.25, 32, ParticleTypes.END_ROD);
                 drawRing(world, center, right, up, 1.45, 20, ParticleTypes.ENCHANT);

@@ -48,6 +48,8 @@ public final class VectorRegnumCommands {
         root.then(CommandManager.literal("give_tome")
                 .requires(source -> source.hasPermissionLevel(2))
                 .executes(context -> giveTome(context.getSource())));
+        root.then(CommandManager.literal("guide")
+                .executes(context -> giveGuide(context.getSource())));
         root.then(CommandManager.literal("showcase")
                 .requires(source -> source.hasPermissionLevel(2))
                 .executes(context -> showcase(context.getSource())));
@@ -112,6 +114,16 @@ public final class VectorRegnumCommands {
         player.giveItemStack(new ItemStack(VectorRegnumContent.SIGIL_TOME));
         player.sendMessage(Text.literal("Received a Firebolt Sigil Tome")
                 .formatted(Formatting.GOLD), false);
+        return 1;
+    }
+
+    private static int giveGuide(ServerCommandSource source) {
+        ServerPlayerEntity player = targetPlayer(source);
+        if (player == null) {
+            source.sendFeedback(() -> Text.literal("No player is connected"), false);
+            return 0;
+        }
+        TutorialGuide.give(player);
         return 1;
     }
 

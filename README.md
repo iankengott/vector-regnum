@@ -29,6 +29,8 @@ larger typed, tick-driven spell VM is built out.
 - Firebolt projectile collision, damage, fire/frost payloads, Frost Nova's
   radial aura, and three context-sensitive Wild Magic effect families.
 - An animated magic circle/pentagram used by the development visual checkpoint.
+- A persistent first-join **Vector-Regnum Field Manual** with a starter Tome;
+  `/vectorregnum guide` replaces the manual if it is lost.
 - Development commands for inspecting mana and exercising preset spells.
 
 The dedicated Hermes workflow has also been exercised end-to-end: remote tests
@@ -93,10 +95,10 @@ transient user services named `vector-regnum-dev-server.service` and
 sessions, or the normal Hermes launcher. See [scripts/README.md](scripts/README.md)
 for the safety checks and recovery commands.
 
-In a development environment, joining the test server automatically gives the
-player a Sigil Tome and stages a 60-second visual checkpoint. The automation is
-guarded by Fabric's development-environment flag and is absent from normal
-release behavior.
+Hermes explicitly sets `VECTOR_REGNUM_VISUAL_CHECK=1`; in that development
+environment, joining stages a 15-second automated visual checkpoint. Normal
+local development play does not run that fixture, and release behavior never
+includes it.
 
 Useful in-game commands:
 
@@ -106,6 +108,7 @@ Useful in-game commands:
 /vectorregnum cast frost_nova
 /vectorregnum cast amplified_firebolt
 /vectorregnum mana
+/vectorregnum guide
 ```
 
 The following development/admin commands require permission level 2:
@@ -154,14 +157,15 @@ The intended system is still much larger: geometric circles read clockwise and
 inward, typed stack memory (`Push`/`Pop`), points/vectors/entities as runtime
 values, tick/delay/duration control, logic gates and branches, bounded loops,
 raycasts and selection, physics operations, redstone/remote activation,
-multithreaded circles, data bridges, and stone/scroll/book implementation
-methods. Mana remains a finite extracted resource rather than a regenerating
-bar, and costs should emerge from physical work, range, rarity, memory, and
-control-flow complexity.
+multithreaded circles, data bridges, stone/scroll/book implementation methods,
+and Create-style animated **Ponders** for spells and scrolls. Mana remains a
+finite extracted resource rather than a regenerating bar, and costs should
+emerge from physical work, range, rarity, memory, and control-flow complexity.
 
 The next architectural milestone is the typed ticked stack VM and its first
 player-authored circle representation. The seven compatibility sigils remain a
 useful vertical-slice frontend, but they are not the final language.
+See [ROADMAP.md](ROADMAP.md) for the complete implemented-versus-planned list.
 
 ---
 

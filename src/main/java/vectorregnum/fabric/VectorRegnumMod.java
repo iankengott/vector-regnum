@@ -12,6 +12,7 @@ public final class VectorRegnumMod implements ModInitializer {
     public void onInitialize() {
         ManaData.initialize();
         VectorRegnumContent.initialize();
+        TutorialGuide.initialize();
         SpellVisualManager.initialize();
         DevShowcaseController.initialize();
         VectorRegnumCommands.initialize();

@@ -185,6 +185,7 @@ start_server() {
         --description='Vector-Regnum isolated Loom development server' \
         --setenv="JAVA_HOME=$verified_java_home" \
         --setenv="PATH=$verified_unit_path" \
+        --setenv='VECTOR_REGNUM_VISUAL_CHECK=1' \
         "$remote_dir/gradlew" --no-daemon runServer
 }
 

@@ -3,7 +3,6 @@ package vectorregnum.fabric;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -21,7 +20,7 @@ public final class DevShowcaseController {
     }
 
     public static void initialize() {
-        if (!FabricLoader.getInstance().isDevelopmentEnvironment()) {
+        if (!FabricLoader.getInstance().isDevelopmentEnvironment() || !visualCheckRequested()) {
             return;
         }
 
@@ -47,10 +46,14 @@ public final class DevShowcaseController {
         });
     }
 
+    private static boolean visualCheckRequested() {
+        return Boolean.getBoolean("vectorregnum.visualCheck")
+                || "1".equals(System.getenv("VECTOR_REGNUM_VISUAL_CHECK"));
+    }
+
     private static void runShowcase(ServerPlayerEntity player) {
         ManaData.refill(player);
         player.getServerWorld().setTimeOfDay(6000L);
-        player.giveItemStack(new ItemStack(VectorRegnumContent.SIGIL_TOME));
         SpellVisualManager.startShowcase(player);
         CastService.cast(player, SpellPresets.FIREBOLT, false);
         CastService.cast(player, SpellPresets.FROST_NOVA, false);
