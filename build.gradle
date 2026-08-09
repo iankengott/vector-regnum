@@ -14,6 +14,24 @@ repositories {
     mavenCentral()
 }
 
+loom {
+    runs {
+        client {
+            client()
+            name = "Vector-Regnum Client"
+            runDir = "run/client"
+            programArg "--quickPlayMultiplayer"
+            programArg "localhost:25575"
+        }
+
+        server {
+            server()
+            name = "Vector-Regnum Dev Server"
+            runDir = "run/server"
+        }
+    }
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"

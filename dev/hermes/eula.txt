@@ -1,0 +1,2 @@
+# Dedicated development server used only for isolated Vector-Regnum testing.
+eula=true
