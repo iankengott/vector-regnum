@@ -1,5 +1,10 @@
 # Vector-Regnum roadmap
 
+> **Platform transition:** priorities 1–19 describe the verified but deprecated
+> Fabric 1.21.1 alpha. NeoForge 1.21.1 is now the active target. Priority 20
+> freezes the Fabric line in its own legacy repository and establishes the
+> separate NeoForge repository before any new gameplay work.
+
 The priorities 1–10 milestone is implemented as a playable alpha. A checked item
 means its first coherent end-to-end pass exists; it does not mean final balance,
 art, UX, or production hardening is complete.
@@ -11,8 +16,8 @@ art, UX, or production hardening is complete.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Frost Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 73 pure/contract tests plus real local/Hermes server boots and Hermes
-  visual inspection.
+- [x] 170 pure/contract tests, 16 production Fabric GameTests, plus real
+  local/Hermes server boots and Hermes visual inspection.
 
 ## Priorities 1–10 milestone
 
@@ -47,48 +52,147 @@ When choosing new work, take the first unfinished item in this list unless Ian
 explicitly reprioritizes it. The detailed sections below describe the broader
 acceptance scope.
 
-11. [ ] Create-style spell/scroll **Ponders**: animated compilation order,
-    execution, mana breakdown, and representative fault/miscast states.
-12. [ ] Graphical in-world circle editor with a discoverable sigil palette,
+11. [x] Create-style spell/scroll **Ponders**: an in-world warded-scribe
+    workshop animates authoritative compilation order, execution, mana flow,
+    effects, exact faults, and every Wild Magic category. Bounded live VM
+    snapshots, explicit subscriptions, long-trace compaction, replay/scrubbing,
+    Primer/Trace views, and authored success/failure scenes are complete.
+12. [x] Replace the vanilla Field Manual with a Vector-Regnum-themed visual
+    guidebook: illustrated diagrams, recipes and examples; searchable chapter
+    navigation; contextual item/block links; progression-aware entries; and
+    readable, accessible scaling. Prototype a native screen against maintained
+    Fabric 1.21.1 guidebook libraries before choosing the implementation.
+    The selected native v6 backend is data-driven and adds three original
+    illustrated plates, scrolling and scrollbars, search/history/bookmarks,
+    scaling and compact layouts, tooltips/alt text, contextual links, unlock
+    gating, live recipes with bounded tag/alternative cycling, item icons, and
+    client book interception. The documented comparison retains Patchouli and
+    GuideME as authoring/interaction inspiration without adding a dependency.
+13. [x] Graphical in-world circle editor with a discoverable sigil palette,
     parameter editing, diagnostics, and media binding without command fluency.
-13. [ ] Natural mana-crystal world generation plus balanced geology, source
-    growth/recharge, transport, and storage progression.
-14. [ ] Fabric GameTests for commands, attachments, media/block-entity round
+    Its responsive native UI provides searchable typed sigils, drag placement
+    and movement with parameter preservation, safe removal and one-step undo,
+    quoted parameter editing, diagnostics, compilation/media binding, and a
+    server-only raycast that captures a validated fixed dimension/block/face
+    anchor without trusting client coordinates.
+14. [x] Natural mana-crystal world generation plus balanced geology, source
+    growth/recharge, transport, and storage progression. Three persistent
+    storage tiers and matching conduit tiers provide bounded loaded-chunk
+    routing, atomic restart-safe transfer, player draw/tuning interactions,
+    comparator output, recipes, upgrades, loot, and balance envelopes.
+15. [x] Fabric GameTests for commands, attachments, media/block-entity round
     trips, crystals, scheduled effects, restart behavior, and multiplayer.
-15. [ ] Complete the spell language: static stack-type analysis,
+    Sixteen production tests cover the real command parser, two-player
+    isolation, attachment/item/block-entity codecs, verified tablet anchors,
+    crystals, actual scheduled expiry, persisted tick-queue reload contracts,
+    multiplayer claims/death migration, and programmable-relay behavior.
+16. [x] Complete the spell language: static stack-type analysis,
     creation/form opcodes, and generic lowering/execution for every curated
-    semantic opcode.
-16. [ ] Formal multiplayer lifecycle and security: chunk unloads, death/copy,
-    teams, claims, permissions, abuse cases, and upgrade migration.
-17. [ ] Expand programmable automation with redstone logic, remote activation,
-    data bridges, and explicit multithread/concurrency ownership rules.
-18. [ ] Replace placeholder presentation with original textures, particles,
-    sounds, UI, localization, and accessibility work.
-19. [ ] Configuration, balancing, profiling, survival/multiplayer playtests,
-    and compatibility testing with representative Fabric mods.
-20. [ ] Release packaging: installation guide, changelog, screenshots/video,
-    versioning, and distributable artifacts.
+    semantic opcode. All 30 library opcodes map losslessly to the 32-opcode
+    semantic vocabulary and one authoritative opcode-driven server backend;
+    authored `VM_CREATE_FORM` programs execute bounded permission-checked forms
+    with persisted cleanup, exact diagnostics, complete mana quotes, and VM
+    presentation events.
+17. [x] Formal multiplayer lifecycle and security: active spells now fail
+    closed on disconnect, death/copy, dimension changes, and owner-chunk
+    unload; private/team chunk claims compose with vanilla/Fabric protection
+    and PvP/friendly-fire policy; bounded start/concurrency admission resists
+    abuse; and versioned player/claim data migrates corrupt or older state.
+18. [x] Expand programmable automation with a persistent Automation Relay:
+    rising/falling/change/while-high redstone rules, owner-only remote
+    activation, bounded read-only data bridges and comparator output, a
+    1,024-global/32-owner/16-per-tick queue, immutable messages, isolated VMs,
+    and explicit many-producer/single-server-thread ownership rules.
+19. [x] Replace placeholder presentation with the compiler-driven, deeply
+    layered sensory system specified in `SPELL_PRESENTATION.md`: original
+    deterministic procedural geometry, particles, glow/contrast/haze and
+    compatible screen treatment, spatial audio, material response, aftermath,
+    near/mid/far/telegraph-only LODs, localized UI, and independent accessible
+    sensory controls. Essential telegraphs do not depend on shaderpacks;
+    signature depth-aware shaders and final bespoke art remain optional
+    release-quality enhancement rather than a gameplay dependency.
+20. [ ] **NeoForge 1.21.1 migration and repository split.** Freeze the current
+    verified Fabric alpha in the published legacy repository, then convert the
+    active `vector-regnum` repository by porting the loader-neutral core,
+    registrations, persistence, networking, events, rendering, commands,
+    integration tests, NixOS launcher, and guarded Hermes workflow. No new
+    gameplay lands on Fabric. The port must retain behavioral parity and hard
+    safety limits, not merely reach a title screen.
+21. [ ] **Elemental identity and affinity expansion.** Replace Frost with Ice;
+    add Water, Air, Earth, Lightning, Time, Space, Light, Dark, Nature, Sound,
+    and rare Void around the ordinary twelve; retain Arcane only as neutral raw
+    mana. Every character receives exactly one permanent natural element while
+    channel attunement remains mutable. Use a data-driven symmetric affinity
+    matrix with 100/75/50/25% efficiency bands and a 25% opposed floor.
+22. [ ] **Casting media, reagents, and resource escrow.** Distinguish bare
+    casting, rituals, engravings, spellbooks, scrolls, and installed circles.
+    Optional reagents may reduce mana, casting time, upkeep, and instability
+    within server-configured floors. Genuine miscasts consume committed
+    resources; policy/unloaded/rate/shutdown/internal failures refund or never
+    withdraw them.
+23. [ ] **Persistent upkeep and natural conclusions.** Give every continuing
+    effect a versioned owner, endpoint/deadline or termination predicate,
+    upkeep payer/escrow, offline and unloaded-chunk policy, restart recovery,
+    and idempotent atomic cleanup. Unpaid or non-concluding magic transitions
+    into bounded deterministic Wild Magic rather than becoming free or orphaned.
+24. [ ] **Advanced shared-memory spell control.** Add bounded variables,
+    iterators, collision, watcher/signal/output operations, and logical parallel
+    branches while retaining a shared `Push`/`Pop` stack. Branches advance in a
+    deterministic server-tick order; shared operations are atomic and traced;
+    branch count, work, lifetime, messages, and stack depth remain hard-capped.
+25. [ ] **Cooperative rituals and multicasting.** Split/replicate circles and
+    combine mana without implicit consent. Every contributor must approve each
+    ritual's exact maximum mana, reagent, and upkeep commitment; reservations
+    are atomic, auditable, restart-safe, and refunded if pre-start approval or
+    funding fails.
+26. [ ] **Recovered-mechanic security and accessibility hardening.** Preserve
+    dangerous magic, render-only constructs, spell disruption, forced-attention
+    effects, and Wild Magic through curated bounded capabilities, claim/team/PvP
+    checks, deterministic randomness, rate/range/lifetime limits, mandatory
+    telegraphs, client sensory controls, and atomic cleanup.
+27. [ ] **Versioned SMP integration API.** Expose narrow optional hooks for the
+    separate Origins, Combat, Progression, World/Story, Administration, and
+    modpack repositories without absorbing those systems or making them hard
+    dependencies. Repository ownership is defined in
+    `docs/REPOSITORY_MAP.md`.
+28. [ ] Configuration, elemental/reagent/upkeep balancing, profiling,
+    survival and multiplayer playtests, abuse testing, and compatibility with
+    representative NeoForge mods and the target SMP pack.
+29. [ ] Release packaging: installation guide, changelog, localization,
+    screenshots/video, versioning, migration notes, and distributable artifacts.
 
 ## Language/runtime follow-up
 
 - [x] Direct clockwise circle-to-vm2 lowering for typed values, memory,
   arithmetic/logic, control/time, perception, and physics sigils.
 - [x] Fabric tick scheduler and read-only perception/world-effect boundary.
-- [ ] Static stack-type analysis before execution (runtime faults are already
+- [x] Static stack-type analysis before execution (runtime faults are already
   precise and bounded).
-- [ ] Creation/form opcodes with concrete material/rarity constraints.
-- [ ] Generic lowering/execution for every semantic library opcode; several
-  library effects remain intentionally purpose-built Fabric adapters.
-- [ ] Multithreaded circles and explicit concurrency/data ownership rules.
+- [x] Executable creation/form opcodes with concrete material/rarity,
+  permanence, volume, duration, range, replacement, and permission constraints.
+- [x] Generic lowering/execution for every semantic library opcode through one
+  opcode-driven Fabric adapter shared by all 15 curated spells.
+- [x] Multithreaded automation ingress with immutable data and explicit
+  many-producer/single-server-thread queue, VM, world, and mana ownership.
 
 ## Player authoring and teaching
 
 - [x] Command-based server-authoritative editor and persistent draft.
 - [x] Save, inspect, validate, copy into media, and recover via checksums.
 - [x] Animated actual circle topology with compiler order/error highlighting.
-- [x] Versioned Field Manual v2 with exact crystal/media recipes and commands.
-- [ ] Graphical/in-world placement editor with discoverable sigil palette.
-- [ ] **Create-style spell/scroll Ponders** showing compilation, execution,
+- [x] Versioned Field Manual v6 with exact crystal/media/infrastructure recipes and commands,
+  data-driven visual elements, search/history/bookmarks/scaling/scrolling,
+  progression gating, live recipe/item rendering, and a native Ponder action.
+- [x] Illustrated custom Field Manual inspired by Patchouli/Lexica Botania and
+  GuideME: a distinctive but familiar visual layout, categories and search,
+  history/bookmarks, contextual links from relevant content, annotated circle
+  and mana diagrams, live recipe/item displays, progression-aware chapters,
+  data-driven/localizable pages, and legible rendering across GUI scales.
+- [x] Prototype native and maintained-library implementations on Fabric 1.21.1;
+  select one using dependency stability, extensibility, visual identity,
+  accessibility, authoring effort, and compatibility as explicit criteria.
+- [x] Graphical/in-world placement editor with discoverable sigil palette.
+- [x] **Create-style spell/scroll Ponders** showing compilation, execution,
   mana breakdown, and representative failure states step by step.
 - [ ] Advancements/tutorial sequence that guides the complete survival arc.
 
@@ -98,20 +202,44 @@ acceptance scope.
   elemental compatibility, attunement, and loaded-source remote draw.
 - [x] First survival recipes, seven persistent research unlocks, and two
   advancement guidance entries.
-- [ ] Natural crystal world generation, geology/rarity balance, transport,
-  storage blocks, and source recharge/growth rules.
-- [ ] Redstone logic expansion, remote activation, data bridges, and
-  multithreaded automation described in the design documents.
-- [ ] Formal chunk-unload, claim, team, and multiplayer permission policy.
+- [x] Deterministic natural crystal world generation, geology/rarity balance,
+  source recharge/growth, persistent progress, three storage/conduit tiers,
+  loaded-chunk routing, restart-safe transfer, recipes, and upgrades.
+- [x] Redstone logic expansion, remote activation, bounded data bridges, and
+  multithreaded automation ingress with server-thread world ownership.
+- [x] Formal chunk-unload, claim, team, PvP, and multiplayer permission policy.
 
 ## Content and release quality
 
 - [x] Initial useful 15-spell library with concrete bounded world effects.
 - [x] Persisted scheduled expiry for temporary light/redstone spell blocks.
-- [ ] Original Vector-Regnum block/item textures, particles, sounds, and UI.
-- [ ] Fabric GameTests for commands, attachments, media/block-entity round
-  trips, crystal interactions, timers, and multiplayer behavior.
+- [x] Stable bounded presentation IR, codec, S2C execution-event bridge, and
+  budgeted client runtime shared by library and player-authored spells; see
+  `SPELL_PRESENTATION.md`.
+- [x] Richly layered compiler-generated spell presentation. Every production
+  spell receives a readable primary gesture
+  supported by restrained microeffects across form/motion, illumination and
+  atmosphere, spatial audio, tactile response, impact, and aftermath. The list
+  is intentionally non-exhaustive, and the system should generate additional
+  context-appropriate layers from spell semantics.
+- [ ] Original Vector-Regnum block/item texture pass and optional signature
+  depth-aware shader instruments for release-quality presentation.
+- [x] Sixteen production Fabric GameTests cover commands, attachments,
+  media/block-entity round trips, crystal interactions, timers, serialized
+  restart contracts, two-player isolation, claims/death migration, relay
+  persistence, remote ownership, and redstone/data behavior.
+- [ ] Replace legacy Fabric integration coverage with equivalent or stronger
+  NeoForge integration tests during priority 20; preserve the loader-neutral
+  JUnit suite throughout the port.
 - [ ] Configuration, balancing, profiling, localization beyond English,
   accessibility, and broader abuse protection.
 - [ ] Survival playtest, death/copy/restart/upgrade tests, mod compatibility,
   release packaging, changelog, screenshots/video, and installation docs.
+
+## Recovered SMP design
+
+The canonical decisions extracted from the recovered design—including the
+NeoForge transition, elemental identity, reagents, upkeep, shared memory,
+per-ritual consent, safety constraints, and project boundaries—live in
+`docs/SMP_INTEGRATION_DECISIONS.md`. Broader SMP systems are deliberately
+separate projects; see `docs/REPOSITORY_MAP.md`.

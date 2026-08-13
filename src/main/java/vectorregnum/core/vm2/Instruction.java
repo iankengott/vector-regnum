@@ -1,6 +1,7 @@
 package vectorregnum.core.vm2;
 
 import java.util.Objects;
+import vectorregnum.core.semantic.SemanticInstruction;
 import vectorregnum.core.vm2.WorldAccess.SelectionFilter;
 
 /**
@@ -8,7 +9,8 @@ import vectorregnum.core.vm2.WorldAccess.SelectionFilter;
  * operations use the operand orders enforced by {@link SpellVm}.
  */
 public record Instruction(Opcode opcode, SourceLocation source, RuntimeValue literal,
-        int argument, int secondArgument, SelectionFilter filter, ManaCostModel.Input cost) {
+        int argument, int secondArgument, SelectionFilter filter, ManaCostModel.Input cost,
+        SemanticInstruction semantic) {
     public static final int MAX_DURATION_TICKS = 1_200;
 
     public Instruction {
@@ -35,17 +37,18 @@ public record Instruction(Opcode opcode, SourceLocation source, RuntimeValue lit
                 }
             }
             case SELECT_RADIUS, RAYCAST_ENTITIES -> Objects.requireNonNull(filter, "selection filter");
+            case SEMANTIC -> Objects.requireNonNull(semantic, "semantic instruction");
             default -> { }
         }
     }
 
     private static Instruction simple(Opcode opcode, SourceLocation source) {
-        return new Instruction(opcode, source, null, 0, 0, null, ManaCostModel.Input.ZERO);
+        return new Instruction(opcode, source, null, 0, 0, null, ManaCostModel.Input.ZERO, null);
     }
 
     public static Instruction push(RuntimeValue value, SourceLocation source) {
         return new Instruction(Opcode.PUSH, source, Objects.requireNonNull(value), 0, 0, null,
-                new ManaCostModel.Input(0, 0, 0, 0, 1, 0, 0));
+                new ManaCostModel.Input(0, 0, 0, 0, 1, 0, 0), null);
     }
     public static Instruction pop(SourceLocation s) { return simple(Opcode.POP, s); }
     public static Instruction dup(SourceLocation s) { return simple(Opcode.DUP, s); }
@@ -73,16 +76,16 @@ public record Instruction(Opcode opcode, SourceLocation source, RuntimeValue lit
     }
     private static Instruction control(Opcode op, int target, int count, SourceLocation source) {
         return new Instruction(op, source, null, target, count, null,
-                new ManaCostModel.Input(0, 0, 0, 0, 0, 0, Math.max(1, count)));
+                new ManaCostModel.Input(0, 0, 0, 0, 0, 0, Math.max(1, count)), null);
     }
 
     public static Instruction delay(int ticks, SourceLocation source) {
         return new Instruction(Opcode.DELAY, source, null, ticks, 0, null,
-                new ManaCostModel.Input(0, 0, ticks, 0, 0, 0, 0));
+                new ManaCostModel.Input(0, 0, ticks, 0, 0, 0, 0), null);
     }
     public static Instruction duration(int ticks, SourceLocation source) {
         return new Instruction(Opcode.SET_DURATION, source, null, ticks, 0, null,
-                new ManaCostModel.Input(0, 0, ticks, 0, 0, 0, 0));
+                new ManaCostModel.Input(0, 0, ticks, 0, 0, 0, 0), null);
     }
     public static Instruction select(SelectionFilter filter, double declaredRange, int samples,
             SourceLocation source) {
@@ -95,7 +98,7 @@ public record Instruction(Opcode opcode, SourceLocation source, RuntimeValue lit
     private static Instruction perception(Opcode opcode, SelectionFilter filter, double range,
             int samples, SourceLocation source) {
         return new Instruction(opcode, source, null, 0, 0, filter,
-                new ManaCostModel.Input(0, range, 0, 0, 1, samples, 0));
+                new ManaCostModel.Input(0, range, 0, 0, 1, samples, 0), null);
     }
 
     public static Instruction impulse(double declaredWork, double rarity, SourceLocation source) {
@@ -118,6 +121,13 @@ public record Instruction(Opcode opcode, SourceLocation source, RuntimeValue lit
     }
     private static Instruction physics(Opcode opcode, double work, double rarity, SourceLocation source) {
         return new Instruction(opcode, source, null, 0, 0, null,
-                new ManaCostModel.Input(work, 0, 0, rarity, 0, 0, 0));
+                new ManaCostModel.Input(work, 0, 0, rarity, 0, 0, 0), null);
+    }
+
+    /** Loader-neutral semantic step. It consumes no VM stack and emits one ordered effect. */
+    public static Instruction semantic(SemanticInstruction instruction, ManaCostModel.Input cost) {
+        Objects.requireNonNull(instruction, "instruction");
+        return new Instruction(Opcode.SEMANTIC, instruction.source(), null, 0, 0, null,
+                Objects.requireNonNull(cost, "cost"), instruction);
     }
 }

@@ -35,6 +35,7 @@ public final class ProgressionData {
             return false;
         }
         player.setAttached(STATE, current.unlock(unlock));
+        ProgressionSync.send(player);
         player.sendMessage(Text.translatable("message.vector_regnum.progression_unlocked",
                 Text.translatable("unlock.vector_regnum." + unlock.id())).formatted(Formatting.AQUA), false);
         return true;
@@ -47,6 +48,7 @@ public final class ProgressionData {
                 changed++;
             }
         }
+        ProgressionSync.send(player);
         return changed;
     }
 }

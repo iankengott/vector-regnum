@@ -26,6 +26,12 @@ public interface PlayerManaBridge {
         }
 
         @Override
+        public boolean tryAcceptStoredExact(ServerPlayerEntity player, int mana,
+                ManaAffinity affinity, BlockPos storage) {
+            return false;
+        }
+
+        @Override
         public void attune(ServerPlayerEntity player, BlockPos source, ManaAffinity sourceAffinity) {
         }
     };
@@ -34,6 +40,12 @@ public interface PlayerManaBridge {
 
     boolean tryAcceptExact(ServerPlayerEntity player, int mana,
             ManaAffinity sourceAffinity, BlockPos source);
+
+    /** Credits finite block storage without replacing the player's attuned natural source. */
+    default boolean tryAcceptStoredExact(ServerPlayerEntity player, int mana,
+            ManaAffinity affinity, BlockPos storage) {
+        return tryAcceptExact(player, mana, affinity, storage);
+    }
 
     boolean consumeCapacityShard(ServerPlayerEntity player, int capacityIncrease);
 

@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped", "category": "redstone",
+  "pattern": ["CGC", "SLS", "CGC"],
+  "key": {
+    "C": {"item": "minecraft:copper_ingot"},
+    "G": {"item": "minecraft:glass"},
+    "S": {"item": "vector_regnum:mana_crystal_shard"},
+    "L": {"item": "minecraft:lapis_lazuli"}
+  },
+  "result": {"id": "vector_regnum:raw_crystal_conduit", "count": 4}
+}

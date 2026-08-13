@@ -1,0 +1,37 @@
+package vectorregnum.core.semantic;
+
+/** Loader-neutral semantic vocabulary shared by curated and authored spell frontends. */
+public enum SemanticOpcode {
+    ORIGIN_SELF,
+    ORIGIN_TARGET,
+    LOOK_VECTOR,
+    RAYCAST_BLOCK,
+    RAYCAST_ENTITY,
+    SELECT_NEARBY_ENTITIES,
+    FILTER_HOSTILE,
+    FILTER_LIVING,
+    FILTER_ORE,
+    ELEMENT_FIRE,
+    ELEMENT_FROST,
+    ELEMENT_ARCANE,
+    ELEMENT_VOID,
+    SHAPE_PROJECTILE,
+    SHAPE_AURA,
+    SHAPE_BARRIER,
+    SET_RADIUS,
+    SET_MAGNITUDE,
+    SET_DURATION,
+    APPLY_DAMAGE,
+    APPLY_IMPULSE,
+    APPLY_SLOW,
+    APPLY_FEATHERFALL,
+    PLACE_LIGHT,
+    BREAK_BLOCKS,
+    TRANSMUTE_BLOCK,
+    CREATE_FORM,
+    EMIT_PARTICLES,
+    EMIT_REDSTONE,
+    REPEAT_BOUNDED,
+    WAIT_TICKS,
+    EXECUTE
+}

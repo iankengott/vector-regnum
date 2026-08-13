@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped", "category": "misc",
+  "pattern": ["GSG", "CLC", "GCG"],
+  "key": {
+    "G": {"item": "minecraft:glass"},
+    "S": {"item": "vector_regnum:mana_crystal_shard"},
+    "C": {"item": "minecraft:copper_ingot"},
+    "L": {"item": "minecraft:lapis_block"}
+  },
+  "result": {"id": "vector_regnum:crystal_vial", "count": 1}
+}

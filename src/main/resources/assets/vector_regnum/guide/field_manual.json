@@ -1,0 +1,307 @@
+{
+  "id": "field_manual",
+  "title": "Vector-Regnum Field Manual",
+  "version": 6,
+  "theme": "brass_ink_and_amethyst",
+  "chapters": [
+    {
+      "id": "first_steps",
+      "title": "First Steps",
+      "icon": "vector_regnum:sigil_tome",
+      "pages": [
+        {
+          "id": "welcome",
+          "title": "The Realm of Direction",
+          "body": "Spells are ordered geometric programs. Begin at north on the outer ring, read clockwise, then move inward. A valid program reshapes the world; a broken one fails at the physical sigil that caused the fault.",
+          "required_unlocks": [],
+          "elements": [
+            {
+              "type": "IMAGE",
+              "label": "Compiler's field kit",
+              "alt": "A sigil tome beside a three-ring circle, with the north slot marked in gold.",
+              "metadata": {
+                "asset": "vector_regnum:textures/gui/guide/compiler_circle.png",
+                "source_width": "256",
+                "source_height": "256",
+                "display_width": "112",
+                "display_height": "112"
+              }
+            },
+            {
+              "type": "DIAGRAM",
+              "label": "Clockwise, then inward",
+              "alt": "Numbered sigils travel clockwise around the outer ring before continuing on the next ring.",
+              "metadata": { "diagram": "circle_compilation_order", "rings": "3", "slot_zero": "north" }
+            },
+            {
+              "type": "LINK",
+              "label": "Learn to gather mana",
+              "alt": "Open the mana source page.",
+              "metadata": { "target": "mana_sources" }
+            }
+          ]
+        },
+        {
+          "id": "quick_cast",
+          "title": "Your First Cast",
+          "body": "Build and draw from a mana source, hold the Firebolt Sigil Tome, aim, and use it. Casting is server-authoritative: the server resolves collision, mana, damage, and the final result.",
+          "required_unlocks": [],
+          "elements": [
+            {
+              "type": "EXAMPLE",
+              "label": "Firebolt checklist",
+              "alt": "Draw mana, hold the tome, aim at a safe target, and use the item.",
+              "metadata": { "example": "first_firebolt", "steps": "4" }
+            },
+            {
+              "type": "PONDER",
+              "label": "Ponder a complete cast",
+              "alt": "Animate compiler order, mana quote, and the actual executed VM ticks.",
+              "metadata": { "scene": "spell_cast_success", "trace": "actual_vm_events" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mana",
+      "title": "Mana Engineering",
+      "icon": "vector_regnum:mana_crystal_shard",
+      "pages": [
+        {
+          "id": "mana_sources",
+          "title": "Finite Crystal Sources",
+          "body": "You begin with zero mana and zero capacity. Craft a source and shards. Constructed sources hold eight finite charges. Buried natural crystals mature and recharge only while loaded and supported by conductive geology; nearby natural sources slow one another.",
+          "required_unlocks": [],
+          "elements": [
+            {
+              "type": "IMAGE",
+              "label": "The attuned mana network",
+              "alt": "A central mana crystal branches to eight elemental source stations, showing mana as a finite routed network.",
+              "metadata": {
+                "asset": "vector_regnum:textures/gui/guide/mana_network.png",
+                "source_width": "256",
+                "source_height": "256",
+                "display_width": "112",
+                "display_height": "112"
+              }
+            },
+            {
+              "type": "RECIPE",
+              "label": "Mana crystal source",
+              "alt": "A shaped recipe using amethyst blocks, lapis blocks, and crying obsidian.",
+              "metadata": { "recipe": "vector_regnum:mana_crystal_node", "display": "live_grid", "context": "vector_regnum:mana_crystal_node" }
+            },
+            {
+              "type": "RECIPE",
+              "label": "Capacity shard",
+              "alt": "A shapeless recipe combining amethyst, lapis, and glowstone dust.",
+              "metadata": { "recipe": "vector_regnum:mana_crystal_shard", "display": "live_grid", "context": "vector_regnum:mana_crystal_shard" }
+            },
+            {
+              "type": "DIAGRAM",
+              "label": "Attuned remote draw",
+              "alt": "Mana weakens with inverse-square distance and only crosses a loaded chunk in the same dimension.",
+              "metadata": { "diagram": "mana_inverse_square", "source_charges": "8", "same_dimension": "required" }
+            },
+            {
+              "type": "LINK",
+              "label": "Build storage and conduits",
+              "alt": "Open the tiered mana infrastructure page.",
+              "metadata": { "target": "mana_infrastructure" }
+            }
+          ]
+        },
+        {
+          "id": "mana_infrastructure",
+          "title": "Storage and Conduits",
+          "body": "Route one loaded source through a matching conduit tier into persistent storage. Crystal Vials hold 200 μ through Raw Crystal Conduits (8 blocks, 25 μ/tick, 80% efficient). Runed Cells hold 1,000 μ through Runed Conduits (24 blocks, 100 μ/tick, 95%). Resonant Vaults hold 8,000 μ through Resonant Conduits (64 blocks, 400 μ/tick, lossless). Use a store for status; sneak-use to draw up to 100 μ. Retuning requires an empty, idle store.",
+          "required_unlocks": ["mana_storage"],
+          "elements": [
+            {
+              "type": "RECIPE",
+              "label": "Crystal Vial",
+              "alt": "The first persistent mana store, crafted from glass, copper, lapis, and a crystal shard.",
+              "metadata": { "recipe": "vector_regnum:crystal_vial", "display": "live_grid", "context": "vector_regnum:crystal_vial" }
+            },
+            {
+              "type": "RECIPE",
+              "label": "Raw Crystal Conduit",
+              "alt": "Four short-range raw conduits crafted from copper, glass, and crystal shards.",
+              "metadata": { "recipe": "vector_regnum:raw_crystal_conduit", "display": "live_grid", "context": "vector_regnum:raw_crystal_conduit" }
+            },
+            {
+              "type": "RECIPE",
+              "label": "Runed Mana Cell",
+              "alt": "Upgrade a Crystal Vial with runed conduits, gold, and a comparator.",
+              "metadata": { "recipe": "vector_regnum:runed_mana_cell", "display": "live_grid", "context": "vector_regnum:runed_mana_cell" }
+            },
+            {
+              "type": "RECIPE",
+              "label": "Resonant Vault",
+              "alt": "Upgrade a Runed Cell with resonant conduits, crying obsidian, amethyst, and diamond.",
+              "metadata": { "recipe": "vector_regnum:resonant_vault", "display": "live_grid", "context": "vector_regnum:resonant_vault" }
+            },
+            {
+              "type": "DIAGRAM",
+              "label": "Matched network tiers",
+              "alt": "Each storage tier accepts only its matching conduit tier; range, throughput, and efficiency rise together.",
+              "metadata": { "diagram": "mana_network", "tiers": "raw,runed,resonant", "loaded_chunks": "required", "search_cap": "512" }
+            }
+          ]
+        },
+        {
+          "id": "mana_quote",
+          "title": "Reading a Mana Quote",
+          "body": "The compiler quotes base, physical work, squared range, duration, rarity, memory, perception, and repeated control-flow work before execution. A Ponder fills each segment from the Program's real ManaCostModel breakdown.",
+          "required_unlocks": ["mana_storage"],
+          "elements": [
+            {
+              "type": "DIAGRAM",
+              "label": "Eight-part cost prism",
+              "alt": "Eight labeled bands combine into the total pre-cast mana cost.",
+              "metadata": { "diagram": "mana_cost_breakdown", "dimensions": "8" }
+            },
+            {
+              "type": "PONDER",
+              "label": "Ponder the quote",
+              "alt": "Step through every non-authoritative display segment using the authoritative quote.",
+              "metadata": { "scene": "mana_breakdown", "trace": "program_mana_cost" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "authoring",
+      "title": "Circle Authoring",
+      "icon": "minecraft:amethyst_shard",
+      "pages": [
+        {
+          "id": "circle_order",
+          "title": "Build and Compile",
+          "body": "Use the circle commands to create, place, parameterize, remove, undo, show, compile, and cast. Press V in a connected world for the server-backed graphical editor; press K for the latest Ponder. Ring 0 is outermost. Slot 0 is north. Exact diagnostics retain both this physical coordinate and the lowered instruction pointer.",
+          "required_unlocks": [],
+          "elements": [
+            {
+              "type": "EXAMPLE",
+              "label": "Editable typed starter",
+              "alt": "Run /vectorregnum circle vm_starter, then compile and inspect the highlighted order.",
+              "metadata": { "example": "vm_starter", "command": "/vectorregnum circle vm_starter" }
+            },
+            {
+              "type": "PONDER",
+              "label": "Ponder compilation",
+              "alt": "A cursor visits every actual PlacedSigil in executionOrder.",
+              "metadata": { "scene": "circle_compilation", "trace": "circle_compilation" }
+            },
+            {
+              "type": "LINK",
+              "label": "Bind the finished program",
+              "alt": "Open the spell media page.",
+              "metadata": { "target": "spell_media" }
+            }
+          ]
+        },
+        {
+          "id": "faults",
+          "title": "Faults and Wild Magic",
+          "body": "Compiler faults stop invalid bytecode from being published. Runtime faults are bounded and preserve their source. Compatibility spell failures may detonate internally, burst as an unstructured element, or become a violent miscast according to the actual CastResult.",
+          "required_unlocks": [],
+          "elements": [
+            {
+              "type": "DIAGRAM",
+              "label": "Fault path",
+              "alt": "Compilation fault stops before execution; runtime fault fractures the currently executing sigil; compatibility faults may emit Wild Magic.",
+              "metadata": { "diagram": "fault_paths", "states": "compile,runtime,wild_magic" }
+            },
+            {
+              "type": "PONDER",
+              "label": "Ponder the real fault",
+              "alt": "Display the diagnostic, VM fault, or Wild Magic category carried by the actual result.",
+              "metadata": { "scene": "fault_and_miscast", "trace": "actual_fault_events" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "media",
+      "title": "Spell Media",
+      "icon": "vector_regnum:spell_scroll",
+      "pages": [
+        {
+          "id": "spell_media",
+          "title": "Scroll, Book, and Tablet",
+          "body": "Bind a compiled circle into a scroll, spellbook, or carved tablet. A scroll burns only after its first accepted successful cast. A book is reusable. A tablet is permanent and casts from its verified world anchor.",
+          "required_unlocks": ["crystal_harvest"],
+          "elements": [
+            {
+              "type": "IMAGE",
+              "label": "Three vessels, one spell",
+              "alt": "A scroll, reusable spellbook, and stone tablet each carry the same glowing circle in a different lifecycle.",
+              "metadata": {
+                "asset": "vector_regnum:textures/gui/guide/spell_media.png",
+                "source_width": "256",
+                "source_height": "256",
+                "display_width": "112",
+                "display_height": "112"
+              }
+            },
+            {
+              "type": "RECIPE",
+              "label": "Blank scroll",
+              "alt": "Paper, ink, and amethyst make a single-use blank scroll.",
+              "metadata": { "recipe": "vector_regnum:spell_scroll", "display": "live_grid", "context": "vector_regnum:spell_scroll" }
+            },
+            {
+              "type": "RECIPE",
+              "label": "Blank spellbook",
+              "alt": "A book, lapis, and amethyst make a reusable spellbook.",
+              "metadata": { "recipe": "vector_regnum:spell_book", "display": "live_grid", "context": "vector_regnum:spell_book" }
+            },
+            {
+              "type": "RECIPE",
+              "label": "Carved tablet",
+              "alt": "Chiseled deepslate, lapis, and amethyst make a permanent anchored tablet.",
+              "metadata": { "recipe": "vector_regnum:carved_spell_tablet", "display": "live_grid", "context": "vector_regnum:carved_spell_tablet" }
+            },
+            {
+              "type": "PONDER",
+              "label": "Ponder scroll consumption",
+              "alt": "The scroll remains through rejected casts and burns after the first accepted success.",
+              "metadata": { "scene": "scroll_lifecycle", "trace": "artifact_transition" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "schools",
+      "title": "Research Schools",
+      "icon": "minecraft:knowledge_book",
+      "pages": [
+        {
+          "id": "movement_school",
+          "title": "Movement Weaving",
+          "body": "Movement programs use typed points, vectors, entities, durations, and validated world effects. Vector Step and Kinetic Ward are the first live VM examples.",
+          "required_unlocks": ["movement_weaving"],
+          "elements": [
+            {
+              "type": "EXAMPLE",
+              "label": "Vector Step",
+              "alt": "A delayed impulse demonstrates a real WAITING tick followed by a validated world effect.",
+              "metadata": { "example": "vector_step", "library_id": "vector_step" }
+            },
+            {
+              "type": "LINK",
+              "label": "Review compiler order",
+              "alt": "Return to the circle authoring chapter.",
+              "metadata": { "target": "circle_order" }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

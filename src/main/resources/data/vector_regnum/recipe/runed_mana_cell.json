@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped", "category": "misc",
+  "pattern": ["GSG", "RVR", "GCG"],
+  "key": {
+    "G": {"item": "minecraft:gold_ingot"},
+    "S": {"item": "vector_regnum:mana_crystal_shard"},
+    "R": {"item": "vector_regnum:runed_conduit"},
+    "V": {"item": "vector_regnum:crystal_vial"},
+    "C": {"item": "minecraft:comparator"}
+  },
+  "result": {"id": "vector_regnum:runed_mana_cell", "count": 1}
+}

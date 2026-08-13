@@ -123,6 +123,28 @@ class MagicCircleAuthoringTest {
         assertEquals(100, editor.undoDepth());
     }
 
+    @Test
+    void editorMovesParameterizedSigilAtomicallyAndUndoRestoresItsSource() {
+        CircleEditorSession editor = new CircleEditorSession(
+                MagicCircle.empty("drag", "Drag", 1, 4));
+        CircleCoordinate source = new CircleCoordinate(0, 0);
+        CircleCoordinate destination = new CircleCoordinate(0, 2);
+        editor.place(source, "VM_PUSH_NUMBER");
+        editor.parameterize(source, List.of(CircleValue.number(7.5)));
+        int undoBeforeMove = editor.undoDepth();
+
+        assertTrue(editor.move(source, destination).changed());
+        assertEquals(undoBeforeMove + 1, editor.undoDepth());
+        PlacedSigil moved = editor.current().sigils().getFirst();
+        assertEquals(destination, moved.coordinate());
+        assertEquals("7.5", ((CircleValue.NumberValue) moved.parameters().getFirst()).canonicalText());
+
+        assertTrue(editor.undo().changed());
+        assertEquals(source, editor.current().sigils().getFirst().coordinate());
+        assertFalse(editor.move(new CircleCoordinate(0, 1), destination).changed());
+        assertEquals("POSITION_EMPTY", editor.lastDiagnostics().getFirst().code());
+    }
+
     static MagicCircle validCircle() {
         return new MagicCircle(1, "fire-aura", "Fire Aura", 2, 8, List.of(
                 sigil(0, 0, "ORIGIN_SELF"),

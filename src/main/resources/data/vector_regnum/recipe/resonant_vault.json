@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped", "category": "misc",
+  "pattern": ["OAO", "RCR", "ODO"],
+  "key": {
+    "O": {"item": "minecraft:crying_obsidian"},
+    "A": {"item": "minecraft:amethyst_block"},
+    "R": {"item": "vector_regnum:resonant_conduit"},
+    "C": {"item": "vector_regnum:runed_mana_cell"},
+    "D": {"item": "minecraft:diamond_block"}
+  },
+  "result": {"id": "vector_regnum:resonant_vault", "count": 1}
+}

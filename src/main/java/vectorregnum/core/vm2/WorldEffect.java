@@ -2,13 +2,15 @@ package vectorregnum.core.vm2;
 
 import java.util.List;
 import java.util.Objects;
+import vectorregnum.core.semantic.SemanticInstruction;
 
 /** Validated loader-neutral mutations for a Fabric adapter to apply server-side. */
 public sealed interface WorldEffect permits WorldEffect.Impulse, WorldEffect.Acceleration,
         WorldEffect.Damping, WorldEffect.FollowPath, WorldEffect.MoveToward,
-        WorldEffect.KeepDistance {
-    String entityId();
-    int durationTicks();
+        WorldEffect.KeepDistance, WorldEffect.SemanticStep {
+    /** Compatibility metadata used by existing presentation traces. */
+    default String entityId() { return this instanceof SemanticStep ? "semantic" : ""; }
+    default int durationTicks() { return 1; }
 
     record Impulse(String entityId, Vector3 impulse, int durationTicks) implements WorldEffect {
         public Impulse { validate(entityId, durationTicks); Objects.requireNonNull(impulse, "impulse"); }
@@ -47,6 +49,11 @@ public sealed interface WorldEffect permits WorldEffect.Impulse, WorldEffect.Acc
             if (targetId.isBlank()) throw new IllegalArgumentException("target cannot be blank");
             if (!Double.isFinite(distance) || distance < 0) throw new IllegalArgumentException("distance must be non-negative");
         }
+    }
+
+    /** Ordered semantic command; only a server adapter may interpret or apply it. */
+    record SemanticStep(SemanticInstruction instruction) implements WorldEffect {
+        public SemanticStep { Objects.requireNonNull(instruction, "instruction"); }
     }
 
     private static void validate(String id, int duration) {

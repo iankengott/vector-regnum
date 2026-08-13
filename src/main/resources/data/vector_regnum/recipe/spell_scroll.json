@@ -3,7 +3,10 @@
   "category": "misc",
   "ingredients": [
     { "item": "minecraft:paper" },
-    { "item": "minecraft:ink_sac" },
+    [
+      { "item": "minecraft:ink_sac" },
+      { "item": "minecraft:black_dye" }
+    ],
     { "item": "minecraft:amethyst_shard" }
   ],
   "result": { "id": "vector_regnum:spell_scroll", "count": 1 }

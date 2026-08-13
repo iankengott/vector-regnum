@@ -13,6 +13,14 @@
   "entrypoints": {
     "main": [
       "vectorregnum.fabric.VectorRegnumMod"
+    ],
+    "client": [
+      "vectorregnum.fabric.VectorRegnumClient"
+    ],
+    "fabric-gametest": [
+      "vectorregnum.fabric.gametest.VectorRegnumGameTests",
+      "vectorregnum.fabric.gametest.Priority17GameTests",
+      "vectorregnum.fabric.gametest.Priority18GameTests"
     ]
   },
   "depends": {

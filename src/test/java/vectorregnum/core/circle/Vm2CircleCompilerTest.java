@@ -8,6 +8,11 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import vectorregnum.core.vm2.Opcode;
 import vectorregnum.core.vm2.Vector3;
+import vectorregnum.core.semantic.CreationForm;
+import vectorregnum.core.semantic.CreationMaterial;
+import vectorregnum.core.vm2.SpellVm;
+import vectorregnum.core.vm2.WorldAccess;
+import vectorregnum.core.vm2.WorldEffect;
 
 class Vm2CircleCompilerTest {
     private static final Vm2CircleCompiler.Context CONTEXT =
@@ -42,6 +47,47 @@ class Vm2CircleCompilerTest {
         assertTrue(compiled.diagnostics().stream().anyMatch(diagnostic ->
                 diagnostic.code().equals("PARAMETER_TYPE")
                         && diagnostic.coordinate().equals(new CircleCoordinate(0, 0))));
+    }
+
+    @Test
+    void staticStackFaultPointsToThePhysicalSigilBeforeExecution() {
+        MagicCircle circle = new MagicCircle(1, "vm-stack-bad", "VM Stack Bad", 1, 4, List.of(
+                sigil(0, 0, "VM_PUSH_BOOLEAN", new CircleValue.BooleanValue(true)),
+                sigil(0, 1, "VM_PUSH_NUMBER", number("2")),
+                sigil(0, 2, "VM_ADD"),
+                sigil(0, 3, "EXECUTE")));
+        Vm2CircleCompilation compiled = Vm2CircleCompiler.compile(circle, CONTEXT);
+        assertTrue(compiled.hasErrors());
+        assertTrue(compiled.compiledProgram().isEmpty());
+        assertTrue(compiled.diagnostics().stream().anyMatch(diagnostic ->
+                diagnostic.code().equals("STATIC_TYPE_MISMATCH")
+                        && diagnostic.coordinate().equals(new CircleCoordinate(0, 2))
+                        && diagnostic.sourceIndex() == 2));
+    }
+
+    @Test
+    void creationSigilLowersTypedBoundedSemanticPayloadAtExactSource() {
+        MagicCircle circle = new MagicCircle(1, "create", "Create", 1, 4, List.of(
+                sigil(0, 0, "VM_CREATE_FORM", new CircleValue.TextValue("ice"),
+                        new CircleValue.TextValue("barrier"), number("8"), number("40"),
+                        new CircleValue.BooleanValue(false)), sigil(0, 1, "EXECUTE")));
+        Vm2CircleCompilation compiled = Vm2CircleCompiler.compile(circle, CONTEXT);
+        assertFalse(compiled.hasErrors(), () -> compiled.diagnostics().toString());
+        var semantic = compiled.compiledProgram().orElseThrow().instructions().getFirst().semantic();
+        assertEquals(CreationMaterial.ICE, semantic.creationSpec().material());
+        assertEquals(CreationForm.BARRIER, semantic.creationSpec().form());
+        assertEquals(0, semantic.source().sourceIndex());
+        SpellVm vm = new SpellVm(compiled.compiledProgram().orElseThrow(), WorldAccess.EMPTY);
+        while (!vm.isTerminal()) vm.tick();
+        assertTrue(vm.fault().isEmpty());
+        assertTrue(vm.allEffects().getFirst() instanceof WorldEffect.SemanticStep);
+
+        MagicCircle invalid = new MagicCircle(1, "bad-create", "Bad Create", 1, 4, List.of(
+                sigil(0, 0, "VM_CREATE_FORM", new CircleValue.TextValue("fire"),
+                        new CircleValue.TextValue("barrier"), number("1"), number("20"),
+                        new CircleValue.BooleanValue(false)), sigil(0, 1, "EXECUTE")));
+        assertEquals("INVALID_CREATION_FORM",
+                Vm2CircleCompiler.compile(invalid, CONTEXT).diagnostics().getFirst().code());
     }
 
     private static CircleValue number(String value) {

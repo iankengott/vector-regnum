@@ -1,7 +1,11 @@
 # Vector-Regnum AI handoff
 
 This file is the starting point for any AI or developer continuing the mod.
-The repository is a playable Fabric 1.21.1 alpha, not a finished release.
+This is the active Vector-Regnum repository, currently carrying the playable,
+verified **but deprecated** Fabric 1.21.1 alpha as its migration baseline.
+NeoForge 1.21.1 is the active target; the exact Fabric state is preserved in a
+separate legacy repository and priority 20 ports this active repository before
+new gameplay development.
 
 ## Read first
 
@@ -9,18 +13,48 @@ The repository is a playable Fabric 1.21.1 alpha, not a finished release.
 2. Read `ROADMAP.md`. Its numbered **Next priorities** queue is the canonical
    work order; the later sections give the acceptance scope for those items.
 3. Read `scripts/README.md` before launching, syncing, or testing on Hermes.
-4. Run `hostname; whoami` before using a machine-specific path. The main PC is
+4. Read `docs/SMP_INTEGRATION_DECISIONS.md` and
+   `docs/REPOSITORY_MAP.md` for the recovered SMP decisions and project scope.
+5. Run `hostname; whoami` before using a machine-specific path. The main PC is
    `nixos`/`iank`; Hermes is `ian-kengott-GF63-Thin-11SC`/`ian-kengott`.
 
 When asked for "what is next," report the first unfinished entries in the
-numbered queue. Do not describe priorities 1–10 as production-complete: they
-have coherent end-to-end alpha passes, but still need balance and hardening.
+numbered queue. Never include a checked entry in an unfinished-priority list.
+Do not describe checked priorities as production-complete: they have coherent
+end-to-end alpha passes, but still need balance and hardening.
+
+## Current handoff checkpoint
+
+As of 2026-08-13, priorities 1–19 are checked for the deprecated Fabric alpha
+and the first unfinished canonical item is **20, the NeoForge 1.21.1 migration
+and repository split**. Priorities 17–19 add formal multiplayer lifecycle/security,
+the programmable Automation Relay and bounded concurrency/data bridge, the
+sixteen-test production Fabric GameTest matrix, and the compiler-driven layered
+client presentation runtime with LOD/accessibility controls.
+Always re-read `ROADMAP.md` before reporting or implementing work because it
+supersedes this dated checkpoint whenever the queue changes.
+
+Do not begin priority 21 or later while this active checkout still builds on
+Fabric. Priority 20 first verifies the published legacy snapshot, then ports
+this repository's behavior and safety/test coverage to NeoForge.
+
+## Subagent collaboration
+
+Ian wants implementation work delegated into bounded independent subtasks when
+concurrency is available. Use only **Sol high** and **Luna max** subagents:
+choose Sol high for focused code/test tasks and Luna max for cross-cutting
+design, integration, or difficult review. If one of those profiles is not
+available, keep that work in the parent instead of substituting another model.
+Do not assign multiple agents overlapping files. The parent agent owns final
+integration, documentation, and the complete verification ladder.
 
 ## Repository and machine boundaries
 
-- Main-PC repository:
+- Active Main-PC checkout (currently the Fabric-to-NeoForge migration baseline):
   `/home/iank/Desktop/my mods/mods-editing/vector-regnum`
-- Hermes guarded mirror:
+- Frozen Main-PC Fabric legacy checkout:
+  `/home/iank/Desktop/my mods/mods-editing/vector-regnum-fabric-legacy`
+- Current Fabric Hermes guarded mirror:
   `ian-kengott@100.88.229.63:/home/ian-kengott/projects/vector-regnum`
 - Main-PC launcher: `/home/iank/Desktop/Vector-Regnum.desktop`
 - Development port: loopback `25575` only.
@@ -31,11 +65,16 @@ have coherent end-to-end alpha passes, but still need balance and hardening.
   the normal launcher, or unrelated saves while testing this project.
 - Preserve unrelated user changes. Do not sync to Hermes until the guarded
   scripts have verified its identity and ownership marker.
+- The active public remote is `https://github.com/iankengott/vector-regnum`.
+  Every companion public remote and its exact local path is recorded in
+  `docs/REPOSITORY_MAP.md`; do not merge their scopes back into this mod.
 
 ## Required verification ladder
 
-Use verification proportionate to the change, but gameplay or visual work is
-not complete without the full ladder.
+The commands below verify the deprecated Fabric reference. Use verification
+proportionate to the change, but gameplay or visual work is not complete
+without the full ladder. Priority 20 must replace every Fabric-specific step
+with an equivalent NeoForge step and retain loader-neutral coverage.
 
 1. On NixOS, use Java 21 and run the automated suite:
 
@@ -85,14 +124,37 @@ rendering, command, persistence, or Fabric integration change requires steps
   limits.
 - Entity raycasts respect block occlusion; remote mana draw requires the same
   dimension and a loaded source chunk.
-- Scrolls are consumed only on the first accepted successful cast; spellbooks
-  are reusable; tablets cast from their verified stored anchor.
+- In the Fabric legacy snapshot, scrolls are consumed only on the first accepted
+  successful cast, spellbooks are reusable, and tablets cast from their verified
+  stored anchor. The NeoForge reagent/media priority intentionally supersedes
+  this: genuine spell faults consume committed resources, while policy,
+  unloaded-target, shutdown, and engine failures do not.
 - Temporary world effects must survive restart safely through scheduled world
   ticks rather than process-local cleanup state.
+- Running spells and compatibility visuals fail closed when their owner dies,
+  disconnects, changes dimension, or leaves a loaded owner chunk. Player
+  targets respect server PvP, spectator, team friendly-fire, and claim policy.
+- Automation ingress carries only immutable bounded frames; only its claimed
+  server tick thread may touch worlds, VMs, mana, or relay state. Offline owners
+  and unloaded relay chunks never execute.
+- Presentation consumes compact authoritative events and is strictly cosmetic.
+  LOD or accessibility settings may remove expressive layers but never the
+  mechanics-derived truth telegraph or alter a gameplay outcome.
 - Tutorial changes require bumping the versioned guide attachment so existing
   players receive the revised manual.
 - The Hermes automated showcase is gated by
   `VECTOR_REGNUM_VISUAL_CHECK=1`; normal local play must not stage it.
+- Canonical NeoForge elemental identity is one permanent natural element;
+  attunement remains mutable. Frost becomes Ice, Void is rare, Arcane is neutral
+  raw mana, and affinity efficiency uses bounded 100/75/50/25% bands.
+- Persistent effects require versioned ownership, upkeep, endpoint/deadline,
+  offline/unloaded/restart reconciliation, and idempotent cleanup. Failure to pay
+  or conclude produces bounded deterministic Wild Magic.
+- Parallel branches may share `Push`/`Pop`, but shared operations are atomic and
+  branches advance in deterministic server-tick order. OS threads never mutate
+  VM/world/mana state directly.
+- Every cooperative ritual requires explicit approval from every contributor
+  for that individual ritual and its exact maximum commitment.
 
 ## Keeping the handoff current
 
@@ -104,6 +166,11 @@ After a meaningful change:
   memory vault on the main PC;
 - record new automated test counts and the latest inspected visual evidence;
 - keep generated worlds, logs, Gradle output, and `visual-evidence/` out of git.
+
+When a numbered priority is completed, check it in the canonical queue and
+remove its remaining-work wording everywhere in the same pass. Confirm that a
+fresh search for stale test counts, old guide versions, and claims that the
+completed work "still remains" returns no misleading handoff text.
 
 Do not check off a roadmap item merely because a class or stub exists. It needs
 an end-to-end playable path, bounded failure behavior, automated coverage, and

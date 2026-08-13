@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shaped", "category": "redstone",
+  "pattern": ["RER", "EAE", "RER"],
+  "key": {
+    "R": {"item": "vector_regnum:runed_conduit"},
+    "E": {"item": "minecraft:ender_pearl"},
+    "A": {"item": "minecraft:amethyst_block"}
+  },
+  "result": {"id": "vector_regnum:resonant_conduit", "count": 4}
+}

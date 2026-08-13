@@ -16,6 +16,11 @@ import vectorregnum.core.circle.SpellArtifact;
 import vectorregnum.fabric.progression.ProgressionContent;
 import vectorregnum.fabric.progression.ProgressionData;
 import vectorregnum.fabric.progression.ProgressionSpellLibrary;
+import vectorregnum.core.semantic.CreationForm;
+import vectorregnum.core.semantic.CreationMaterial;
+import vectorregnum.core.semantic.CreationSpec;
+import vectorregnum.fabric.automation.AutomationContent;
+import vectorregnum.fabric.automation.AutomationRelayBlockEntity;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -41,7 +46,7 @@ public final class DevShowcaseController {
                 PENDING.remove(handler.player.getUuid()));
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             for (StagedBlock staged : STAGED_BLOCKS) {
-                if (staged.world.getBlockState(staged.pos).isOf(ProgressionContent.MANA_CRYSTAL_NODE)) {
+                if (staged.world.getBlockState(staged.pos).isOf(staged.expected)) {
                     staged.world.setBlockState(staged.pos, staged.previous);
                 }
             }
@@ -86,10 +91,31 @@ public final class DevShowcaseController {
             BlockState previous = player.getServerWorld().getBlockState(sourcePos);
             player.getServerWorld().setBlockState(sourcePos,
                     ProgressionContent.MANA_CRYSTAL_NODE.getDefaultState());
-            STAGED_BLOCKS.add(new StagedBlock(player.getServerWorld(), sourcePos.toImmutable(), previous));
+            STAGED_BLOCKS.add(new StagedBlock(player.getServerWorld(), sourcePos.toImmutable(),
+                    previous, ProgressionContent.MANA_CRYSTAL_NODE));
         }
+        BlockPos conduitPos = sourcePos.offset(player.getHorizontalFacing().rotateYClockwise());
+        BlockPos vialPos = conduitPos.offset(player.getHorizontalFacing().rotateYClockwise());
+        BlockPos relayPos = sourcePos.offset(player.getHorizontalFacing().rotateYCounterclockwise());
+        stageIfAir(player.getServerWorld(), conduitPos, ProgressionContent.RAW_CRYSTAL_CONDUIT);
+        stageIfAir(player.getServerWorld(), vialPos, ProgressionContent.CRYSTAL_VIAL);
+        stageIfAir(player.getServerWorld(), relayPos, AutomationContent.AUTOMATION_RELAY);
+        if (player.getServerWorld().getBlockEntity(relayPos)
+                instanceof AutomationRelayBlockEntity relay) {
+            relay.configure(player, mediaCircle,
+                    vectorregnum.core.automation.AutomationRule.risingEdge());
+            relay.requestRemote(player);
+        }
+        SemanticCreationExecutor.create(player, new CreationSpec(CreationMaterial.ARCANE_FORCE,
+                CreationForm.BARRIER, 8, 600, false));
         giveIfMissing(player, ProgressionContent.MANA_CRYSTAL_SHARD,
                 new ItemStack(ProgressionContent.MANA_CRYSTAL_SHARD, 8));
+        giveIfMissing(player, ProgressionContent.CRYSTAL_VIAL_ITEM,
+                new ItemStack(ProgressionContent.CRYSTAL_VIAL_ITEM));
+        giveIfMissing(player, ProgressionContent.RAW_CRYSTAL_CONDUIT_ITEM,
+                new ItemStack(ProgressionContent.RAW_CRYSTAL_CONDUIT_ITEM, 8));
+        giveIfMissing(player, AutomationContent.AUTOMATION_RELAY_ITEM,
+                new ItemStack(AutomationContent.AUTOMATION_RELAY_ITEM));
         giveIfMissing(player, SpellMediaContent.SPELL_SCROLL,
                 CircleAuthoringService.createArtifactStack(SpellArtifact.scroll("showcase-scroll", mediaCircle)));
         giveIfMissing(player, SpellMediaContent.SPELL_BOOK,
@@ -116,14 +142,15 @@ public final class DevShowcaseController {
         LibrarySpellService.castForShowcase(player, "aegis_shell");
         LibrarySpellService.castForShowcase(player, "featherfall");
         LibrarySpellService.castForShowcase(player, "redstone_oracle");
-        player.sendMessage(Text.literal("VECTOR-REGNUM • PRIORITIES 1–10 VISUAL CHECKPOINT")
+        player.sendMessage(Text.literal("VECTOR-REGNUM • PRIORITIES 1–19 VISUAL CHECKPOINT")
                 .formatted(Formatting.GOLD, Formatting.BOLD), false);
         VectorRegnumMod.LOGGER.info(
-                "VISUAL_CHECKPOINT_READY milestone=priorities_1_10 player={} circle_sigils={} "
-                        + "library_spells={} vm_status={} vm_cost={} duration_ticks={}",
+                "VISUAL_CHECKPOINT_READY milestone=priorities_1_19 player={} circle_sigils={} "
+                        + "library_spells={} automation_relay={} vm_status={} vm_cost={} duration_ticks={}",
                 player.getGameProfile().getName(),
                 circle.sigils().size(),
                 ProgressionSpellLibrary.ALL.size(),
+                player.getServerWorld().getBlockState(relayPos).isOf(AutomationContent.AUTOMATION_RELAY),
                 probe.status(),
                 probe.cost().total(),
                 SpellVisualManager.DEV_SHOWCASE_DURATION_TICKS);
@@ -135,6 +162,14 @@ public final class DevShowcaseController {
         }
     }
 
-    private record StagedBlock(ServerWorld world, BlockPos pos, BlockState previous) {
+    private static void stageIfAir(ServerWorld world, BlockPos pos, net.minecraft.block.Block block) {
+        if (!world.isAir(pos)) return;
+        BlockState previous = world.getBlockState(pos);
+        world.setBlockState(pos, block.getDefaultState());
+        STAGED_BLOCKS.add(new StagedBlock(world, pos.toImmutable(), previous, block));
+    }
+
+    private record StagedBlock(ServerWorld world, BlockPos pos, BlockState previous,
+            net.minecraft.block.Block expected) {
     }
 }

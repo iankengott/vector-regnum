@@ -18,7 +18,9 @@ import java.util.List;
 
 /** Gives each player a persistent first-join field manual and starter tome. */
 public final class TutorialGuide {
-    private static final int CURRENT_GUIDE_VERSION = 2;
+    public static final String FIELD_MANUAL_TITLE_PREFIX = "Vector-Regnum Field Manual v";
+    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "6";
+    private static final int CURRENT_GUIDE_VERSION = 6;
     private static final AttachmentType<Boolean> RECEIVED = AttachmentRegistry.<Boolean>create(
             Identifier.of(VectorRegnumMod.MOD_ID, "received_tutorial_guide"),
             builder -> builder
@@ -79,7 +81,13 @@ public final class TutorialGuide {
                         + "Shard (shapeless): amethyst shard + lapis lazuli + glowstone dust.\n\n"
                         + "Source (crafting grid):\nALA\nLCL\nALA\n\n"
                         + "A = amethyst block\nL = lapis block\nC = crying obsidian\n\n"
-                        + "Use blaze powder, snowball, ender pearl, or amethyst shard on a source to tune fire, frost, void, or arcane. Permanent blocks cannot be recovered."),
+                        + "Use blaze powder, snowball, ender pearl, or amethyst shard on a source to tune fire, frost, void, or arcane. Natural crystals mature and recharge only while loaded and buried in conductive rock."),
+                page("MANA STORAGE\n\n"
+                        + "Connect a source to a Crystal Vial with Raw Crystal Conduits. Upgrade both together to a Runed Cell/Conduit, then a Resonant Vault/Conduit.\n\n"
+                        + "Raw: 200 μ, 8 blocks, 80%\n"
+                        + "Runed: 1,000 μ, 24 blocks, 95%\n"
+                        + "Resonant: 8,000 μ, 64 blocks, 100%\n\n"
+                        + "Use a store for status; sneak-use to draw. Tune only while empty and idle."),
                 page("AUTHOR A CIRCLE\n\n"
                         + "/vectorregnum circle new <id>\n"
                         + "/vectorregnum circle place <ring> <slot> <SIGIL>\n"
@@ -99,7 +107,7 @@ public final class TutorialGuide {
                         + "Craft blanks first: scroll = paper+ink+amethyst; book = book+lapis+amethyst; tablet = chiseled deepslate+lapis+amethyst. Scrolls burn once, books reuse, tablets anchor permanently."),
                 page("THE TICKED VM\n\n"
                         + "The new runtime has typed numbers, booleans, points, vectors, entities, and lists; Push/Pop memory; delay/duration; branches; and bounded loops.\n\n"
-                        + "Load an editable typed example with /vectorregnum circle vm_starter. Use circle params for comma-separated vector/list/control parameters. It yields safely at per-tick limits."),
+                        + "Load an editable typed example with /vectorregnum circle vm_starter. Use circle params for comma-separated vector/list/control parameters. VM_CREATE_FORM adds bounded material forms. It yields safely at per-tick limits."),
                 page("PERCEPTION & PHYSICS\n\n"
                         + "The VM can select and raycast entities, then emit validated impulse, acceleration, damping, path, move-toward, and keep-distance effects.\n\n"
                         + "Typed sigils use the VM_ prefix and EXECUTE ends the program. Cost names physical work, range, duration, rarity, memory, perception, and control flow."),
@@ -110,7 +118,7 @@ public final class TutorialGuide {
                         + "Compiler faults are physical. Depending on how far the spell progressed, failure may detonate internally, burst as an unstructured element, or become a violent miscast.\n\n"
                         + "Use /vectorregnum guide if you need another manual. Admins can use /vectorregnum devkit in a test world."));
         book.set(DataComponentTypes.WRITTEN_BOOK_CONTENT, new WrittenBookContentComponent(
-                RawFilteredPair.of("Vector-Regnum Field Manual v2"),
+                RawFilteredPair.of(FIELD_MANUAL_TITLE),
                 "The Realm of Direction",
                 0,
                 pages,

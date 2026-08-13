@@ -1,24 +1,36 @@
 # Vector-Regnum
 
-*The Realm of Direction* is a Fabric 1.21.1 programming-magic mod in active
-development. Players arrange sigils on geometric circles, read clockwise around
+> **Platform status (2026-08-13):** this is the active Vector-Regnum repository,
+> currently carrying the verified Fabric 1.21.1 alpha as its migration baseline.
+> The Fabric implementation is deprecated and frozen for new gameplay work;
+> **active development targets NeoForge 1.21.1** through roadmap priority 20.
+> The frozen Fabric repository and all companion projects are listed in
+> [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
+
+*The Realm of Direction* is a programming-magic mod. Players arrange sigils on
+geometric circles, read clockwise around
 the outer ring and then inward. Valid circles become server-authoritative world
 effects; invalid programs fault at an exact physical sigil and may collapse into
 Wild Magic.
 
 The current build is a substantial playable alpha, not a finished release. It
-implements the first working pass of the project's priorities 1–10: typed/ticked
-execution, authoring and diagnostics, safety-bounded control flow, perception,
-physics, cost accounting, three spell media, finite crystal progression, and a
-15-spell library.
+implements the first coherent working pass of priorities 1–19: typed/ticked
+execution, authoring and diagnostics,
+safety-bounded control flow, perception, physics, cost accounting, three spell
+media, finite crystal progression, Ponders, the visual Field Manual, the
+server-backed circle editor, natural crystal progression, GameTests,
+multiplayer/security policy, programmable automation, and compiler-driven
+client presentation.
 
-## Confirmed working
+## Confirmed working in the Fabric legacy alpha
 
 - Fabric Loader 0.18.3, Fabric API 0.116.7+1.21.1, Yarn
   1.21.1+build.3, Loom 1.14.8, Gradle 9.2.1, and Java 21.
-- **73 passing JUnit tests** covering the compatibility engine, typed VM,
-  circle authoring/persistence, media lifecycles, cost model, crystal rules,
-  progression, and the spell-library integration contract.
+- **170 passing JUnit tests** covering the compatibility engine, typed VM,
+  static stack analysis, semantics/presentation, circle authoring, media,
+  guide/Ponder models, geology, transport, multiplayer policy, automation
+  ownership, progression, and spell-library contracts, plus **16 passing
+  production Fabric GameTests** on an isolated headless server.
 - A Minecraft-independent `vm2` with numbers, booleans, points, vectors,
   entity references, immutable lists, Push/Pop/Dup memory, arithmetic, logic,
   branches, bounded loops, delays, durations, and exact source locations.
@@ -48,23 +60,68 @@ physics, cost accounting, three spell media, finite crystal progression, and a
   blaze powder, snowball, or ender pearl. Player channel affinity is selected
   with `/vectorregnum mana attune ...`.
 - Crystal/media recipes, seven persistent research discoveries, advancement
-  guidance, and a versioned first-join Field Manual v2.
+  guidance, and a versioned first-join Field Manual v6. The v6 book opens a
+  searchable, scrollable, progression-aware visual manual with three original
+  illustrated plates, contextual links, tooltips, live shaped/shapeless recipe
+  grids, bounded recipe-alternative cycling, and item icons. Its Ponder cards
+  and the `K` key request the latest
+  server-authoritative completed trace, including actual vm2 ticks, effects,
+  runtime faults, compatibility failures, and Wild Magic categories.
+- Natural crystal generation has deterministic buried veins, grade/depth/host
+  rules, scheduled maturation/recharge, persistent progress, and competition
+  balance. Crystal Vials, Runed Cells, and Resonant Vaults connect through
+  matching Raw, Runed, and Resonant conduits with bounded loaded-chunk search,
+  tiered range/throughput/loss, restart-safe in-flight mana, upgrades,
+  interactions, and comparator output.
+- Press `V` in a connected world for the server-backed graphical circle editor;
+  its responsive layout exposes a typed/searchable sigil palette, drag
+  placement and movement with preserved parameters, right-click/Delete removal,
+  quoted parameter editing, diagnostics, undo, compile, explicit
+  Scroll/Book/Tablet binding, and a server-validated fixed block-face anchor.
+  Static stack analysis rejects invalid vm2 programs before execution. All 15
+  curated spells lower through one complete opcode-driven semantic backend;
+  authored `VM_CREATE_FORM` programs create bounded permission-checked material
+  forms, and the presentation IR receives authoritative VM events.
 - Fifteen playable spells across combat, defense, movement, utility,
   detection, and automation. Their semantic programs are quoted through the
   same vm2 cost dimensions; Vector Step and Kinetic Ward use live vm2 physics.
 - Temporary Mage Light and Redstone Oracle blocks remove themselves through
   persisted scheduled block ticks, including across a normal server restart.
+- Formal multiplayer lifecycle and security: running spells cancel on owner
+  disconnect/death/dimension change or an unloaded owner chunk; PvP and team
+  friendly-fire policy is enforced; private/team chunk spell claims compose
+  with vanilla/Fabric protection callbacks; per-player casting is rate- and
+  concurrency-bounded; and versioned player/claim state migrates safely.
+- A persistent programmable Automation Relay can bind the current circle to
+  rising, falling, changing, or sustained redstone, accept owner-only remote
+  requests, expose bounded read-only data bridges/comparator output, and feed
+  immutable requests through a bounded many-producer/single-server-thread
+  scheduler. Offline owners and unloaded relay chunks never execute.
+- Every semantic or authored VM spell compiles into a bounded, versioned client
+  presentation program driven only by actually executed server events. The
+  runtime composes deterministic rings, beams, ribbons, particles, atmosphere,
+  spatial sound, material response, screen treatment, and aftermath with
+  distance/quality LODs. Press `O` for independent particle, darkness/fog,
+  flash, chromatic, camera, audio, reduced-motion, and photosensitivity controls.
 - The original Sigil Tome, Firebolt, Frost Nova, collision/damage/status
   effects, mana starvation, and context-sensitive Wild Magic remain available.
 
 The full workflow has been exercised on Hermes: remote Java 21 tests/build,
 loopback-only server, quick-joined Minecraft client, automated in-game
-preflight, and direct screenshot inspection of the typed eight-sigil circle,
-mana crystal, spell particles, compiler cost output, and bound media.
+preflight, and direct inspection of the priorities 1–19 showcase in
+`visual-evidence/hermes-window-20260813T153728Z.png`. The real
+`/home/iank/Desktop/Vector-Regnum.desktop` was also launched on the main PC;
+its client joined the isolated server, entered gameplay, and opened the new
+`O`-key presentation/accessibility screen. The inspected captures are
+`visual-evidence/local-gameplay-priorities-17-19.png` and
+`visual-evidence/local-accessibility-priority-19.png`. Minecraft closed
+normally, both private server units became inactive, and port 25575 was free
+on both machines afterward.
 
 ## Build and test
 
-Java 21 is required:
+These commands verify the deprecated Fabric reference during the port. Java 21
+is required:
 
 ```bash
 ./gradlew --no-daemon test build
@@ -80,13 +137,18 @@ JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" ./gradlew --no-daemon test buil
 
 ## Play on the main PC
 
-Double-click **Play Vector-Regnum** on the desktop. The shortcut runs
+This launcher runs the deprecated Fabric reference until priority 20 replaces
+it with a clearly named NeoForge launcher. Double-click **Play Vector-Regnum**
+on the desktop. The shortcut runs
 `scripts/local-play.sh`, which resolves Java 21, stages only this mod in an
 isolated flat world on `127.0.0.1:25575`, launches Minecraft through
 `steam-run`, and stops the private server when the client closes. It does not
 touch the normal Minecraft launcher, saves, modpacks, or port 25565.
 
 ## Hermes development workflow
+
+The current scripts exercise the deprecated Fabric reference. Priority 20 must
+create equivalent guarded NeoForge workflows before the port is accepted.
 
 ```bash
 scripts/hermes-sync.sh
@@ -145,6 +207,19 @@ Progression and spells:
 /vectorregnum vm demo
 ```
 
+Multiplayer security and automation:
+
+```text
+/vectorregnum security
+/vectorregnum security claim private|team
+/vectorregnum security release
+/vectorregnum automation give
+/vectorregnum automation program <x> <y> <z>
+/vectorregnum automation rule rising|falling|change|while_high <x> <y> <z> <threshold> <cooldown>
+/vectorregnum automation trigger <x> <y> <z>
+/vectorregnum automation inspect <x> <y> <z>
+```
+
 The library IDs are `ember_lance`, `chain_frost`, `gravity_slam`,
 `aegis_shell`, `kinetic_ward`, `vector_step`, `featherfall`, `mage_light`,
 `excavate`, `stoneweave`, `life_sense`, `ore_resonance`, `sentry_pulse`,
@@ -174,15 +249,65 @@ Useful direct-vm2 sigils include:
 Run `circle vm_starter` for a working delayed, costed Vector Step example.
 The original seven compatibility sigils remain supported for older circles.
 
+## Spell presentation system
+
+Spell presentation is compiler-driven rather than limited to a hand-authored
+animation for each library spell. Shared spell semantics produce authoritative
+VM behavior and a bounded client presentation program, with runtime events
+keeping branches, loops, delays, targets, and paths in sync.
+
+Every spell combines many restrained, coordinated
+layers: readable form and telegraphing, particles and procedural geometry,
+illumination and dynamic/shadow response, darkness/fog and air movement,
+spatial sound, camera/screen response, material interaction, and lingering aftermath. Those
+examples are a floor rather than a closed list. Signature depth-aware shaders
+may later enhance the composition, but essential effects remain scalable,
+accessible, mechanically truthful, and functional without a shaderpack.
+
+See [SPELL_PRESENTATION.md](SPELL_PRESENTATION.md) for the presentation IR,
+semantic-generation rules, sensory choreography standard, runtime boundaries,
+budgets, compatibility, and accessibility requirements.
+
+## Recovered SMP design decisions
+
+The recovered SMP notes have been reconciled with the implemented alpha in
+[docs/SMP_INTEGRATION_DECISIONS.md](docs/SMP_INTEGRATION_DECISIONS.md). The
+canonical direction is:
+
+- NeoForge 1.21.1 replaces Fabric for active development; Fabric remains a
+  separate explicitly deprecated backup.
+- Each character has exactly one permanent natural element. Frost becomes Ice;
+  the ordinary twelve are Water, Fire, Air, Earth, Lightning, Time, Space,
+  Light, Dark, Nature, Ice, and Sound; Void is rare, while Arcane is neutral raw
+  mana rather than a natural element. Mutable attunement uses data-driven
+  affinity distance with 100/75/50/25% efficiency and a 25% opposed floor.
+- Rituals, engravings, books, scrolls, and other casting methods may commit
+  reagents to reduce mana, casting time, upkeep, and instability. Genuine spell
+  faults consume committed resources; policy or engine failures do not.
+- Persistent magic owns a restart-safe upkeep/cleanup record and a natural
+  endpoint. If it cannot pay before concluding—or never concludes before its
+  hard cap—it resolves through bounded deterministic Wild Magic and atomic
+  cleanup.
+- Parallel branches retain a shared atomic `Push`/`Pop` stack but advance in a
+  deterministic authoritative server-tick order.
+- Every cooperative ritual requires explicit approval from every contributor
+  for that ritual's exact bounded commitment.
+- Dangerous and coercive mechanics retain their identity behind permission,
+  rate/range/lifetime, deterministic-randomness, telegraph, cleanup, and
+  accessibility boundaries.
+
+Origins, precision melee, general progression, story/world systems,
+administration, and the modpack are separate repositories connected through a
+small versioned API. See [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
+
 ## Still not finished
 
-The largest remaining systems are a graphical in-world editor, natural crystal
-world generation and transport infrastructure, creation/form opcodes,
-Create-style spell **Ponders**, generic lowering of every curated semantic
-opcode instead of some purpose-built Fabric effects, dedicated GameTests,
-multiplayer claim integrations beyond standard Fabric break callbacks,
-redstone/remote/multithread/data-bridge expansion, original art/audio,
-balancing/configuration/accessibility, and release packaging.
+The immediate work is the repository-preserving NeoForge port, followed by the
+elemental identity model, reagent economy, persistent upkeep and conclusions,
+shared-memory branching, explicitly approved cooperative rituals, security and
+accessibility hardening, and the optional SMP integration API. Configuration,
+balancing, profiling, full playtests, NeoForge/modpack compatibility, final art,
+localization, and release packaging follow those systems.
 
 See [ROADMAP.md](ROADMAP.md) for the detailed status.
 
@@ -193,7 +318,13 @@ the machine boundaries, canonical priority queue, required NixOS and Hermes
 verification ladder, visual-inspection requirement, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
-[ROADMAP.md](ROADMAP.md) controls the order.
+[ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priorities 1–19
+are checked as the Fabric legacy alpha and the first unfinished canonical item
+is priority 20: finish freezing the published Fabric legacy repository, then
+port this active repository's complete verified behavior and testing workflow
+to NeoForge. `AGENTS.md`
+also records Ian's allowed subagent profiles and delegation
+rules so no earlier chat context is required.
 
 ---
 

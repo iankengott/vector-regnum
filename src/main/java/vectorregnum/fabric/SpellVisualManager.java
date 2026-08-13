@@ -12,6 +12,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.sound.SoundEvents;
 import net.minecraft.util.math.Box;
+import net.minecraft.util.math.Direction;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.hit.HitResult;
 import net.minecraft.world.RaycastContext;
@@ -22,6 +23,9 @@ import vectorregnum.core.WildMagicCategory;
 import vectorregnum.core.circle.CircleDiagnostic;
 import vectorregnum.core.circle.MagicCircle;
 import vectorregnum.core.circle.PlacedSigil;
+import vectorregnum.core.presentation.ExecutionEvent;
+import vectorregnum.fabric.presentation.PresentationNetworking;
+import vectorregnum.fabric.multiplayer.SpellSecurityPolicy;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -44,6 +48,7 @@ public final class SpellVisualManager {
             return;
         }
         initialized = true;
+        PresentationNetworking.initialize();
         ServerTickEvents.END_SERVER_TICK.register(SpellVisualManager::tick);
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> ACTIVE.clear());
     }
@@ -69,6 +74,30 @@ public final class SpellVisualManager {
         ACTIVE.add(new CircleVisual(player));
     }
 
+    /** Resolves only bounded, mechanics-derived VM events into cosmetic particles. */
+    public static void acceptVmEvent(ServerPlayerEntity player, ExecutionEvent event) {
+        if (player == null || player.isRemoved() || event == null) {
+            return;
+        }
+        ServerWorld world = player.getServerWorld();
+        Vec3d point = player.getEyePos();
+        switch (event) {
+            case ExecutionEvent.Started ignored -> world.spawnParticles(ParticleTypes.ENCHANT,
+                    point.x, point.y, point.z, 3, 0.12, 0.12, 0.12, 0.03);
+            case ExecutionEvent.DelayStarted delay -> world.spawnParticles(ParticleTypes.END_ROD,
+                    point.x, point.y, point.z, Math.min(6, delay.delayTicks()),
+                    0.16, 0.16, 0.16, 0.01);
+            case ExecutionEvent.WorldEffectEmitted ignored -> world.spawnParticles(
+                    ParticleTypes.ELECTRIC_SPARK, point.x, point.y, point.z,
+                    5, 0.2, 0.2, 0.2, 0.03);
+            case ExecutionEvent.Halted ignored -> world.spawnParticles(ParticleTypes.END_ROD,
+                    point.x, point.y, point.z, 4, 0.18, 0.18, 0.18, 0.02);
+            case ExecutionEvent.Faulted ignored -> world.spawnParticles(ParticleTypes.SMOKE,
+                    point.x, point.y, point.z, 8, 0.22, 0.25, 0.22, 0.03);
+            default -> { }
+        }
+    }
+
     public static void showAuthoredCircle(
             ServerPlayerEntity player, MagicCircle circle, List<CircleDiagnostic> diagnostics) {
         ACTIVE.removeIf(visual -> visual instanceof AuthoredCircleVisual authored
@@ -81,6 +110,14 @@ public final class SpellVisualManager {
         ACTIVE.removeIf(visual -> visual instanceof AuthoredCircleVisual authored
                 && authored.player.getUuid().equals(player.getUuid()));
         ACTIVE.add(new AuthoredCircleVisual(player, circle, diagnostics, center));
+    }
+
+    /** Draws a fixed editor preview parallel to a server-captured block face. */
+    public static void showAuthoredCircleOnFace(ServerPlayerEntity player, MagicCircle circle,
+            List<CircleDiagnostic> diagnostics, Vec3d center, Direction face) {
+        ACTIVE.removeIf(visual -> visual instanceof AuthoredCircleVisual authored
+                && authored.player.getUuid().equals(player.getUuid()));
+        ACTIVE.add(new AuthoredCircleVisual(player, circle, diagnostics, center, face));
     }
 
     private static void tick(MinecraftServer server) {
@@ -100,6 +137,13 @@ public final class SpellVisualManager {
 
     private interface ActiveVisual {
         boolean tick();
+    }
+
+    private static boolean casterAvailable(ServerPlayerEntity caster, ServerWorld world) {
+        return caster != null && !caster.isRemoved() && caster.isAlive()
+                && caster.getServerWorld() == world
+                && caster.getServer().getPlayerManager().getPlayer(caster.getUuid()) == caster
+                && world.isChunkLoaded(caster.getBlockPos());
     }
 
     private static final class ProjectileVisual implements ActiveVisual {
@@ -124,7 +168,7 @@ public final class SpellVisualManager {
 
         @Override
         public boolean tick() {
-            if (age++ >= 45 || caster.isRemoved()) {
+            if (age++ >= 45 || !casterAvailable(caster, world)) {
                 return false;
             }
             Vec3d position = origin.add(direction.multiply(age * 0.55));
@@ -153,7 +197,8 @@ public final class SpellVisualManager {
             List<LivingEntity> hits = world.getEntitiesByClass(
                     LivingEntity.class,
                     new Box(position, position).expand(radius),
-                    entity -> entity != caster && entity.isAlive());
+                    entity -> entity != caster && entity.isAlive()
+                            && SpellSecurityPolicy.canAffectEntity(caster, entity));
             if (!hits.isEmpty()) {
                 LivingEntity target = hits.getFirst();
                 target.damage(world.getDamageSources().magic(), (float) Math.min(40.0, 4.0 * magnitude));
@@ -190,7 +235,7 @@ public final class SpellVisualManager {
 
         @Override
         public boolean tick() {
-            if (age++ >= 80 || caster.isRemoved()) {
+            if (age++ >= 80 || !casterAvailable(caster, world)) {
                 return false;
             }
             double radius = Math.min(targetRadius, 0.35 + age * 0.16);
@@ -214,6 +259,7 @@ public final class SpellVisualManager {
                         new Box(center, center).expand(targetRadius, 2.5, targetRadius),
                         entity -> entity != caster
                                 && entity.isAlive()
+                                && SpellSecurityPolicy.canAffectEntity(caster, entity)
                                 && entity.squaredDistanceTo(center) <= targetRadius * targetRadius);
                 for (LivingEntity target : targets) {
                     if (element == Element.FROST) {
@@ -246,7 +292,7 @@ public final class SpellVisualManager {
 
         @Override
         public boolean tick() {
-            if (age++ >= 50 || caster.isRemoved()) {
+            if (age++ >= 50 || !casterAvailable(caster, world)) {
                 return false;
             }
             if (age == 1 && command.category() == WildMagicCategory.INTERNAL_MANA_DETONATION) {
@@ -305,7 +351,7 @@ public final class SpellVisualManager {
 
         @Override
         public boolean tick() {
-            if (age++ >= DEV_SHOWCASE_DURATION_TICKS || player.isRemoved()) {
+            if (age++ >= DEV_SHOWCASE_DURATION_TICKS || !casterAvailable(player, world)) {
                 return false;
             }
             if (age % 4 == 0) {
@@ -333,11 +379,16 @@ public final class SpellVisualManager {
 
         private AuthoredCircleVisual(
                 ServerPlayerEntity player, MagicCircle circle, List<CircleDiagnostic> diagnostics) {
-            this(player, circle, diagnostics, null);
+            this(player, circle, diagnostics, null, null);
         }
 
         private AuthoredCircleVisual(ServerPlayerEntity player, MagicCircle circle,
                 List<CircleDiagnostic> diagnostics, Vec3d anchoredCenter) {
+            this(player, circle, diagnostics, anchoredCenter, null);
+        }
+
+        private AuthoredCircleVisual(ServerPlayerEntity player, MagicCircle circle,
+                List<CircleDiagnostic> diagnostics, Vec3d anchoredCenter, Direction anchorFace) {
             this.player = player;
             this.world = player.getServerWorld();
             this.circle = circle;
@@ -345,19 +396,28 @@ public final class SpellVisualManager {
                     .filter(diagnostic -> diagnostic.severity() == CircleDiagnostic.Severity.ERROR)
                     .flatMap(diagnostic -> diagnostic.location().stream())
                     .collect(Collectors.toUnmodifiableSet());
-            Vec3d forward = player.getRotationVec(1.0F).normalize();
-            Vec3d horizontal = forward.crossProduct(new Vec3d(0.0, 1.0, 0.0));
-            this.right = horizontal.lengthSquared() < 1.0e-6
-                    ? new Vec3d(1.0, 0.0, 0.0)
-                    : horizontal.normalize();
-            this.up = right.crossProduct(forward).normalize();
+            Vec3d forward;
+            if (anchorFace == null) {
+                forward = player.getRotationVec(1.0F).normalize();
+                Vec3d horizontal = forward.crossProduct(new Vec3d(0.0, 1.0, 0.0));
+                this.right = horizontal.lengthSquared() < 1.0e-6
+                        ? new Vec3d(1.0, 0.0, 0.0) : horizontal.normalize();
+                this.up = right.crossProduct(forward).normalize();
+            } else {
+                forward = new Vec3d(anchorFace.getOffsetX(), anchorFace.getOffsetY(),
+                        anchorFace.getOffsetZ());
+                Vec3d referenceUp = Math.abs(forward.y) > 0.9
+                        ? new Vec3d(0.0, 0.0, 1.0) : new Vec3d(0.0, 1.0, 0.0);
+                this.right = referenceUp.crossProduct(forward).normalize();
+                this.up = forward.crossProduct(right).normalize();
+            }
             this.center = anchoredCenter == null
                     ? player.getEyePos().add(forward.multiply(5.0)) : anchoredCenter;
         }
 
         @Override
         public boolean tick() {
-            if (age++ >= DURATION_TICKS || player.isRemoved()) {
+            if (age++ >= DURATION_TICKS || !casterAvailable(player, world)) {
                 return false;
             }
             if (age % 4 == 0) {

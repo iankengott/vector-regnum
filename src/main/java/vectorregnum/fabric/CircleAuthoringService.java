@@ -16,6 +16,10 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.TypedActionResult;
+import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.math.Direction;
 import net.minecraft.world.World;
 import net.minecraft.util.math.Vec3d;
 import vectorregnum.core.CastResult;
@@ -33,7 +37,10 @@ import vectorregnum.core.circle.SpellArtifactPersistence;
 import vectorregnum.core.circle.SpellMedium;
 import vectorregnum.core.circle.Vm2CircleCompilation;
 import vectorregnum.core.circle.Vm2CircleCompiler;
+import vectorregnum.fabric.editor.CircleEditorInteraction;
+import vectorregnum.fabric.editor.CircleEditorAnchor;
 import vectorregnum.core.vm2.Vector3;
+import vectorregnum.fabric.ponder.PonderTraceNetworking;
 
 import java.util.List;
 import java.util.Map;
@@ -44,7 +51,9 @@ import java.util.concurrent.ConcurrentHashMap;
 /** Player-facing, server-authoritative editor and spell-media integration. */
 public final class CircleAuthoringService {
     private static final String ARTIFACT_KEY = "vector_regnum_artifact";
+    private static final double EDITOR_ANCHOR_RANGE = 8.0;
     private static final Map<UUID, CircleEditorSession> SESSIONS = new ConcurrentHashMap<>();
+    private static final Map<UUID, CircleEditorAnchor> EDITOR_ANCHORS = new ConcurrentHashMap<>();
 
     private static final AttachmentType<String> SAVED_CIRCLE = AttachmentRegistry.<String>create(
             Identifier.of(VectorRegnumMod.MOD_ID, "authored_circle"),
@@ -60,7 +69,10 @@ public final class CircleAuthoringService {
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 SESSIONS.put(handler.player.getUuid(), load(handler.player)));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                SESSIONS.remove(handler.player.getUuid()));
+        {
+            SESSIONS.remove(handler.player.getUuid());
+            EDITOR_ANCHORS.remove(handler.player.getUuid());
+        });
     }
 
     public static CircleEditorSession session(ServerPlayerEntity player) {
@@ -70,7 +82,7 @@ public final class CircleAuthoringService {
     public static void newCircle(ServerPlayerEntity player, String id) {
         replace(player, MagicCircle.empty(id, displayName(id), 3, 8));
         player.sendMessage(Text.literal("New 3-ring circle: " + id).formatted(Formatting.GOLD), false);
-        SpellVisualManager.showAuthoredCircle(player, session(player).current(), List.of());
+        showEditorPreview(player, session(player).current(), List.of());
     }
 
     public static void loadStarter(ServerPlayerEntity player) {
@@ -112,8 +124,7 @@ public final class CircleAuthoringService {
     public static boolean parameterizeValues(
             ServerPlayerEntity player, int ring, int slot, String rawValues) {
         try {
-            List<CircleValue> values = java.util.Arrays.stream(rawValues.trim().split("[ ,]+"))
-                    .filter(value -> !value.isBlank())
+            List<CircleValue> values = CircleEditorInteraction.parseParameterInput(rawValues).stream()
                     .map(CircleAuthoringService::parseValue)
                     .toList();
             CircleEditorSession.EditResult result = session(player).parameterize(
@@ -133,6 +144,15 @@ public final class CircleAuthoringService {
         return result.changed();
     }
 
+    public static boolean move(ServerPlayerEntity player, int sourceRing, int sourceSlot,
+            int destinationRing, int destinationSlot) {
+        CircleEditorSession.EditResult result = session(player).move(
+                new CircleCoordinate(sourceRing, sourceSlot),
+                new CircleCoordinate(destinationRing, destinationSlot));
+        finishEdit(player, result);
+        return result.changed();
+    }
+
     public static boolean undo(ServerPlayerEntity player) {
         CircleEditorSession.EditResult result = session(player).undo();
         finishEdit(player, result);
@@ -143,15 +163,49 @@ public final class CircleAuthoringService {
         MagicCircle circle = session(player).current();
         if (Vm2CircleCompiler.isVm2Circle(circle)) {
             Vm2CircleCompilation typed = Vm2CircleCompiler.compile(circle,
-                    vmContext(player, player.getEyePos()));
+                    vmContext(player, editorOrigin(player)));
             sendVmCompilation(player, typed);
-            SpellVisualManager.showAuthoredCircle(player, circle, typed.diagnostics());
+            showEditorPreview(player, circle, typed.diagnostics());
+            PonderTraceNetworking.publishCompilation(player, "server-compiler-trace",
+                    circle.name() + " — authoritative compilation", typed);
             return new AuthoringCompilation(null, typed);
         }
         CircleCompilation legacy = session(player).compilePreview();
         sendCompilation(player, legacy);
-        SpellVisualManager.showAuthoredCircle(player, circle, legacy.diagnostics());
+        showEditorPreview(player, circle, legacy.diagnostics());
         return new AuthoringCompilation(legacy, null);
+    }
+
+    /** Captures the server's current block raycast; the client never supplies coordinates. */
+    public static EditorAnchorResult captureEditorAnchor(ServerPlayerEntity player) {
+        HitResult rawHit = player.raycast(EDITOR_ANCHOR_RANGE, 1.0F, false);
+        if (!(rawHit instanceof BlockHitResult hit) || rawHit.getType() != HitResult.Type.BLOCK) {
+            return EditorAnchorResult.rejected("Look at a block face within 8 blocks, then try again");
+        }
+        BlockPos position = hit.getBlockPos();
+        if (!player.getServerWorld().isChunkLoaded(position)
+                || player.getServerWorld().getBlockState(position).isAir()) {
+            return EditorAnchorResult.rejected("The targeted block face is not loaded or solid");
+        }
+        CircleEditorAnchor anchor = new CircleEditorAnchor(
+                player.getServerWorld().getRegistryKey().getValue().toString(),
+                position.getX(), position.getY(), position.getZ(),
+                CircleEditorAnchor.Face.valueOf(hit.getSide().name()));
+        EDITOR_ANCHORS.put(player.getUuid(), anchor);
+        showEditorPreview(player, session(player).current(), List.of());
+        return EditorAnchorResult.accepted("Anchored to " + anchor.description());
+    }
+
+    public static EditorAnchorResult clearEditorAnchor(ServerPlayerEntity player) {
+        CircleEditorAnchor removed = EDITOR_ANCHORS.remove(player.getUuid());
+        showEditorPreview(player, session(player).current(), List.of());
+        return removed == null
+                ? EditorAnchorResult.rejected("No editor anchor was set")
+                : EditorAnchorResult.accepted("World-face anchor cleared");
+    }
+
+    public static String editorAnchorDescription(ServerPlayerEntity player) {
+        return validEditorAnchor(player).map(CircleEditorAnchor::description).orElse("");
     }
 
     public static boolean cast(ServerPlayerEntity player) {
@@ -174,7 +228,7 @@ public final class CircleAuthoringService {
                         sigil.type(), parameters)).formatted(Formatting.GRAY), false);
             }
         }
-        SpellVisualManager.showAuthoredCircle(player, circle, List.of());
+        showEditorPreview(player, circle, List.of());
     }
 
     public static boolean giveMedium(ServerPlayerEntity player, SpellMedium medium) {
@@ -258,15 +312,22 @@ public final class CircleAuthoringService {
             Vm2CircleCompilation compilation = Vm2CircleCompiler.compile(circle, vmContext(player, origin));
             sendVmCompilation(player, compilation);
             SpellVisualManager.showAuthoredCircleAt(player, circle, compilation.diagnostics(), origin);
+            if (compilation.hasErrors()) {
+                PonderTraceNetworking.publishCompilation(player, "server-compiler-fault",
+                        circle.name() + " — compiler fault", compilation);
+            }
             return !compilation.hasErrors() && FabricVmService.startAuthored(player,
-                    compilation.compiledProgram().orElseThrow(), chargeMana, circle.name());
+                    compilation, chargeMana, circle.name());
         }
         CircleCompilation compilation = CircleAuthoringCompiler.compile(circle);
         sendCompilation(player, compilation);
         SpellVisualManager.showAuthoredCircleAt(player, circle, compilation.diagnostics(), origin);
-        return !compilation.hasErrors() && CastService.castAt(player,
-                compilation.compatibilitySource(), chargeMana, origin,
-                player.getRotationVec(1.0F)) instanceof CastResult.Success;
+        if (compilation.hasErrors()) return false;
+        CastResult result = CastService.castAt(player, compilation.compatibilitySource(), chargeMana,
+                origin, player.getRotationVec(1.0F));
+        PonderTraceNetworking.publishCompatibility(player, "server-authored-compatibility-trace",
+                circle.name() + " — authoritative result", compilation, result);
+        return result instanceof CastResult.Success;
     }
 
     public static ItemStack createArtifactStack(SpellArtifact artifact) {
@@ -342,7 +403,7 @@ public final class CircleAuthoringService {
             persist(player);
             player.sendMessage(Text.literal("Circle updated • " + result.circle().sigils().size() + " sigils")
                     .formatted(Formatting.AQUA), true);
-            SpellVisualManager.showAuthoredCircle(player, result.circle(), List.of());
+            showEditorPreview(player, result.circle(), List.of());
         } else {
             sendDiagnostics(player, result.diagnostics());
         }
@@ -432,6 +493,46 @@ public final class CircleAuthoringService {
         return new CircleValue.NumberValue(raw);
     }
 
+    private static Optional<CircleEditorAnchor> validEditorAnchor(ServerPlayerEntity player) {
+        CircleEditorAnchor anchor = EDITOR_ANCHORS.get(player.getUuid());
+        if (anchor == null) {
+            return Optional.empty();
+        }
+        String currentDimension = player.getServerWorld().getRegistryKey().getValue().toString();
+        BlockPos position = new BlockPos(anchor.x(), anchor.y(), anchor.z());
+        if (!anchor.dimension().equals(currentDimension)
+                || !player.getServerWorld().isChunkLoaded(position)
+                || player.getServerWorld().getBlockState(position).isAir()) {
+            EDITOR_ANCHORS.remove(player.getUuid(), anchor);
+            return Optional.empty();
+        }
+        return Optional.of(anchor);
+    }
+
+    private static Vec3d editorOrigin(ServerPlayerEntity player) {
+        return validEditorAnchor(player).map(CircleAuthoringService::anchorCenter)
+                .orElseGet(player::getEyePos);
+    }
+
+    private static Vec3d anchorCenter(CircleEditorAnchor anchor) {
+        return Vec3d.ofCenter(new BlockPos(anchor.x(), anchor.y(), anchor.z())).add(
+                anchor.face().offsetX() * 0.505,
+                anchor.face().offsetY() * 0.505,
+                anchor.face().offsetZ() * 0.505);
+    }
+
+    private static void showEditorPreview(ServerPlayerEntity player, MagicCircle circle,
+            List<CircleDiagnostic> diagnostics) {
+        Optional<CircleEditorAnchor> anchor = validEditorAnchor(player);
+        if (anchor.isEmpty()) {
+            SpellVisualManager.showAuthoredCircle(player, circle, diagnostics);
+            return;
+        }
+        CircleEditorAnchor fixed = anchor.orElseThrow();
+        SpellVisualManager.showAuthoredCircleOnFace(player, circle, diagnostics,
+                anchorCenter(fixed), Direction.valueOf(fixed.face().name()));
+    }
+
     private static Vm2CircleCompiler.Context vmContext(ServerPlayerEntity player, Vec3d origin) {
         Vec3d look = player.getRotationVec(1.0F).normalize();
         return new Vm2CircleCompiler.Context(player.getUuidAsString(),
@@ -452,6 +553,22 @@ public final class CircleAuthoringService {
 
         public List<CircleDiagnostic> diagnostics() {
             return compatibility != null ? compatibility.diagnostics() : vm2.diagnostics();
+        }
+    }
+
+    public record EditorAnchorResult(boolean accepted, String message) {
+        public EditorAnchorResult {
+            if (message == null || message.isBlank() || message.length() > 256) {
+                throw new IllegalArgumentException("anchor result needs a bounded message");
+            }
+        }
+
+        public static EditorAnchorResult accepted(String message) {
+            return new EditorAnchorResult(true, message);
+        }
+
+        public static EditorAnchorResult rejected(String message) {
+            return new EditorAnchorResult(false, message);
         }
     }
 

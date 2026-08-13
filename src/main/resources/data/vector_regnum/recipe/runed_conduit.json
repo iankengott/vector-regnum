@@ -1,0 +1,10 @@
+{
+  "type": "minecraft:crafting_shaped", "category": "redstone",
+  "pattern": ["RGR", "GLG", "RGR"],
+  "key": {
+    "R": {"item": "vector_regnum:raw_crystal_conduit"},
+    "G": {"item": "minecraft:gold_ingot"},
+    "L": {"item": "minecraft:redstone_block"}
+  },
+  "result": {"id": "vector_regnum:runed_conduit", "count": 4}
+}

@@ -10,6 +10,7 @@ import vectorregnum.fabric.progression.ManaAffinity;
 import vectorregnum.fabric.progression.ManaCrystalNodeBlock;
 import vectorregnum.fabric.progression.ManaDrawRules;
 import vectorregnum.fabric.progression.ProgressionContent;
+import vectorregnum.fabric.multiplayer.PlayerDataMigration;
 
 /** Server-authoritative, persistent mana. It intentionally has no regeneration. */
 public final class ManaData {
@@ -215,5 +216,23 @@ public final class ManaData {
         long target = player.getServerWorld().getTime() + ticks;
         long current = player.getAttachedOrCreate(CHANNEL_LOCK_UNTIL);
         player.setAttached(CHANNEL_LOCK_UNTIL, Math.max(current, target));
+    }
+
+    /** Repairs legacy/corrupt fields and clears death-only transient channel state. */
+    public static void migrateAndSanitize(ServerPlayerEntity player, boolean deathCopy, int schema) {
+        PlayerDataMigration.Snapshot migrated = PlayerDataMigration.migrate(
+                new PlayerDataMigration.Snapshot(schema,
+                        player.getAttachedOrCreate(MANA), player.getAttachedOrCreate(CAPACITY),
+                        player.getAttachedOrCreate(AFFINITY),
+                        player.getAttachedOrCreate(ATTUNED_SOURCE),
+                        player.getAttachedOrCreate(ATTUNED_DIMENSION),
+                        player.getAttachedOrCreate(CHANNEL_LOCK_UNTIL)),
+                deathCopy, MAX_CAPACITY);
+        player.setAttached(CAPACITY, migrated.capacity());
+        player.setAttached(MANA, migrated.mana());
+        player.setAttached(AFFINITY, migrated.affinity());
+        player.setAttached(ATTUNED_SOURCE, migrated.sourcePosition());
+        player.setAttached(ATTUNED_DIMENSION, migrated.sourceDimension());
+        player.setAttached(CHANNEL_LOCK_UNTIL, migrated.channelLockUntil());
     }
 }

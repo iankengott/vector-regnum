@@ -4,8 +4,16 @@ import vectorregnum.core.vm2.Instruction;
 import vectorregnum.core.vm2.Program;
 import vectorregnum.core.vm2.RuntimeValue;
 import vectorregnum.core.vm2.SourceLocation;
+import vectorregnum.core.vm2.StackAnalysis;
+import vectorregnum.core.vm2.StackDiagnostic;
+import vectorregnum.core.vm2.StackTypeAnalyzer;
 import vectorregnum.core.vm2.Vector3;
 import vectorregnum.core.vm2.WorldAccess;
+import vectorregnum.core.semantic.CreationForm;
+import vectorregnum.core.semantic.CreationMaterial;
+import vectorregnum.core.semantic.CreationSpec;
+import vectorregnum.core.semantic.SemanticCostModel;
+import vectorregnum.core.semantic.SemanticInstruction;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -53,7 +61,17 @@ public final class Vm2CircleCompiler {
             return new Vm2CircleCompilation(ordered, null, diagnostics);
         }
         try {
-            return new Vm2CircleCompilation(ordered, new Program(instructions), diagnostics);
+            Program program = new Program(instructions);
+            StackAnalysis analysis = StackTypeAnalyzer.analyze(program);
+            for (StackDiagnostic diagnostic : analysis.diagnostics()) {
+                int sourceIndex = diagnostic.source().sourceIndex();
+                CircleCoordinate coordinate = sourceIndex >= 0 && sourceIndex < ordered.size()
+                        ? ordered.get(sourceIndex).coordinate() : null;
+                diagnostics.add(error("STATIC_" + diagnostic.code().name(),
+                        diagnostic.message(), coordinate, sourceIndex));
+            }
+            return new Vm2CircleCompilation(ordered,
+                    diagnostics.isEmpty() ? program : null, diagnostics);
         } catch (RuntimeException exception) {
             diagnostics.add(error("INVALID_CONTROL_FLOW", safeMessage(exception), null, -1));
             return new Vm2CircleCompilation(ordered, null, diagnostics);
@@ -145,6 +163,7 @@ public final class Vm2CircleCompiler {
             case "VM_FOLLOW_PATH" -> physics(sigil, source, Physics.FOLLOW_PATH);
             case "VM_MOVE_TOWARD" -> physics(sigil, source, Physics.MOVE_TOWARD);
             case "VM_KEEP_DISTANCE" -> physics(sigil, source, Physics.KEEP_DISTANCE);
+            case "VM_CREATE_FORM" -> creation(sigil, source);
             case "EXECUTE" -> {
                 requireCount(sigil, 0);
                 yield Instruction.halt(source);
@@ -182,6 +201,31 @@ public final class Vm2CircleCompiler {
             case MOVE_TOWARD -> Instruction.moveToward(work, rarity, source);
             case KEEP_DISTANCE -> Instruction.keepDistance(work, rarity, source);
         };
+    }
+
+    private static Instruction creation(PlacedSigil sigil, SourceLocation source) {
+        requireCount(sigil, 5);
+        String material = text(sigil, 0, "material");
+        String form = text(sigil, 1, "form");
+        boolean permanent;
+        if (sigil.parameters().get(4) instanceof CircleValue.BooleanValue value) permanent = value.value();
+        else throw fault("PARAMETER_TYPE", "VM_CREATE_FORM parameter 5 (permanent) must be true or false");
+        try {
+            CreationSpec spec = new CreationSpec(CreationMaterial.valueOf(material.toUpperCase()),
+                    CreationForm.valueOf(form.toUpperCase()), number(sigil, 2), integer(sigil, 3), permanent);
+            SemanticInstruction semantic = SemanticInstruction.creation(spec, source);
+            return Instruction.semantic(semantic, SemanticCostModel.cost(semantic));
+        } catch (IllegalArgumentException exception) {
+            throw fault("INVALID_CREATION_FORM", exception.getMessage());
+        }
+    }
+
+    private static String text(PlacedSigil sigil, int index, String name) {
+        if (!(sigil.parameters().get(index) instanceof CircleValue.TextValue value)) {
+            throw fault("PARAMETER_TYPE", "VM_CREATE_FORM parameter " + (index + 1)
+                    + " (" + name + ") must be text");
+        }
+        return value.value();
     }
 
     private static double number(PlacedSigil sigil, int index) {

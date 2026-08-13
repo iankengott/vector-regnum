@@ -28,6 +28,17 @@ import vectorregnum.core.vm2.TickResult;
 import vectorregnum.core.vm2.Vector3;
 import vectorregnum.core.vm2.WorldAccess;
 import vectorregnum.core.vm2.WorldEffect;
+import vectorregnum.core.presentation.PresentationCompiler;
+import vectorregnum.core.semantic.SemanticInstruction;
+import vectorregnum.core.circle.CircleCoordinate;
+import vectorregnum.core.circle.PlacedSigil;
+import vectorregnum.core.circle.Vm2CircleCompilation;
+import vectorregnum.fabric.ponder.PonderTimeline;
+import vectorregnum.fabric.ponder.PonderTimelineBuilder;
+import vectorregnum.fabric.ponder.PonderTraceNetworking;
+import vectorregnum.fabric.multiplayer.CastAbuseGuard;
+import vectorregnum.fabric.multiplayer.SpellSecurityPolicy;
+import vectorregnum.fabric.multiplayer.SpellLeasePolicy;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -36,11 +47,15 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 
 /** Executes vm2 once per server tick and is the only adapter allowed to mutate entities. */
 public final class FabricVmService {
+    private static final int PONDER_LIVE_INTERVAL_TICKS = 10;
     private static final List<ActiveVm> ACTIVE_VMS = new ArrayList<>();
     private static final List<ActiveForce> ACTIVE_FORCES = new ArrayList<>();
+    private static final CastAbuseGuard ABUSE_GUARD = new CastAbuseGuard();
+    private static final Set<UUID> CANCELLED_OWNERS = new HashSet<>();
     private static boolean initialized;
 
     private FabricVmService() {
@@ -53,6 +68,8 @@ public final class FabricVmService {
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
             ACTIVE_VMS.clear();
             ACTIVE_FORCES.clear();
+            ABUSE_GUARD.clear();
+            CANCELLED_OWNERS.clear();
         });
     }
 
@@ -63,19 +80,36 @@ public final class FabricVmService {
         Vector3 impulse = new Vector3(look.x * strength, Math.max(0.18, look.y * strength + 0.22),
                 look.z * strength);
         Program program = impulseProgram(player.getUuidAsString(), impulse, delayTicks, 1);
-        return start(player, program, chargeMana, "Vector Step");
+        return start(player, syntheticCompilation(program), chargeMana, "Vector Step");
     }
 
     public static boolean launchKineticWard(
             ServerPlayerEntity player, Entity target, Vec3d impulse, boolean chargeMana) {
         Program program = impulseProgram(target.getUuidAsString(),
                 new Vector3(impulse.x, impulse.y, impulse.z), 0, 1);
-        return start(player, program, chargeMana, "Kinetic Ward");
+        return start(player, syntheticCompilation(program), chargeMana, "Kinetic Ward");
     }
 
     public static boolean startAuthored(
             ServerPlayerEntity player, Program program, boolean chargeMana, String label) {
-        return start(player, program, chargeMana, label);
+        return start(player, syntheticCompilation(program), chargeMana, label,
+                (owner, steps) -> SemanticSpellExecutor.execute(owner, steps, false));
+    }
+
+    public static boolean startAuthored(ServerPlayerEntity player,
+            Vm2CircleCompilation compilation, boolean chargeMana, String label) {
+        if (compilation.hasErrors() || compilation.compiledProgram().isEmpty()) {
+            return false;
+        }
+        return start(player, compilation, chargeMana, label,
+                (owner, steps) -> SemanticSpellExecutor.execute(owner, steps, false));
+    }
+
+    /** Queues a lowered semantic program and applies its ordered plan only at EXECUTE. */
+    public static boolean startSemantic(ServerPlayerEntity player, Program program,
+            boolean chargeMana, String label,
+            BiConsumer<ServerPlayerEntity, List<SemanticInstruction>> executor) {
+        return start(player, syntheticCompilation(program), chargeMana, label, executor);
     }
 
     public static PerceptionReport perceptionProbe(ServerPlayerEntity player, double radius) {
@@ -93,6 +127,18 @@ public final class FabricVmService {
                 .map(RuntimeValue.ListValue.class::cast)
                 .findFirst().map(value -> value.values().size()).orElse(0);
         return new PerceptionReport(result.status(), count, program.manaCost());
+    }
+
+    /** Shares the burst limiter with compatibility casts that complete immediately. */
+    public static boolean admitImmediateCast(ServerPlayerEntity player) {
+        CastAbuseGuard.Admission admission = ABUSE_GUARD.acquire(
+                player.getUuid(), player.getServerWorld().getTime());
+        if (!admission.accepted()) {
+            player.sendMessage(Text.literal(admission.message()).formatted(Formatting.RED), true);
+            return false;
+        }
+        ABUSE_GUARD.release(player.getUuid());
+        return true;
     }
 
     public static Program impulseProgram(
@@ -113,12 +159,26 @@ public final class FabricVmService {
         return new Program(instructions);
     }
 
-    private static boolean start(
-            ServerPlayerEntity player, Program program, boolean chargeMana, String label) {
+    private static boolean start(ServerPlayerEntity player, Vm2CircleCompilation compilation,
+            boolean chargeMana, String label) {
+        return start(player, compilation, chargeMana, label, null);
+    }
+
+    private static boolean start(ServerPlayerEntity player, Vm2CircleCompilation compilation,
+            boolean chargeMana, String label,
+            BiConsumer<ServerPlayerEntity, List<SemanticInstruction>> semanticExecutor) {
+        Program program = compilation.compiledProgram().orElseThrow();
+        CastAbuseGuard.Admission admission = ABUSE_GUARD.acquire(
+                player.getUuid(), player.getServerWorld().getTime());
+        if (!admission.accepted()) {
+            player.sendMessage(Text.literal(admission.message()).formatted(Formatting.RED), true);
+            return false;
+        }
         if (chargeMana && ManaData.isChannelLocked(player)) {
             player.sendMessage(Text.literal("Mana channel locked for "
                             + ManaData.remainingLockTicks(player) + " more ticks")
                     .formatted(Formatting.RED), true);
+            ABUSE_GUARD.release(player.getUuid());
             return false;
         }
         double cost = program.manaCost().total();
@@ -128,10 +188,18 @@ public final class FabricVmService {
                             "%s needs %.2f μ; only %.2f μ is available",
                             label, cost, ManaData.available(player)))
                     .formatted(Formatting.RED), true);
+            ABUSE_GUARD.release(player.getUuid());
             return false;
         }
-        ACTIVE_VMS.add(new ActiveVm(player.getUuid(), player.getServerWorld(),
-                new SpellVm(program, new MinecraftWorldAccess(player)), label));
+        long presentationSeed = player.getUuid().getMostSignificantBits()
+                ^ player.getServerWorld().getTime() ^ program.instructions().hashCode();
+        VmPresentationBridge presentation = new VmPresentationBridge(player,
+                PresentationCompiler.compile(label, presentationSeed, program));
+        ActiveVm active = new ActiveVm(player.getUuid(), player.getServerWorld(),
+                new SpellVm(program, new MinecraftWorldAccess(player), presentation), label,
+                presentation, compilation, new ArrayList<>(), semanticExecutor, new ArrayList<>());
+        ACTIVE_VMS.add(active);
+        publishLiveTrace(player, active);
         player.sendMessage(Text.literal(String.format(
                         "%s queued in vm2 • %.2f μ • tick-resumable",
                         label, cost)).formatted(Formatting.AQUA), true);
@@ -142,9 +210,20 @@ public final class FabricVmService {
         Iterator<ActiveVm> vmIterator = ACTIVE_VMS.iterator();
         while (vmIterator.hasNext()) {
             ActiveVm active = vmIterator.next();
+            ServerPlayerEntity currentOwner = server.getPlayerManager().getPlayer(active.owner);
+            if (CANCELLED_OWNERS.contains(active.owner) || !validLifecycle(currentOwner, active)) {
+                ABUSE_GUARD.release(active.owner);
+                vmIterator.remove();
+                continue;
+            }
             TickResult result = active.vm.tick();
+            active.trace.add(result);
             for (WorldEffect effect : result.effects()) {
-                apply(active.world, effect);
+                if (effect instanceof WorldEffect.SemanticStep semantic) {
+                    active.semanticSteps.add(semantic.instruction());
+                } else {
+                    apply(currentOwner, active.world, effect);
+                }
             }
             if (result.status() == TickResult.Status.FAULTED) {
                 ServerPlayerEntity owner = server.getPlayerManager().getPlayer(active.owner);
@@ -157,24 +236,61 @@ public final class FabricVmService {
                                 .formatted(Formatting.RED), false);
                     }
                 });
+                publishTrace(owner, active);
+                ABUSE_GUARD.release(active.owner);
                 vmIterator.remove();
             } else if (result.status() == TickResult.Status.HALTED) {
+                ServerPlayerEntity owner = server.getPlayerManager().getPlayer(active.owner);
+                if (owner != null && active.semanticExecutor != null && !active.semanticSteps.isEmpty()) {
+                    try {
+                        active.semanticExecutor.accept(owner, List.copyOf(active.semanticSteps));
+                    } catch (RuntimeException exception) {
+                        VectorRegnumMod.LOGGER.error("Semantic adapter rejected {} after validated VM execution",
+                                active.label, exception);
+                        owner.sendMessage(Text.literal("Semantic execution failed safely for " + active.label)
+                                .formatted(Formatting.RED), false);
+                    }
+                }
+                publishTrace(owner, active);
+                ABUSE_GUARD.release(active.owner);
                 vmIterator.remove();
+            } else if (active.trace.size() == 1
+                    || active.trace.size() % PONDER_LIVE_INTERVAL_TICKS == 0) {
+                publishLiveTrace(server.getPlayerManager().getPlayer(active.owner), active);
             }
         }
 
         Iterator<ActiveForce> forceIterator = ACTIVE_FORCES.iterator();
         while (forceIterator.hasNext()) {
             ActiveForce active = forceIterator.next();
-            if (!applyTimed(active) || --active.remaining <= 0) {
+            ServerPlayerEntity owner = server.getPlayerManager().getPlayer(active.owner);
+            if (CANCELLED_OWNERS.contains(active.owner) || owner == null
+                    || !applyTimed(owner, active) || --active.remaining <= 0) {
                 forceIterator.remove();
             }
         }
+        CANCELLED_OWNERS.clear();
     }
 
-    private static void apply(ServerWorld world, WorldEffect effect) {
+    private static boolean validLifecycle(ServerPlayerEntity owner, ActiveVm active) {
+        return SpellLeasePolicy.shouldContinue(owner != null && !owner.isRemoved(),
+                owner != null && owner.isAlive(),
+                owner != null && owner.getServerWorld() == active.world,
+                owner != null && active.world.isChunkLoaded(owner.getBlockPos()));
+    }
+
+    public static void cancelOwner(UUID owner, String reason) {
+        long pending = ACTIVE_VMS.stream().filter(active -> active.owner.equals(owner)).count();
+        CANCELLED_OWNERS.add(owner);
+        ABUSE_GUARD.clear(owner);
+        if (pending > 0) VectorRegnumMod.LOGGER.info("Cancelling {} spell VM(s) for {}: {}",
+                pending, owner, reason);
+    }
+
+    private static void apply(ServerPlayerEntity owner, ServerWorld world, WorldEffect effect) {
+        if (effect instanceof WorldEffect.SemanticStep) return;
         Entity entity = find(world, effect.entityId());
-        if (entity == null || entity.isRemoved()) return;
+        if (entity == null || !SpellSecurityPolicy.canAffectEntity(owner, entity)) return;
         switch (effect) {
             case WorldEffect.Impulse impulse -> {
                 Vec3d change = clamped(toMinecraft(impulse.impulse()), 4.0);
@@ -185,8 +301,8 @@ public final class FabricVmService {
                         24, 0.35, 0.45, 0.35, 0.12);
             }
             default -> {
-                ActiveForce active = new ActiveForce(world, effect, effect.durationTicks());
-                if (applyTimed(active) && effect.durationTicks() > 1) {
+                ActiveForce active = new ActiveForce(owner.getUuid(), world, effect, effect.durationTicks());
+                if (applyTimed(owner, active) && effect.durationTicks() > 1) {
                     active.remaining--;
                     ACTIVE_FORCES.add(active);
                 }
@@ -194,13 +310,14 @@ public final class FabricVmService {
         }
     }
 
-    private static boolean applyTimed(ActiveForce active) {
+    private static boolean applyTimed(ServerPlayerEntity owner, ActiveForce active) {
         ServerWorld world = active.world;
         WorldEffect effect = active.effect;
         Entity entity = find(world, effect.entityId());
-        if (entity == null || entity.isRemoved()) return false;
+        if (entity == null || !SpellSecurityPolicy.canAffectEntity(owner, entity)) return false;
         switch (effect) {
             case WorldEffect.Impulse ignored -> { return false; }
+            case WorldEffect.SemanticStep ignored -> { return false; }
             case WorldEffect.Acceleration acceleration ->
                     entity.addVelocity(clamped(toMinecraft(acceleration.acceleration()), 1.0));
             case WorldEffect.Damping damping ->
@@ -224,7 +341,7 @@ public final class FabricVmService {
                     moveToward(entity, toMinecraft(move.point()), move.speed());
             case WorldEffect.KeepDistance keep -> {
                 Entity target = find(world, keep.targetId());
-                if (target == null) return false;
+                if (target == null || !SpellSecurityPolicy.canAffectEntity(owner, target)) return false;
                 Vec3d delta = entity.getPos().subtract(target.getPos());
                 double current = delta.length();
                 if (current > 1.0e-6) {
@@ -265,20 +382,70 @@ public final class FabricVmService {
         return new Vec3d(vector.x(), vector.y(), vector.z());
     }
 
+    private static void publishTrace(ServerPlayerEntity owner, ActiveVm active) {
+        if (owner == null) return;
+        try {
+            PonderTimeline timeline = PonderTimelineBuilder.fromVm2("server-vm-trace",
+                    active.label + " — authoritative VM trace", active.compilation, active.trace);
+            PonderTraceNetworking.publish(owner, timeline);
+        } catch (RuntimeException exception) {
+            VectorRegnumMod.LOGGER.warn("Could not retain Ponder trace for {}", active.label,
+                    exception);
+        }
+    }
+
+    private static void publishLiveTrace(ServerPlayerEntity owner, ActiveVm active) {
+        if (owner == null) return;
+        try {
+            PonderTimeline timeline = PonderTimelineBuilder.fromVm2("server-vm-trace",
+                    active.label + " — live authoritative VM trace", active.compilation,
+                    active.trace);
+            PonderTraceNetworking.publishLive(owner, timeline);
+        } catch (RuntimeException exception) {
+            VectorRegnumMod.LOGGER.warn("Could not stream Ponder trace for {}", active.label,
+                    exception);
+        }
+    }
+
+    private static Vm2CircleCompilation syntheticCompilation(Program program) {
+        int maximumSource = program.instructions().stream()
+                .mapToInt(instruction -> instruction.source().sourceIndex()).max().orElse(0);
+        int size = Math.min(maximumSource + 1, PonderTimeline.MAX_STEPS / 2);
+        List<PlacedSigil> order = new ArrayList<>(size);
+        for (int sourceIndex = 0; sourceIndex < size; sourceIndex++) {
+            final int wanted = sourceIndex;
+            SourceLocation source = program.instructions().stream()
+                    .map(Instruction::source)
+                    .filter(candidate -> candidate.sourceIndex() == wanted)
+                    .findFirst().orElse(SourceLocation.at(sourceIndex, "UNKNOWN_SOURCE"));
+            String sigil = source.sigilId().matches("[A-Z][A-Z0-9_]{0,63}")
+                    ? source.sigilId() : "UNKNOWN_SOURCE";
+            order.add(new PlacedSigil(new CircleCoordinate(Math.max(0, source.line() - 1),
+                    Math.max(0, source.column() - 1)), sigil));
+        }
+        return new Vm2CircleCompilation(order, program, List.of());
+    }
+
     public record PerceptionReport(
             TickResult.Status status, int entityCount, ManaCostModel.Breakdown cost) {
     }
 
-    private record ActiveVm(UUID owner, ServerWorld world, SpellVm vm, String label) {
+    private record ActiveVm(UUID owner, ServerWorld world, SpellVm vm, String label,
+            VmPresentationBridge presentation, Vm2CircleCompilation compilation,
+            List<TickResult> trace,
+            BiConsumer<ServerPlayerEntity, List<SemanticInstruction>> semanticExecutor,
+            List<SemanticInstruction> semanticSteps) {
     }
 
     private static final class ActiveForce {
+        private final UUID owner;
         private final ServerWorld world;
         private final WorldEffect effect;
         private int remaining;
         private int pathIndex;
 
-        private ActiveForce(ServerWorld world, WorldEffect effect, int remaining) {
+        private ActiveForce(UUID owner, ServerWorld world, WorldEffect effect, int remaining) {
+            this.owner = owner;
             this.world = world;
             this.effect = effect;
             this.remaining = remaining;

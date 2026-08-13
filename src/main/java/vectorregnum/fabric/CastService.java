@@ -15,6 +15,10 @@ import vectorregnum.core.SpellEngine;
 import vectorregnum.core.SpellFault;
 import vectorregnum.core.Vec3;
 import vectorregnum.core.WildMagicCategory;
+import vectorregnum.core.circle.CircleCompilation;
+import vectorregnum.core.circle.CircleCoordinate;
+import vectorregnum.core.circle.PlacedSigil;
+import vectorregnum.fabric.ponder.PonderTraceNetworking;
 
 import java.util.List;
 import java.util.Optional;
@@ -31,6 +35,10 @@ public final class CastService {
 
     public static CastResult castAt(ServerPlayerEntity player, List<Sigil> sigils,
             boolean chargeMana, Vec3d origin, Vec3d direction) {
+        if (!FabricVmService.admitImmediateCast(player)) {
+            return new CastResult.EngineFailure("RATE_LIMITED",
+                    "Caster exceeded the bounded spell start rate");
+        }
         if (chargeMana && ManaData.isChannelLocked(player)) {
             long ticks = ManaData.remainingLockTicks(player);
             player.sendMessage(Text.literal("Mana channel locked for " + ticks + " more ticks")
@@ -77,7 +85,9 @@ public final class CastService {
                     starvation.reason(),
                     starvation.sourceIndex(),
                     starvation.category());
-            return new CastResult.SpellFailure(program, fault, List.of(starvation));
+            CastResult failure = new CastResult.SpellFailure(program, fault, List.of(starvation));
+            publishPonder(player, sigils, program, failure);
+            return failure;
         }
 
         for (EffectCommand effect : result.effects()) {
@@ -98,7 +108,19 @@ public final class CastService {
                                     + " at sigil " + failure.fault().sourceIndex())
                     .formatted(Formatting.LIGHT_PURPLE), false);
         }
+        publishPonder(player, sigils, program, result);
         return result;
+    }
+
+    private static void publishPonder(ServerPlayerEntity player, List<Sigil> sigils,
+            CompiledSpell program, CastResult result) {
+        List<PlacedSigil> order = java.util.stream.IntStream.range(0, sigils.size())
+                .mapToObj(index -> new PlacedSigil(new CircleCoordinate(0, index),
+                        sigils.get(index).type()))
+                .toList();
+        PonderTraceNetworking.publishCompatibility(player, "server-compatibility-trace",
+                "Compatibility spell — authoritative result",
+                new CircleCompilation(order, sigils, program, List.of()), result);
     }
 
     private static Vec3 toCore(Vec3d vector) {

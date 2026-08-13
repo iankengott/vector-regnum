@@ -4,6 +4,7 @@ import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
+import net.minecraft.command.argument.BlockPosArgumentType;
 import net.minecraft.item.ItemStack;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -13,6 +14,10 @@ import net.minecraft.util.Formatting;
 import net.minecraft.util.math.BlockPos;
 import vectorregnum.core.Sigil;
 import vectorregnum.core.circle.SpellMedium;
+import vectorregnum.core.automation.AutomationRule;
+import vectorregnum.fabric.automation.AutomationContent;
+import vectorregnum.fabric.automation.AutomationRelayBlockEntity;
+import vectorregnum.fabric.multiplayer.SpellSecurityPolicy;
 import vectorregnum.fabric.progression.ManaAffinity;
 import vectorregnum.fabric.progression.ProgressionContent;
 import vectorregnum.fabric.progression.ProgressionData;
@@ -73,6 +78,7 @@ public final class VectorRegnumCommands {
         root.then(libraryCommands());
         root.then(researchCommands());
         root.then(vmCommands());
+        root.then(automationCommands());
         root.then(CommandManager.literal("progression")
                 .executes(context -> progression(context.getSource()))
                 .then(CommandManager.literal("unlock_all")
@@ -177,6 +183,46 @@ public final class VectorRegnumCommands {
                         .executes(context -> vmDemo(context.getSource())))
                 .then(CommandManager.literal("probe")
                         .executes(context -> vmProbe(context.getSource())));
+    }
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<ServerCommandSource>
+            automationCommands() {
+        var automation = CommandManager.literal("automation")
+                .then(CommandManager.literal("give")
+                        .requires(source -> source.hasPermissionLevel(2))
+                        .executes(context -> giveAutomationRelay(context.getSource())))
+                .then(CommandManager.literal("program")
+                        .then(CommandManager.argument("pos", BlockPosArgumentType.blockPos())
+                                .executes(context -> programAutomation(context.getSource(),
+                                        BlockPosArgumentType.getBlockPos(context, "pos")))))
+                .then(CommandManager.literal("trigger")
+                        .then(CommandManager.argument("pos", BlockPosArgumentType.blockPos())
+                                .executes(context -> triggerAutomation(context.getSource(),
+                                        BlockPosArgumentType.getBlockPos(context, "pos")))))
+                .then(CommandManager.literal("inspect")
+                        .then(CommandManager.argument("pos", BlockPosArgumentType.blockPos())
+                                .executes(context -> inspectAutomation(context.getSource(),
+                                        BlockPosArgumentType.getBlockPos(context, "pos")))));
+        var rule = CommandManager.literal("rule");
+        for (AutomationRule.TriggerMode mode : AutomationRule.TriggerMode.values()) {
+            rule.then(CommandManager.literal(mode.name().toLowerCase())
+                    .then(CommandManager.argument("pos", BlockPosArgumentType.blockPos())
+                            .then(CommandManager.argument("threshold",
+                                    IntegerArgumentType.integer(1, 15))
+                                    .then(CommandManager.argument("cooldown",
+                                            IntegerArgumentType.integer(1,
+                                                    AutomationRule.MAX_COOLDOWN_TICKS))
+                                            .executes(context -> configureAutomationRule(
+                                                    context.getSource(),
+                                                    BlockPosArgumentType.getBlockPos(context, "pos"),
+                                                    mode,
+                                                    IntegerArgumentType.getInteger(context,
+                                                            "threshold"),
+                                                    IntegerArgumentType.getInteger(context,
+                                                            "cooldown")))))));
+        }
+        automation.then(rule);
+        return automation;
     }
 
     private static int cast(ServerCommandSource source, List<Sigil> spell, boolean chargeMana) {
@@ -386,6 +432,105 @@ public final class VectorRegnumCommands {
                         report.entityCount(), report.cost().total(), report.cost().range(),
                         report.cost().perception())).formatted(Formatting.AQUA), false);
         return 1;
+    }
+
+    private static int giveAutomationRelay(ServerCommandSource source) {
+        ServerPlayerEntity player = targetPlayer(source);
+        if (player == null) return noPlayer(source);
+        player.getInventory().offerOrDrop(new ItemStack(AutomationContent.AUTOMATION_RELAY_ITEM));
+        player.sendMessage(Text.literal("Received one programmable automation relay")
+                .formatted(Formatting.GOLD), false);
+        return 1;
+    }
+
+    private static int programAutomation(ServerCommandSource source, BlockPos pos) {
+        ServerPlayerEntity player = targetPlayer(source);
+        if (player == null) return noPlayer(source);
+        AutomationRelayBlockEntity relay = automationRelay(source, pos);
+        if (relay == null) return 0;
+        if (!SpellSecurityPolicy.canModifyBlock(player, pos, source.getWorld().getBlockState(pos))) {
+            player.sendMessage(Text.literal("Claims or world permissions prevent programming this relay")
+                    .formatted(Formatting.RED), false);
+            return 0;
+        }
+        if (CircleAuthoringService.compile(player).hasErrors()) {
+            player.sendMessage(Text.literal("Fix the current circle before programming a relay")
+                    .formatted(Formatting.RED), false);
+            return 0;
+        }
+        if (!relay.configure(player, CircleAuthoringService.session(player).current(),
+                AutomationRule.risingEdge())) {
+            player.sendMessage(Text.literal("Only the relay owner may replace its program")
+                    .formatted(Formatting.RED), false);
+            return 0;
+        }
+        player.sendMessage(Text.literal("Relay programmed with the current circle • rising edge • 20t cooldown")
+                .formatted(Formatting.GREEN), false);
+        return 1;
+    }
+
+    private static int configureAutomationRule(ServerCommandSource source, BlockPos pos,
+            AutomationRule.TriggerMode mode, int threshold, int cooldown) {
+        ServerPlayerEntity player = targetPlayer(source);
+        if (player == null) return noPlayer(source);
+        AutomationRelayBlockEntity relay = automationRelay(source, pos);
+        if (relay == null) return 0;
+        if (!SpellSecurityPolicy.canModifyBlock(player, pos, source.getWorld().getBlockState(pos))) {
+            player.sendMessage(Text.literal("Claims or world permissions prevent changing this relay")
+                    .formatted(Formatting.RED), false);
+            return 0;
+        }
+        if (!relay.reconfigureRule(player, new AutomationRule(mode, threshold, cooldown))) {
+            player.sendMessage(Text.literal("Program and own this relay before changing its rule")
+                    .formatted(Formatting.RED), false);
+            return 0;
+        }
+        player.sendMessage(Text.literal("Relay rule updated: " + mode.name().toLowerCase()
+                        + " at " + threshold + ", cooldown " + cooldown + "t")
+                .formatted(Formatting.GREEN), false);
+        return 1;
+    }
+
+    private static int triggerAutomation(ServerCommandSource source, BlockPos pos) {
+        ServerPlayerEntity player = targetPlayer(source);
+        if (player == null) return noPlayer(source);
+        AutomationRelayBlockEntity relay = automationRelay(source, pos);
+        if (relay == null) return 0;
+        if (!SpellSecurityPolicy.canModifyBlock(player, pos, source.getWorld().getBlockState(pos))) {
+            player.sendMessage(Text.literal("Claims or world permissions prevent triggering this relay")
+                    .formatted(Formatting.RED), false);
+            return 0;
+        }
+        if (!relay.requestRemote(player)) {
+            player.sendMessage(Text.literal("Remote request rejected: relay is unprogrammed, foreign, or busy")
+                    .formatted(Formatting.RED), false);
+            return 0;
+        }
+        player.sendMessage(Text.literal("Remote activation queued at " + pos.toShortString())
+                .formatted(Formatting.AQUA), false);
+        return 1;
+    }
+
+    private static int inspectAutomation(ServerCommandSource source, BlockPos pos) {
+        ServerPlayerEntity player = targetPlayer(source);
+        if (player == null) return noPlayer(source);
+        AutomationRelayBlockEntity relay = automationRelay(source, pos);
+        if (relay == null) return 0;
+        relay.reportStatus(player);
+        return 1;
+    }
+
+    private static AutomationRelayBlockEntity automationRelay(
+            ServerCommandSource source, BlockPos pos) {
+        if (!source.getWorld().isChunkLoaded(pos)) {
+            source.sendError(Text.literal("Automation refuses unloaded target chunks"));
+            return null;
+        }
+        if (!(source.getWorld().getBlockEntity(pos) instanceof AutomationRelayBlockEntity relay)) {
+            source.sendError(Text.literal("No automation relay exists at " + pos.toShortString()));
+            return null;
+        }
+        return relay;
     }
 
     private static int devkit(ServerCommandSource source) {

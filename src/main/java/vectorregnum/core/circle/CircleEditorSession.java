@@ -64,6 +64,38 @@ public final class CircleEditorSession {
         return success();
     }
 
+    /** Moves one authored sigil, including its typed parameters, as one undoable edit. */
+    public EditResult move(CircleCoordinate source, CircleCoordinate destination) {
+        Objects.requireNonNull(source, "source");
+        Objects.requireNonNull(destination, "destination");
+        try {
+            source.requireInside(current.ringCount(), current.slotsPerRing());
+        } catch (IllegalArgumentException e) {
+            return failure("POSITION_OUTSIDE_CIRCLE", e.getMessage(), source);
+        }
+        try {
+            destination.requireInside(current.ringCount(), current.slotsPerRing());
+        } catch (IllegalArgumentException e) {
+            return failure("POSITION_OUTSIDE_CIRCLE", e.getMessage(), destination);
+        }
+        if (source.equals(destination)) {
+            return failure("MOVE_SAME_POSITION", "Drag a sigil to a different empty slot", source);
+        }
+        PlacedSigil existing = find(source);
+        if (existing == null) {
+            return failure("POSITION_EMPTY", "The dragged circle position is empty", source);
+        }
+        if (find(destination) != null) {
+            return failure("POSITION_OCCUPIED", "Drop sigils only into empty circle positions",
+                    destination);
+        }
+        List<PlacedSigil> changed = new ArrayList<>(current.sigils());
+        changed.set(changed.indexOf(existing), new PlacedSigil(destination,
+                existing.type(), existing.parameters()));
+        apply(changed);
+        return success();
+    }
+
     public EditResult parameterize(CircleCoordinate coordinate, List<CircleValue> parameters) {
         Objects.requireNonNull(parameters, "parameters");
         PlacedSigil existing = find(coordinate);

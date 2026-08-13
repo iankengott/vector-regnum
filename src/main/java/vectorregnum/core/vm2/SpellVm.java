@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import vectorregnum.core.presentation.ExecutionEvent;
+import vectorregnum.core.presentation.ExecutionEventSink;
 import vectorregnum.core.vm2.RuntimeValue.BooleanValue;
 import vectorregnum.core.vm2.RuntimeValue.EntityValue;
 import vectorregnum.core.vm2.RuntimeValue.ListValue;
@@ -23,6 +25,7 @@ public final class SpellVm {
     private final Program program;
     private final WorldAccess world;
     private final VmLimits limits;
+    private final ExecutionEventSink eventSink;
     private final Deque<RuntimeValue> stack = new ArrayDeque<>();
     private final List<WorldEffect> allEffects = new ArrayList<>();
     private final Map<Integer, Integer> loopPasses = new HashMap<>();
@@ -33,23 +36,41 @@ public final class SpellVm {
     private long lifetimeTicks;
     private boolean halted;
     private VmFault fault;
+    private long eventSequence;
+    private boolean terminalEventPublished;
+    private boolean started;
 
-    public SpellVm(Program program, WorldAccess world, VmLimits limits) {
+    public SpellVm(Program program, WorldAccess world, VmLimits limits,
+            ExecutionEventSink eventSink) {
         this.program = Objects.requireNonNull(program, "program");
         this.world = Objects.requireNonNull(world, "world");
         this.limits = Objects.requireNonNull(limits, "limits");
+        this.eventSink = Objects.requireNonNull(eventSink, "eventSink");
+    }
+
+    public SpellVm(Program program, WorldAccess world, VmLimits limits) {
+        this(program, world, limits, ExecutionEventSink.NOOP);
     }
 
     public SpellVm(Program program, WorldAccess world) {
-        this(program, world, VmLimits.DEFAULT);
+        this(program, world, VmLimits.DEFAULT, ExecutionEventSink.NOOP);
+    }
+
+    public SpellVm(Program program, WorldAccess world, ExecutionEventSink eventSink) {
+        this(program, world, VmLimits.DEFAULT, eventSink);
     }
 
     public TickResult tick() {
         if (fault != null) return result(TickResult.Status.FAULTED, 0, List.of());
         if (halted) return result(TickResult.Status.HALTED, 0, List.of());
+        if (!started) {
+            started = true;
+            publish(new ExecutionEvent.Started(nextEventSequence(), 0));
+        }
         lifetimeTicks++;
         if (lifetimeTicks > limits.maxLifetimeTicks()) {
             fail(VmFault.Code.LIFETIME_TICK_LIMIT, "spell exceeded lifetime tick limit", currentSource());
+            publishFault();
             return result(TickResult.Status.FAULTED, 0, List.of());
         }
         if (waitingTicks > 0) {
@@ -63,6 +84,7 @@ public final class SpellVm {
             while (executed < limits.maxInstructionsPerTick()) {
                 if (instructionPointer >= program.instructions().size()) {
                     halted = true;
+                    publishHalted(currentSource());
                     return result(TickResult.Status.HALTED, executed, emitted);
                 }
                 if (totalInstructions >= limits.maxTotalInstructions()) {
@@ -70,19 +92,27 @@ public final class SpellVm {
                             "spell exceeded total instruction limit");
                 }
                 Instruction instruction = program.instructions().get(instructionPointer);
+                int executedPointer = instructionPointer;
                 totalInstructions++;
                 executed++;
                 TickResult.Status terminal = execute(instruction, emitted);
-                if (terminal != null) return result(terminal, executed, emitted);
+                publish(new ExecutionEvent.StepExecuted(nextEventSequence(), lifetimeTicks,
+                        executedPointer, instructionPointer, instruction.opcode(), instruction.source()));
+                if (terminal != null) {
+                    if (terminal == TickResult.Status.HALTED) publishHalted(instruction.source());
+                    return result(terminal, executed, emitted);
+                }
             }
             return result(TickResult.Status.BUDGET_YIELD, executed, emitted);
         } catch (ExecutionFault executionFault) {
             fault = executionFault.fault;
+            publishFault();
             return result(TickResult.Status.FAULTED, executed, emitted);
         } catch (RuntimeException adapterFailure) {
             fail(VmFault.Code.WORLD_ADAPTER_ERROR,
                     "world adapter rejected operation: " + adapterFailure.getClass().getSimpleName(),
                     currentSource());
+            publishFault();
             return result(TickResult.Status.FAULTED, executed, emitted);
         }
     }
@@ -110,6 +140,8 @@ public final class SpellVm {
                 instructionPointer++;
                 if (instruction.argument() > 0) {
                     waitingTicks = instruction.argument() - 1;
+                    publish(new ExecutionEvent.DelayStarted(nextEventSequence(), lifetimeTicks,
+                            instructionPointer - 1, instruction.source(), instruction.argument()));
                     return TickResult.Status.WAITING;
                 }
             }
@@ -122,6 +154,10 @@ public final class SpellVm {
             case FOLLOW_PATH -> { emitPath(emitted); instructionPointer++; }
             case MOVE_TOWARD -> { emitMove(emitted); instructionPointer++; }
             case KEEP_DISTANCE -> { emitKeepDistance(emitted); instructionPointer++; }
+            case SEMANTIC -> {
+                emit(new WorldEffect.SemanticStep(instruction.semantic()), emitted);
+                instructionPointer++;
+            }
             case HALT -> { instructionPointer++; halted = true; return TickResult.Status.HALTED; }
         }
         return null;
@@ -205,6 +241,8 @@ public final class SpellVm {
             throw authored(VmFault.Code.INVALID_QUERY, "selection result limit exceeded");
         }
         push(new ListValue(found));
+        publish(new ExecutionEvent.ValuesResolved(nextEventSequence(), lifetimeTicks,
+                instructionPointer, instruction.opcode(), instruction.source(), found));
     }
 
     private void raycast(Instruction instruction) {
@@ -216,6 +254,8 @@ public final class SpellVm {
         List<RuntimeValue> result = hit.flatMap(RaycastHit::entity)
                 .map(entity -> List.<RuntimeValue>of(new EntityValue(entity.id()))).orElseGet(List::of);
         push(new ListValue(result));
+        publish(new ExecutionEvent.ValuesResolved(nextEventSequence(), lifetimeTicks,
+                instructionPointer, instruction.opcode(), instruction.source(), result));
     }
 
     private double positiveRange(RuntimeValue value) {
@@ -277,6 +317,8 @@ public final class SpellVm {
 
     private void emit(WorldEffect effect, List<WorldEffect> emitted) {
         emitted.add(effect); allEffects.add(effect);
+        publish(new ExecutionEvent.WorldEffectEmitted(nextEventSequence(), lifetimeTicks,
+                instructionPointer, currentSource(), effect));
     }
 
     private NumberValue number(double value) {
@@ -326,6 +368,31 @@ public final class SpellVm {
 
     private TickResult result(TickResult.Status status, int executed, List<WorldEffect> effects) {
         return new TickResult(status, instructionPointer, executed, effects, Optional.ofNullable(fault));
+    }
+
+    private void publishHalted(SourceLocation source) {
+        if (terminalEventPublished) return;
+        terminalEventPublished = true;
+        publish(new ExecutionEvent.Halted(nextEventSequence(), lifetimeTicks,
+                instructionPointer, source));
+    }
+
+    private void publishFault() {
+        if (terminalEventPublished || fault == null) return;
+        terminalEventPublished = true;
+        publish(new ExecutionEvent.Faulted(nextEventSequence(), lifetimeTicks, fault));
+    }
+
+    private long nextEventSequence() {
+        return eventSequence++;
+    }
+
+    private void publish(ExecutionEvent event) {
+        try {
+            eventSink.accept(event);
+        } catch (RuntimeException ignored) {
+            // Presentation is non-authoritative and must never change VM execution.
+        }
     }
 
     public List<RuntimeValue> stackTopFirst() { return List.copyOf(stack); }

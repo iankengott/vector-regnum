@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "redstone",
+  "pattern": ["RQR", "CTC", "RCR"],
+  "key": {
+    "R": { "item": "minecraft:redstone" },
+    "Q": { "item": "minecraft:quartz" },
+    "C": { "item": "minecraft:copper_ingot" },
+    "T": { "item": "vector_regnum:carved_spell_tablet" }
+  },
+  "result": { "id": "vector_regnum:automation_relay", "count": 1 }
+}
