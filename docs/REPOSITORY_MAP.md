@@ -30,3 +30,7 @@ progression unlocks, reputation/patron modifiers, spell disruption, mana-region
 queries, and story events. Companion mods depend on that API or communicate
 through events/data packs. Vector-Regnum must not acquire mandatory dependencies
 on every companion project.
+
+Every repository has its own root `AGENTS.md`, following
+`docs/COMPANION_AI_HANDOFF_STANDARD.md` while adding project-specific scope,
+invariants, local paths, and verification requirements.
