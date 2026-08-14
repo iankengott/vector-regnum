@@ -13,7 +13,7 @@ paths below were verified when the repositories were created.
 | [`regnum-progression`](https://github.com/iankengott/regnum-progression) | Classes, professions, skill trees, patrons, reputation, boons | `/home/iank/Desktop/my mods/mods-editing/regnum-progression` | Scaffolded |
 | [`regnum-world-story`](https://github.com/iankengott/regnum-world-story) | Primordials, story state, regional weather/mana storms, dimensions and endings | `/home/iank/Desktop/my mods/mods-editing/regnum-world-story` | Scaffolded |
 | [`regnum-administration`](https://github.com/iankengott/regnum-administration) | Admin orb/pocket tools and SMP control surfaces | `/home/iank/Desktop/my mods/mods-editing/regnum-administration` | Scaffolded |
-| [`regnum-smp-modpack`](https://github.com/iankengott/regnum-smp-modpack) | Third-party pack manifest/configuration, shader/Create compatibility and distribution | `/home/iank/Desktop/my mods/mods-editing/regnum-smp-modpack` | Scaffolded |
+| [`regnum-smp-modpack`](https://github.com/iankengott/regnum-smp-modpack) | Third-party pack manifest/configuration, Veil/shader/Create compatibility, dependency licensing, and distribution | `/home/iank/Desktop/my mods/mods-editing/regnum-smp-modpack` | Scaffolded |
 
 Artemis host power monitoring belongs in host infrastructure rather than a
 Minecraft mod. If the SMP needs to display that telemetry in-game,

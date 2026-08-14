@@ -24,6 +24,24 @@ specifications.
 - Companion SMP systems live in separate public repositories and integrate
   through small, versioned APIs. See `REPOSITORY_MAP.md` for verified links.
 
+## Rendering and presentation dependency
+
+[FoundryMC Veil](https://github.com/FoundryMC/Veil) is approved as the optional
+client rendering foundation for Vector-Regnum after the NeoForge migration.
+Vector-Regnum owns the bounded adapter and semantic module vocabulary; Veil is
+infrastructure beneath the existing loader-neutral presentation IR, not an
+authored-spell language or a source of gameplay authority. The exact Minecraft
+1.21.1 version is selected and pinned only after testing Veil present and
+absent, dedicated-server classloading, resource reload, accessibility/LOD
+fallbacks, shader interoperability, Create, and the target modpack.
+
+The built-in renderer always preserves mechanics-derived origin, direction,
+area, timing, allegiance, danger, and impact cues. Post-processing, advanced
+GPU features, and Veil itself may improve expressive layers but may never be
+required for a cast to execute or for a player to receive its mandatory
+telegraph. Companion mods request versioned semantic presentation capabilities
+through Vector-Regnum rather than submitting arbitrary renderer source.
+
 ## Elemental identity and attunement
 
 Every character has exactly **one permanent natural element**. It cannot be

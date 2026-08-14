@@ -34,9 +34,11 @@ client presentation runtime with LOD/accessibility controls.
 Always re-read `ROADMAP.md` before reporting or implementing work because it
 supersedes this dated checkpoint whenever the queue changes.
 
-Do not begin priority 21 or later while this active checkout still builds on
-Fabric. Priority 20 first verifies the published legacy snapshot, then ports
-this repository's behavior and safety/test coverage to NeoForge.
+Do not begin priority 20a or 21 or later while this active checkout still builds
+on Fabric. Priority 20 first verifies the published legacy snapshot, then ports
+this repository's behavior and safety/test coverage to NeoForge. Priority 20a
+then establishes the optional Veil-backed modular renderer and compatibility
+gate before new gameplay development begins at priority 21.
 
 ## Subagent collaboration
 
@@ -140,6 +142,10 @@ rendering, command, persistence, or Fabric integration change requires steps
 - Presentation consumes compact authoritative events and is strictly cosmetic.
   LOD or accessibility settings may remove expressive layers but never the
   mechanics-derived truth telegraph or alter a gameplay outcome.
+- Veil is optional client presentation infrastructure only. It must never be
+  required for dedicated-server startup, authoritative gameplay, or mandatory
+  truth telegraphs; the built-in renderer and accessible low-LOD path remain
+  functional when Veil or post-processing is unavailable.
 - Tutorial changes require bumping the versioned guide attachment so existing
   players receive the revised manual.
 - The Hermes automated showcase is gated by
@@ -166,6 +172,8 @@ After a meaningful change:
   memory vault on the main PC;
 - record new automated test counts and the latest inspected visual evidence;
 - keep generated worlds, logs, Gradle output, and `visual-evidence/` out of git.
+- update the Regnum Hub with inspected in-game images only when the roadmap's
+  release milestone says the NeoForge mod is finished or release-ready.
 
 When a numbered priority is completed, check it in the canonical queue and
 remove its remaining-work wording everywhere in the same pass. Confirm that a

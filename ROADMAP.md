@@ -109,15 +109,37 @@ acceptance scope.
     compatible screen treatment, spatial audio, material response, aftermath,
     near/mid/far/telegraph-only LODs, localized UI, and independent accessible
     sensory controls. Essential telegraphs do not depend on shaderpacks;
-    signature depth-aware shaders and final bespoke art remain optional
-    release-quality enhancement rather than a gameplay dependency.
+    signature depth-aware shaders, including the planned Veil-backed
+    compositor, and final bespoke art remain optional release-quality
+    enhancement rather than a gameplay dependency.
 20. [ ] **NeoForge 1.21.1 migration and repository split.** Freeze the current
     verified Fabric alpha in the published legacy repository, then convert the
     active `vector-regnum` repository by porting the loader-neutral core,
     registrations, persistence, networking, events, rendering, commands,
     integration tests, NixOS launcher, and guarded Hermes workflow. No new
     gameplay lands on Fabric. The port must retain behavioral parity and hard
-    safety limits, not merely reach a title screen.
+    safety limits, not merely reach a title screen. Preserve the loader-neutral
+    presentation IR and a built-in client renderer so neither dedicated-server
+    startup nor baseline telegraphs depend on Veil.
+20a. [ ] **Veil-backed modular presentation overhaul and compatibility gate.**
+    After priority 20 establishes the NeoForge baseline—and before priority 21
+    gameplay work—add [FoundryMC Veil](https://github.com/FoundryMC/Veil) as an
+    optional client rendering backend beneath the existing bounded
+    `PresentationProgram`. Map semantic parameters such as origin, target,
+    normal, radius, element, magnitude, duration, and deterministic seed into a
+    curated reusable vocabulary of particles, beams, ribbons, trails, runes,
+    animated meshes, surfaces, volumes, deferred lights, framebuffers, and
+    optional post-processing. Player-authored spells may select only bounded
+    modules and parameters; they cannot upload arbitrary GLSL, Veil JSON,
+    assets, packets, or executable code. The built-in renderer remains the
+    mandatory fallback and must preserve mechanics-derived truth telegraphs
+    when Veil is absent, fails to initialize, post-processing is disabled, a
+    shaderpack is incompatible, or accessibility/LOD settings remove expressive
+    layers. Pin an exact tested Minecraft 1.21.1 Veil version during
+    implementation, then verify Veil present/absent, dedicated-server
+    classloading, resource reload, low LOD, reduced-motion/photosensitivity,
+    representative library and player-authored spells, and the target SMP
+    renderer/Create compatibility matrix.
 21. [ ] **Elemental identity and affinity expansion.** Replace Frost with Ice;
     add Water, Air, Earth, Lightning, Time, Space, Light, Dark, Nature, Sound,
     and rare Void around the ordinary twelve; retain Arcane only as neutral raw
@@ -160,6 +182,11 @@ acceptance scope.
     representative NeoForge mods and the target SMP pack.
 29. [ ] Release packaging: installation guide, changelog, localization,
     screenshots/video, versioning, migration notes, and distributable artifacts.
+    Once the NeoForge mod is finished or release-ready and its visuals have
+    passed direct inspection, update the
+    [Regnum Hub](https://iankengott.github.io/regnum-hub/#index) with accurate
+    in-game images and captions; do not publish placeholder, scaffold, or
+    unverified Veil imagery as finished work.
 
 ## Language/runtime follow-up
 
@@ -222,8 +249,9 @@ acceptance scope.
   atmosphere, spatial audio, tactile response, impact, and aftermath. The list
   is intentionally non-exhaustive, and the system should generate additional
   context-appropriate layers from spell semantics.
-- [ ] Original Vector-Regnum block/item texture pass and optional signature
-  depth-aware shader instruments for release-quality presentation.
+- [ ] Original Vector-Regnum block/item texture pass plus the priority-20a
+  Veil-backed modular renderer, with a built-in truth-telegraph fallback, for
+  release-quality presentation.
 - [x] Sixteen production Fabric GameTests cover commands, attachments,
   media/block-entity round trips, crystal interactions, timers, serialized
   restart contracts, two-player isolation, claims/death migration, relay

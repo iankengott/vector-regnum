@@ -260,9 +260,14 @@ Every spell combines many restrained, coordinated
 layers: readable form and telegraphing, particles and procedural geometry,
 illumination and dynamic/shadow response, darkness/fog and air movement,
 spatial sound, camera/screen response, material interaction, and lingering aftermath. Those
-examples are a floor rather than a closed list. Signature depth-aware shaders
-may later enhance the composition, but essential effects remain scalable,
-accessible, mechanically truthful, and functional without a shaderpack.
+examples are a floor rather than a closed list. After the NeoForge migration,
+roadmap priority 20a adds
+[FoundryMC Veil](https://github.com/FoundryMC/Veil) as an optional modular
+rendering backend for reusable particles, beams, ribbons, meshes, lights,
+framebuffers, and post effects. Veil will consume the existing bounded
+presentation program rather than replace its spell grammar. Essential effects
+remain scalable, accessible, mechanically truthful, and functional through the
+built-in renderer when Veil or a compatible shader path is unavailable.
 
 See [SPELL_PRESENTATION.md](SPELL_PRESENTATION.md) for the presentation IR,
 semantic-generation rules, sensory choreography standard, runtime boundaries,
@@ -303,11 +308,14 @@ small versioned API. See [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 ## Still not finished
 
 The immediate work is the repository-preserving NeoForge port, followed by the
-elemental identity model, reagent economy, persistent upkeep and conclusions,
-shared-memory branching, explicitly approved cooperative rituals, security and
-accessibility hardening, and the optional SMP integration API. Configuration,
-balancing, profiling, full playtests, NeoForge/modpack compatibility, final art,
-localization, and release packaging follow those systems.
+Veil-backed modular presentation overhaul and compatibility gate before new
+gameplay work. The elemental identity model, reagent economy, persistent upkeep
+and conclusions, shared-memory branching, explicitly approved cooperative
+rituals, security and accessibility hardening, and the optional SMP integration
+API follow. Configuration, balancing, profiling, full playtests,
+NeoForge/modpack compatibility, final art, localization, and release packaging
+come afterward; that release milestone also owns publishing inspected in-game
+images to the Regnum Hub.
 
 See [ROADMAP.md](ROADMAP.md) for the detailed status.
 
