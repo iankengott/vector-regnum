@@ -1,36 +1,36 @@
 package vectorregnum.neoforge;
 
 import com.mojang.serialization.MapCodec;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.random.Random;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.util.RandomSource;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
 
 /** A scheduled-tick light: expiry persists with the chunk across server restarts. */
 public final class MageLightBlock extends Block {
     public static final int LIFETIME_TICKS = 1_200;
-    public static final MapCodec<MageLightBlock> CODEC = createCodec(MageLightBlock::new);
+    public static final MapCodec<MageLightBlock> CODEC = simpleCodec(MageLightBlock::new);
 
-    public MageLightBlock(Settings settings) {
-        super(settings);
+    public MageLightBlock(Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected MapCodec<? extends Block> getCodec() {
+    protected MapCodec<? extends Block> codec() {
         return CODEC;
     }
 
     @Override
-    protected void onBlockAdded(BlockState state, World world, BlockPos pos,
+    protected void onPlace(BlockState state, Level level, BlockPos pos,
             BlockState oldState, boolean notify) {
-        super.onBlockAdded(state, world, pos, oldState, notify);
-        if (!world.isClient()) world.scheduleBlockTick(pos, this, LIFETIME_TICKS);
+        super.onPlace(state, level, pos, oldState, notify);
+        if (!level.isClientSide()) level.scheduleTick(pos, this, LIFETIME_TICKS);
     }
 
     @Override
-    protected void scheduledTick(BlockState state, ServerWorld world, BlockPos pos, Random random) {
-        if (state.isOf(this)) world.removeBlock(pos, false);
+    protected void tick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
+        if (state.is(this)) world.removeBlock(pos, false);
     }
 }
