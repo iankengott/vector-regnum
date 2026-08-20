@@ -138,6 +138,12 @@ phase 10 cannot verify anything without it: an empty structure template, the
 registration namespace, and a `gameTestServer` run configuration.
 `runGameTestServer` supplies the process exit code the ladder needs.
 
+The template replaces `FabricGameTest.EMPTY_STRUCTURE`, which has no NeoForge
+counterpart. The existing tests place blocks no further out than coordinate 3,
+so an 8x8x8 template with a solid floor at y=0 covers them, and the tests'
+repeated use of `new BlockPos(2, 1, 2)` confirms they expect to work one block
+above a floor.
+
 Write a checked-in source manifest naming exactly which sources compile at each
 intermediate gate. Without it the phase 1 through 3 gates are unfalsifiable.
 
@@ -145,6 +151,18 @@ Gate: `./gradlew build` succeeds against the manifest's core-only source set,
 which is `core` plus the 15 test files that do not reference
 `vectorregnum.fabric`. The other 32 test files are excluded by the manifest, not
 by accident. A build that succeeds because nothing compiles does not pass.
+
+**Status: passed, 2026-08-20.** `BUILD SUCCESSFUL in 1m 53s` on NeoForge
+`21.1.248` with ModDevGradle `2.0.141`. `portStageReport` confirms the build saw
+85 main files and 15 test files, and 158 class files were produced, so it did
+not pass by compiling nothing. `-PportStage=bogus` fails with
+`port-manifest.txt defines no main.include for stage 'bogus'`, so the manifest
+gate has been observed to fail rather than merely assumed to work.
+
+`pack.mcmeta` was investigated and deliberately not added; the official 1.21.1
+MDK ships without one and NeoForge derives pack metadata from
+`neoforge.mods.toml`. The existing data directories already use 1.21 singular
+names (`recipe`, `loot_table`, `advancement`), so no renaming was needed.
 
 ### Phase 2 — Core and pure tests (1-2 h, parent)
 
@@ -158,6 +176,15 @@ slices in phase 3, not here.
 Gate: the 15 loader-free test files green on the NeoForge toolchain, and `core`
 compiles with no edits. Any edit needed here means the loader-neutral claim was
 wrong and the plan needs revisiting.
+
+**Status: passed, 2026-08-20.** 15 test classes, 83 tests, zero failures, errors
+or skips. `git status` on `src/main/java/vectorregnum/core` reports zero changed
+files, so all 85 core files compiled against NeoForge and Mojang official
+mappings without a single edit.
+
+This is the plan's central assumption confirmed rather than assumed: the
+loader-neutral split is real, and roughly a quarter of the codebase needed no
+port at all.
 
 ### Phase 3 — Mapping sweep, vertical slices, package rename (10-16 h, deepseekflash fan-out)
 
