@@ -11,9 +11,12 @@ contract and add only repository-specific boundaries and invariants.
 2. **Current checkpoint** — distinguish confirmed implementation from plans.
    A scaffold must say it is a scaffold and must not imply build, commands,
    tests, or gameplay exist.
-3. **Subagent collaboration** — only Sol high and Luna max; bounded,
-   non-overlapping files; parent owns integration, documentation, and the full
-   verification ladder.
+3. **Subagent collaboration** — a named ordered ladder, not an open choice.
+   Here that is opencode deepseekflash (`opencode/deepseek-v4-flash-free`,
+   `--variant max`) first, Luna max second, Sol xhigh or Opus 5 medium only when
+   extremely necessary. Bounded non-overlapping files; the parent owns
+   integration, documentation, and the full verification ladder, and verifies
+   subagent output rather than trusting a summary.
 4. **Repository and machine boundaries** — exact public remote and local path;
    identify any owned ports, services, servers, or remote worktrees. If none
    exist, say so and forbid borrowing another project's workflow implicitly.
