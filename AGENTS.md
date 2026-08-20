@@ -43,12 +43,35 @@ gate before new gameplay development begins at priority 21.
 ## Subagent collaboration
 
 Ian wants implementation work delegated into bounded independent subtasks when
-concurrency is available. Use only **Sol high** and **Luna max** subagents:
-choose Sol high for focused code/test tasks and Luna max for cross-cutting
-design, integration, or difficult review. If one of those profiles is not
-available, keep that work in the parent instead of substituting another model.
-Do not assign multiple agents overlapping files. The parent agent owns final
-integration, documentation, and the complete verification ladder.
+concurrency is available. Choose a subagent by walking this ladder in order and
+taking the first available profile:
+
+1. **opencode deepseekflash (preferred).** Model
+   `opencode/deepseek-v4-flash-free` driven at maximum reasoning:
+
+   ```bash
+   opencode run -m opencode/deepseek-v4-flash-free --variant max \
+     --dir "/home/iank/Desktop/my mods/mods-editing/vector-regnum" "<task>"
+   ```
+
+   It is free, so prefer it and always pass `--variant max`. Use it for
+   inventory, mechanical refactors, mapping renames, test scaffolding, and any
+   task whose result the compiler or the verification ladder can check.
+   `~/.config/opencode/opencode.jsonc` already pins opencode's own `explore` and
+   `general` agents to this model.
+2. **Luna max.** Escalate here for cross-cutting design, loader-semantics
+   judgment, integration reasoning, and difficult review — work where being
+   confidently wrong is expensive and no compiler will catch it.
+3. **Sol xhigh or Opus 5 medium.** Only when a task is extremely demanding and
+   both profiles above have proven insufficient. Justify the escalation in the
+   handoff notes.
+
+Never substitute a model outside this ladder; if none is available, keep the
+work in the parent. Do not assign multiple agents overlapping files. Give a
+deepseekflash subagent explicit file lists rather than asking it to search, and
+state read-only when it must not write. The parent agent owns final
+integration, documentation, and the complete verification ladder, and must
+independently verify subagent output rather than trusting a summary.
 
 ## Repository and machine boundaries
 

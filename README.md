@@ -330,9 +330,9 @@ Vector-Regnum priorities" is sufficient; the numbered queue in
 are checked as the Fabric legacy alpha and the first unfinished canonical item
 is priority 20: finish freezing the published Fabric legacy repository, then
 port this active repository's complete verified behavior and testing workflow
-to NeoForge. `AGENTS.md`
-also records Ian's allowed subagent profiles and delegation
-rules so no earlier chat context is required.
+to NeoForge. `AGENTS.md` also records Ian's subagent ladder — opencode
+deepseekflash first, then Luna max, then Sol xhigh or Opus 5 medium — plus the
+delegation rules, so no earlier chat context is required.
 
 ---
 

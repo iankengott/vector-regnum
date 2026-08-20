@@ -1,0 +1,42 @@
+# Priority 20 port source manifest
+#
+# Defines exactly which sources compile at each intermediate gate. Without this
+# the phase 1 through 3 gates are unfalsifiable: "the build passes" means
+# nothing if the build silently compiles less than you think.
+#
+# Select a stage with -PportStage=<name>. Default is "core".
+# build.gradle reads this file. Do not edit one without the other.
+
+[stage:core]
+# Phase 1 and 2. Loader-neutral only. 85 main files, 5,391 lines, zero
+# net.minecraft and zero net.fabricmc imports.
+main.include = vectorregnum/core/**
+# 15 of 47 test files. The other 32 reference vectorregnum.fabric and return
+# during the phase 3 vertical slices.
+test.include = vectorregnum/core/automation/AutomationDataFrameTest.java
+test.include = vectorregnum/core/automation/AutomationRuleTest.java
+test.include = vectorregnum/core/automation/AutomationSchedulerTest.java
+test.include = vectorregnum/core/circle/CirclePersistenceTest.java
+test.include = vectorregnum/core/circle/MagicCircleAuthoringTest.java
+test.include = vectorregnum/core/circle/SpellArtifactTest.java
+test.include = vectorregnum/core/circle/Vm2CircleCompilerTest.java
+test.include = vectorregnum/core/CompatibilityFixturesTest.java
+test.include = vectorregnum/core/EngineHardeningTest.java
+test.include = vectorregnum/core/presentation/PresentationFoundationTest.java
+test.include = vectorregnum/core/semantic/SemanticFoundationTest.java
+test.include = vectorregnum/core/semantic/SemanticVmLowererTest.java
+test.include = vectorregnum/core/vm2/ManaCostModelTest.java
+test.include = vectorregnum/core/vm2/SpellVmTest.java
+test.include = vectorregnum/core/vm2/StackTypeAnalyzerTest.java
+
+# Deliberately excluded from stage:core even though it lives under core.
+# vectorregnum/core/presentation/PresentationCompilerTest.java imports
+# vectorregnum.fabric.LibrarySemanticAdapter and
+# vectorregnum.fabric.progression.ProgressionSpellLibrary at lines 14-15.
+# A core test depending on the loader package is a layering violation. Fix it
+# during phase 3 rather than carrying it forward.
+
+[stage:full]
+# Phase 3 onward, once every slice has NeoForge replacements.
+main.include = **
+test.include = **

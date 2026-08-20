@@ -1,0 +1,26 @@
+modLoader = "javafml"
+loaderVersion = "${loader_version_range}"
+license = "All-Rights-Reserved"
+
+[[mods]]
+modId = "vector_regnum"
+version = "${version}"
+displayName = "Vector-Regnum"
+authors = "Ian Kengott"
+description = '''
+A dangerous programming-magic system built from ordered geometric sigils.
+'''
+
+[[dependencies.vector_regnum]]
+modId = "neoforge"
+type = "required"
+versionRange = "${neo_version_range}"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.vector_regnum]]
+modId = "minecraft"
+type = "required"
+versionRange = "${minecraft_version_range}"
+ordering = "NONE"
+side = "BOTH"
