@@ -22,6 +22,29 @@ server-backed circle editor, natural crystal progression, GameTests,
 multiplayer/security policy, programmable automation, and compiler-driven
 client presentation.
 
+## NeoForge port status
+
+Roadmap priority 20 is in progress on branch `phase3-mapping`. The plan and
+every gate live in `docs/NEOFORGE_PORT_PLAN.md`; this is only the current
+position.
+
+| | |
+|---|---|
+| Build | NeoForge 21.1.248, ModDevGradle 2.0.141, Mojang official mappings |
+| Phases done | 0, 1, 2 |
+| Phase 3 | 4 of about 9 slices done |
+| Loader classes ported | 58 of 110 |
+| Remaining mapping-only | 26 classes, 3,747 lines |
+| Deferred to phases 4-9 | 29 classes, 5,105 lines that need Fabric API replacement |
+| Tests green at `-PportStage=slice4` | 149, zero failures |
+
+**What green does not mean.** Those 149 tests pass with no blocks, items, block
+entities, networking, or commands registered, because they are loader-neutral
+logic. There is still no NeoForge `@Mod` entrypoint, so nothing is launchable
+and the GameTests cannot run. A passing build here proves the code compiles
+against Mojang mappings, not that the mod works. Phase 10 adds the
+registration-presence test that closes this gap.
+
 ## Confirmed working in the Fabric legacy alpha
 
 - Fabric Loader 0.18.3, Fabric API 0.116.7+1.21.1, Yarn
@@ -30,7 +53,9 @@ client presentation.
   static stack analysis, semantics/presentation, circle authoring, media,
   guide/Ponder models, geology, transport, multiplayer policy, automation
   ownership, progression, and spell-library contracts, plus **16 passing
-  production Fabric GameTests** on an isolated headless server.
+  production Fabric GameTests** on an isolated headless server. Those numbers
+  describe the frozen Fabric alpha at `c7371ca`, not the current NeoForge tree.
+  See the port status below for what passes today.
 - A Minecraft-independent `vm2` with numbers, booleans, points, vectors,
   entity references, immutable lists, Push/Pop/Dup memory, arithmetic, logic,
   branches, bounded loops, delays, durations, and exact source locations.
@@ -120,11 +145,13 @@ on both machines afterward.
 
 ## Build and test
 
-These commands verify the deprecated Fabric reference during the port. Java 21
-is required:
+Java 21 is required. **During the priority 20 port a stage is mandatory.** A
+bare `./gradlew build` fails on purpose, so that a partial build cannot be
+mistaken for the full suite:
 
 ```bash
-./gradlew --no-daemon test build
+./gradlew --no-daemon -PportStage=slice4 test build   # newest passing stage
+./gradlew --no-daemon -PportStage=full  test build    # the real gate, still failing
 ```
 
 On the main NixOS PC, use the declared JDK without installing an imperative
@@ -132,8 +159,14 @@ profile:
 
 ```bash
 task_jdk=$(nix eval --raw nixpkgs#jdk21.outPath)
-JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" ./gradlew --no-daemon test build
+JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
+  ./gradlew --no-daemon -PportStage=slice4 test build
 ```
+
+Stages are defined in `gradle/port-manifest.txt`, which is authoritative;
+`build.gradle` reads it. `-PportStage=full` is the gate that matters and will
+keep failing until the port completes. Run `portStageReport` to see how many
+files a stage actually selects.
 
 ## Play on the main PC
 

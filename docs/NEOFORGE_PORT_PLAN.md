@@ -202,6 +202,36 @@ Two traps B identified:
   becomes `loadAdditional` and `writeNbt` becomes `saveAdditional` with
   different parameters. A missed override compiles and never runs.
 
+**Status: in progress, 4 of about 9 slices done. This is where to resume.**
+
+| Slice | Commit | Scope | Result |
+|---|---|---|---|
+| 1 | `e07a57c` | Package rename to `vectorregnum.neoforge`, 42 transitively clean classes | 144 tests |
+| 2 | `2314d69` | `ManaAffinity`, `ManaCrystalGeology`, `AutomationDataBridge` | 149 tests |
+| 3 | `4cbac5e` | 7 payload records to `StreamCodec` | 149 tests |
+| 4 | `9bb16c7` | 3 temporary-effect blocks | 149 tests |
+
+Remaining, 26 classes and 3,747 lines, grouped as they should be sliced:
+progression 9 classes / 923 lines (the only group that still recovers tests,
+gating 5 of the 9 excluded test classes behind `ManaReservoir`,
+`ManaTransportRules` and `ManaDrawRules`), root 7 / 843 including the block
+entities, guide 2 / 559, editor 1 / 465, ponder 3 / 422, automation 3 / 388,
+presentation 1 / 147.
+
+**Next action: slice 5, the progression cluster.**
+
+Two lessons from slices 1-4, both earned the hard way:
+
+- Give the subagent explicit method *signatures*, not just name pairs. Slice 3
+  used a name table and needed hand fixes; slice 4 used full signatures and
+  returned correct.
+- A rename table cannot express an argument-order change. `StreamCodec.of`
+  takes `(buffer, value)` where Yarn's `PacketCodec.of` took `(value, buffer)`,
+  so a method reference binds backwards and fails type inference. Slice 3 also
+  proved the agent will confidently assert a wrong rename: it reported
+  `readUuid`/`writeUuid` as unchanged when Mojang uses `readUUID`/`writeUUID`.
+  Compile every slice; never trust the summary.
+
 Port in vertical slices that compile completely, rather than sweeping all 63
 files and hoping for a full compile. A "full compile" is impossible while 29
 files still import Fabric APIs owned by phases 4 through 9, so each slice

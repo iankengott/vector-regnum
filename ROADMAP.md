@@ -112,7 +112,10 @@ acceptance scope.
     signature depth-aware shaders, including the planned Veil-backed
     compositor, and final bespoke art remain optional release-quality
     enhancement rather than a gameplay dependency.
-20. [ ] **NeoForge 1.21.1 migration and repository split.** Freeze the current
+20. [ ] **NeoForge 1.21.1 migration and repository split.** *In progress:
+    phases 0-2 complete, phase 3 four slices in. Branch `phase3-mapping`.
+    Sequencing, gates, and current position are in
+    `docs/NEOFORGE_PORT_PLAN.md`; resume at phase 3 slice 5.* Freeze the current
     verified Fabric alpha in the published legacy repository, then convert the
     active `vector-regnum` repository by porting the loader-neutral core,
     registrations, persistence, networking, events, rendering, commands,

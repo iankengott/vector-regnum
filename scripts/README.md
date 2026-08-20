@@ -6,6 +6,15 @@
 > not exist until roadmap priority 20. Do not treat a successful Fabric run as
 > proof that the NeoForge port works.
 
+> **Disabled during the priority 20 NeoForge port.** `scripts/local-play.sh`
+> and `scripts/hermes-client.sh` exit immediately with an explanation. The
+> build no longer compiles the Fabric entrypoints and no NeoForge `@Mod`
+> entrypoint exists yet, so a launch would start vanilla Minecraft with no
+> Vector-Regnum loaded and look like it succeeded. `scripts/hermes-build.sh`
+> still works but passes an explicit port stage and warns that a non-`full`
+> stage is a partial build. Use the frozen legacy checkout at `c7371ca` for a
+> playable Fabric alpha.
+
 ## Main PC one-click launcher
 
 `scripts/local-play.sh` backs the executable **Play Vector-Regnum** shortcut at
