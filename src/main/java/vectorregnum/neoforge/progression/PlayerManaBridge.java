@@ -1,7 +1,7 @@
 package vectorregnum.neoforge.progression;
 
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
 
 /**
  * Narrow integration boundary to the player mana attachment. Exact acceptance keeps
@@ -10,46 +10,46 @@ import net.minecraft.util.math.BlockPos;
 public interface PlayerManaBridge {
     PlayerManaBridge DISCONNECTED = new PlayerManaBridge() {
         @Override
-        public ManaAffinity requestedAffinity(ServerPlayerEntity player) {
+        public ManaAffinity requestedAffinity(ServerPlayer player) {
             return ManaAffinity.ARCANE;
         }
 
         @Override
-        public boolean tryAcceptExact(ServerPlayerEntity player, int mana,
+        public boolean tryAcceptExact(ServerPlayer player, int mana,
                 ManaAffinity sourceAffinity, BlockPos source) {
             return false;
         }
 
         @Override
-        public boolean consumeCapacityShard(ServerPlayerEntity player, int capacityIncrease) {
+        public boolean consumeCapacityShard(ServerPlayer player, int capacityIncrease) {
             return false;
         }
 
         @Override
-        public boolean tryAcceptStoredExact(ServerPlayerEntity player, int mana,
+        public boolean tryAcceptStoredExact(ServerPlayer player, int mana,
                 ManaAffinity affinity, BlockPos storage) {
             return false;
         }
 
         @Override
-        public void attune(ServerPlayerEntity player, BlockPos source, ManaAffinity sourceAffinity) {
+        public void attune(ServerPlayer player, BlockPos source, ManaAffinity sourceAffinity) {
         }
     };
 
-    ManaAffinity requestedAffinity(ServerPlayerEntity player);
+    ManaAffinity requestedAffinity(ServerPlayer player);
 
-    boolean tryAcceptExact(ServerPlayerEntity player, int mana,
+    boolean tryAcceptExact(ServerPlayer player, int mana,
             ManaAffinity sourceAffinity, BlockPos source);
 
     /** Credits finite block storage without replacing the player's attuned natural source. */
-    default boolean tryAcceptStoredExact(ServerPlayerEntity player, int mana,
+    default boolean tryAcceptStoredExact(ServerPlayer player, int mana,
             ManaAffinity affinity, BlockPos storage) {
         return tryAcceptExact(player, mana, affinity, storage);
     }
 
-    boolean consumeCapacityShard(ServerPlayerEntity player, int capacityIncrease);
+    boolean consumeCapacityShard(ServerPlayer player, int capacityIncrease);
 
     /** Called before a successful source draw so an implementation can persist the selected source. */
-    default void attune(ServerPlayerEntity player, BlockPos source, ManaAffinity sourceAffinity) {
+    default void attune(ServerPlayer player, BlockPos source, ManaAffinity sourceAffinity) {
     }
 }

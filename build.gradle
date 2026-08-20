@@ -29,17 +29,31 @@ if (!providers.gradleProperty("portStage").isPresent()) {
 }
 def portStage = providers.gradleProperty("portStage").get()
 def manifest = file("gradle/port-manifest.txt")
-def stagePatterns = { String stage, String key ->
+def readStagePatterns
+readStagePatterns = { String stage, String key, Set<String> seen ->
+    if (!seen.add(stage)) {
+        throw new GradleException("port-manifest.txt contains a stage inheritance cycle at '${stage}'")
+    }
     def out = []
+    def parents = []
     def active = false
     manifest.eachLine { line ->
         def t = line.trim()
         if (t.startsWith("[stage:")) {
             active = (t == "[stage:${stage}]")
+        } else if (active && t.startsWith("extends =")) {
+            parents << t.substring(t.indexOf('=') + 1).trim()
         } else if (active && t.startsWith("${key} =")) {
             out << t.substring(t.indexOf('=') + 1).trim()
         }
     }
+    parents.each { parent ->
+        out.addAll(0, readStagePatterns(parent, key, new LinkedHashSet<>(seen)))
+    }
+    return out
+}
+def stagePatterns = { String stage, String key ->
+    def out = readStagePatterns(stage, key, new LinkedHashSet<>()).unique()
     if (out.isEmpty()) {
         throw new GradleException("port-manifest.txt defines no ${key} for stage '${stage}'")
     }

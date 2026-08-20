@@ -408,6 +408,22 @@ test.include = vectorregnum/neoforge/progression/ProgressionSpellLibraryTest.jav
 test.include = vectorregnum/neoforge/progression/ProgressionStateTest.java
 test.include = vectorregnum/neoforge/world/ManaCrystalGeologyTest.java
 
+[stage:slice5]
+# Phase 3 slice 5a. The original plan grouped all progression blocks here, but
+# those classes depend directly on Fabric registration and attachment classes.
+# Keep this compile gate honest: map the independent mana rules and player
+# bridge now; blocks and block entities return with their real NeoForge
+# registration and persistence dependencies in phases 4 and 5.
+extends = slice4
+main.include = vectorregnum/neoforge/progression/ManaDrawRules.java
+main.include = vectorregnum/neoforge/progression/ManaReservoir.java
+main.include = vectorregnum/neoforge/progression/ManaTransportRules.java
+main.include = vectorregnum/neoforge/progression/PlayerManaBridge.java
+test.include = vectorregnum/neoforge/progression/ManaDrawRulesTest.java
+test.include = vectorregnum/neoforge/progression/ManaNetworkSearchTest.java
+test.include = vectorregnum/neoforge/progression/ManaTransportRulesTest.java
+test.include = vectorregnum/neoforge/progression/PlayerManaBridgeTest.java
+
 [stage:full]
 # Phase 3 onward, once every slice has NeoForge replacements.
 main.include = **
