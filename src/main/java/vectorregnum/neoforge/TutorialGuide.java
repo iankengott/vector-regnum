@@ -1,18 +1,15 @@
 package vectorregnum.neoforge;
 
-import com.mojang.serialization.Codec;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.WrittenBookContentComponent;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.RawFilteredPair;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.server.network.Filterable;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.component.WrittenBookContent;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 
 import java.util.List;
 
@@ -21,52 +18,42 @@ public final class TutorialGuide {
     public static final String FIELD_MANUAL_TITLE_PREFIX = "Vector-Regnum Field Manual v";
     public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "6";
     private static final int CURRENT_GUIDE_VERSION = 6;
-    private static final AttachmentType<Boolean> RECEIVED = AttachmentRegistry.<Boolean>create(
-            Identifier.of(VectorRegnumMod.MOD_ID, "received_tutorial_guide"),
-            builder -> builder
-                    .initializer(() -> false)
-                    .persistent(Codec.BOOL)
-                    .copyOnDeath());
-
-    private static final AttachmentType<Integer> RECEIVED_VERSION = AttachmentRegistry.<Integer>create(
-            Identifier.of(VectorRegnumMod.MOD_ID, "tutorial_guide_version"),
-            builder -> builder
-                    .initializer(() -> 0)
-                    .persistent(Codec.INT)
-                    .copyOnDeath());
-
     private TutorialGuide() {
     }
 
     public static void initialize() {
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> {
-            ServerPlayerEntity player = handler.player;
-            if (!player.getAttachedOrCreate(RECEIVED)
-                    || player.getAttachedOrCreate(RECEIVED_VERSION) < CURRENT_GUIDE_VERSION) {
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent event) -> {
+            if (!(event.getEntity() instanceof ServerPlayer player)) {
+                return;
+            }
+            if (!player.getData(PlayerAttachmentContent.RECEIVED_TUTORIAL_GUIDE)
+                    || player.getData(PlayerAttachmentContent.TUTORIAL_GUIDE_VERSION)
+                    < CURRENT_GUIDE_VERSION) {
                 give(player);
                 giveStarterTomeIfMissing(player);
             }
         });
     }
 
-    public static void give(ServerPlayerEntity player) {
-        player.getInventory().offerOrDrop(createBook());
-        player.setAttached(RECEIVED, true);
-        player.setAttached(RECEIVED_VERSION, CURRENT_GUIDE_VERSION);
-        player.sendMessage(Text.literal(
+    public static void give(ServerPlayer player) {
+        player.getInventory().placeItemBackInInventory(createBook());
+        player.setData(PlayerAttachmentContent.RECEIVED_TUTORIAL_GUIDE, true);
+        player.setData(PlayerAttachmentContent.TUTORIAL_GUIDE_VERSION, CURRENT_GUIDE_VERSION);
+        player.sendSystemMessage(Component.literal(
                         "Vector-Regnum Field Manual added to your inventory — right-click it to begin")
-                .formatted(Formatting.GOLD), false);
+                .withStyle(ChatFormatting.GOLD));
     }
 
-    private static void giveStarterTomeIfMissing(ServerPlayerEntity player) {
-        if (!player.getInventory().contains(stack -> stack.isOf(VectorRegnumContent.SIGIL_TOME))) {
-            player.getInventory().offerOrDrop(new ItemStack(VectorRegnumContent.SIGIL_TOME));
+    private static void giveStarterTomeIfMissing(ServerPlayer player) {
+        if (!player.getInventory().contains(stack -> stack.is(VectorRegnumContent.SIGIL_TOME.get()))) {
+            player.getInventory().placeItemBackInInventory(
+                    new ItemStack(VectorRegnumContent.SIGIL_TOME.get()));
         }
     }
 
     private static ItemStack createBook() {
         ItemStack book = new ItemStack(Items.WRITTEN_BOOK);
-        List<RawFilteredPair<Text>> pages = List.of(
+        List<Filterable<Component>> pages = List.of(
                 page("VECTOR-REGNUM\nThe Realm of Direction\n\n"
                         + "Welcome, compiler. Spells are ordered sigil programs. Correct programs reshape the world; broken programs become Wild Magic."),
                 page("QUICK START\n\n"
@@ -117,8 +104,8 @@ public final class TutorialGuide {
                 page("WILD MAGIC\n\n"
                         + "Compiler faults are physical. Depending on how far the spell progressed, failure may detonate internally, burst as an unstructured element, or become a violent miscast.\n\n"
                         + "Use /vectorregnum guide if you need another manual. Admins can use /vectorregnum devkit in a test world."));
-        book.set(DataComponentTypes.WRITTEN_BOOK_CONTENT, new WrittenBookContentComponent(
-                RawFilteredPair.of(FIELD_MANUAL_TITLE),
+        book.set(DataComponents.WRITTEN_BOOK_CONTENT, new WrittenBookContent(
+                Filterable.passThrough(FIELD_MANUAL_TITLE),
                 "The Realm of Direction",
                 0,
                 pages,
@@ -126,7 +113,7 @@ public final class TutorialGuide {
         return book;
     }
 
-    private static RawFilteredPair<Text> page(String contents) {
-        return RawFilteredPair.of(Text.literal(contents));
+    private static Filterable<Component> page(String contents) {
+        return Filterable.passThrough(Component.literal(contents));
     }
 }

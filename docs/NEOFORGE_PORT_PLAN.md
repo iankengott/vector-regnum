@@ -1,13 +1,14 @@
 # Priority 20 execution plan: Fabric to NeoForge 1.21.1
 
-Status: proposed, not started. This plan implements canonical roadmap priority
-20. It does not change what priority 20 requires; it sequences it.
+Status: complete, 2026-08-20. This plan implemented canonical roadmap priority
+20. The final NeoForge baseline passes 172 JUnit tests, 17 production
+GameTests, live registration parity, and the guarded local/Hermes ladder.
 
 Revision 2 incorporates an adversarial review. Two blockers, four high findings,
 and two medium findings were confirmed against the tree and fixed below. The
-changes that mattered most: world claims cannot be an attachment, the phase 5
-save gate contradicted a canonical decision, and phase 6 had NeoForge threading
-backwards.
+changes that mattered most: world claims needed an explicit persistence-owner
+decision, the phase 5 save gate contradicted a canonical decision, and phase 6
+had NeoForge threading backwards.
 
 ## Measured baseline
 
@@ -74,11 +75,11 @@ and `copyOnDeath` is a real builder flag available once a serializer is
 configured. Subagent A was right and subagent C was wrong to claim no
 equivalent exists.
 
-Holders are entities, block entities, and chunks. Levels are not supported and
-the documentation directs level data to `SavedData`, which independently
-confirms the `WORLD_CLAIMS` blocker. Item stacks are also unsupported, having
-been superseded by vanilla data components; this project attaches nothing to
-item stacks, so that costs nothing here.
+The pinned NeoForge API also supports level attachments. Claims nevertheless
+use explicit per-dimension `SavedData`: immutable ledger replacement, dirty-bit
+ownership, malformed-file recovery, and restart reconciliation remain visible
+in one adapter. Player state uses serialized, copy-on-death attachments. Item
+stacks use vanilla data components; this project attaches nothing to them.
 Source: https://docs.neoforged.net/docs/1.21.1/datastorage/attachments/
 
 **2. Pinned versions.** NeoForge `21.1.248`, which is both the latest 21.1
@@ -389,7 +390,7 @@ race.
 
 ### Phase 10 — Test port and the coverage gap (6-10 h, deepseekflash then parent)
 
-Port the 16 `@GameTest` methods, which live in 3 classes and not 16, from
+Port the 16 legacy `@GameTest` methods, which live in 3 classes and not 16, from
 `FabricGameTest` to `@GameTestHolder`. `TestContext` becomes `GameTestHelper`
 with renamed methods, and annotation attributes change. The structure template,
 namespace, and `gameTestServer` run configuration were built in phase 1, so
@@ -402,10 +403,12 @@ phase 4 parity manifest and fails when any expected registry ID, attachment ID,
 payload ID, creative-tab membership, or command root is missing from the live
 game. The current suite cannot tell a working port from an empty one.
 
-Gate: all 16 GameTest methods pass on NeoForge through `runGameTestServer` with
-a real process exit code, and the new registration test fails when a
-registration is deliberately commented out. Verify that failure; a gate that has
-never failed is not a gate.
+Gate: all 17 GameTest methods (the 16 ports plus live registration parity) pass
+on NeoForge through `runGameTestServer` with a real process exit code, and the
+new registration test fails when a registration is deliberately broken. This
+was proved by temporarily renaming the live `sigil_tome` ID: parity was the
+sole required failure, the mutation was restored, and two consecutive
+persisted-world runs then passed all 17 tests.
 
 ### Phase 11 — Ladder, launcher, mirror, handoff (6-9 h, parent)
 

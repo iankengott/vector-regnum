@@ -3,115 +3,118 @@ package vectorregnum.neoforge.gametest;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import java.util.UUID;
-import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
-import net.minecraft.block.Blocks;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.network.packet.c2s.common.SyncedClientOptions;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.test.GameTest;
-import net.minecraft.test.TestContext;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.GameMode;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.core.BlockPos;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
+import net.minecraft.world.level.block.Blocks;
+import net.neoforged.neoforge.gametest.GameTestHolder;
+import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import vectorregnum.core.automation.AutomationRule;
 import vectorregnum.neoforge.ManaData;
 import vectorregnum.neoforge.automation.AutomationContent;
 import vectorregnum.neoforge.automation.AutomationRelayBlockEntity;
+import vectorregnum.neoforge.multiplayer.ClaimLedger;
+import vectorregnum.neoforge.multiplayer.ClaimSavedData;
+import vectorregnum.neoforge.multiplayer.MultiplayerLifecycleService;
 
-/** Real Fabric coverage for priority 18's command, relay, redstone, and NBT boundaries. */
-public final class Priority18GameTests implements FabricGameTest {
+/** Real NeoForge coverage for priority 18's command, relay, redstone, and NBT boundaries. */
+@GameTestHolder("vector_regnum")
+@PrefixGameTestTemplate(false)
+public final class Priority18GameTests {
     private static final BlockPos RELAY = new BlockPos(2, 1, 2);
 
-    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE, tickLimit = 40)
-    public void remoteActivationUsesProgrammedRelayAndServerQueue(TestContext context) {
-        ServerPlayerEntity player = connectedCreativePlayer(context);
-        removePlayerAfterTest(context, player);
+    @GameTest(template = "empty", timeoutTicks = 40)
+    public void remoteActivationUsesProgrammedRelayAndServerQueue(GameTestHelper context) {
+        ServerPlayer player = connectedCreativePlayer(context);
         ManaData.setForTesting(player, 1_000.0, 1_000.0);
-        context.setBlockState(RELAY, AutomationContent.AUTOMATION_RELAY);
+        context.setBlock(RELAY, AutomationContent.automationRelay());
         programCompatibilityCircle(context, player);
-        BlockPos absolute = context.getAbsolutePos(RELAY);
+        BlockPos absolute = context.absolutePos(RELAY);
 
         execute(context, player, "vectorregnum automation program "
                 + absolute.getX() + " " + absolute.getY() + " " + absolute.getZ(), 1);
         execute(context, player, "vectorregnum automation trigger "
                 + absolute.getX() + " " + absolute.getY() + " " + absolute.getZ(), 1);
 
-        context.waitAndRun(3, () -> {
+        context.runAfterDelay(3, () -> {
             AutomationRelayBlockEntity relay = context.getBlockEntity(RELAY);
-            context.assertEquals(1L, relay.acceptedActivations(),
+            context.assertValueEqual(1L, relay.acceptedActivations(),
                     "remote command should enqueue exactly one immutable invocation");
-            context.assertEquals(1L, relay.successfulActivations(),
+            context.assertValueEqual(1L, relay.successfulActivations(),
                     "the server tick should execute the programmed circle for its owner");
-            context.complete();
+            completeAfterCleanup(context, player);
         });
     }
 
-    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE, tickLimit = 40)
-    public void risingRedstoneCapturesBridgeValueAndDrivesComparator(TestContext context) {
-        ServerPlayerEntity player = connectedCreativePlayer(context);
-        removePlayerAfterTest(context, player);
+    @GameTest(template = "empty", timeoutTicks = 40)
+    public void risingRedstoneCapturesBridgeValueAndDrivesComparator(GameTestHelper context) {
+        ServerPlayer player = connectedCreativePlayer(context);
         ManaData.setForTesting(player, 1_000.0, 1_000.0);
-        context.setBlockState(RELAY, AutomationContent.AUTOMATION_RELAY);
+        context.setBlock(RELAY, AutomationContent.automationRelay());
         programCompatibilityCircle(context, player);
-        BlockPos absolute = context.getAbsolutePos(RELAY);
+        BlockPos absolute = context.absolutePos(RELAY);
         execute(context, player, "vectorregnum automation program "
                 + absolute.getX() + " " + absolute.getY() + " " + absolute.getZ(), 1);
 
-        context.runAtTick(2, () -> context.setBlockState(RELAY.west(), Blocks.REDSTONE_BLOCK));
-        context.waitAndRun(6, () -> {
+        context.runAtTickTime(context.getTick() + 2, () -> context.setBlock(RELAY.west(), Blocks.REDSTONE_BLOCK));
+        context.runAfterDelay(6, () -> {
             AutomationRelayBlockEntity relay = context.getBlockEntity(RELAY);
-            context.assertEquals(1L, relay.acceptedActivations(),
+            context.assertValueEqual(1L, relay.acceptedActivations(),
                     "one rising edge should enqueue one invocation");
-            context.assertEquals(15, relay.comparatorOutput(),
+            context.assertValueEqual(15, relay.comparatorOutput(),
                     "captured redstone data should bridge back out as comparator strength");
-            context.complete();
+            completeAfterCleanup(context, player);
         });
     }
 
-    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
-    public void relayProgramRuleAndCountersSurviveMinecraftNbt(TestContext context) {
-        ServerPlayerEntity player = connectedCreativePlayer(context);
-        removePlayerAfterTest(context, player);
-        context.setBlockState(RELAY, AutomationContent.AUTOMATION_RELAY);
+    @GameTest(template = "empty")
+    public void relayProgramRuleAndCountersSurviveMinecraftNbt(GameTestHelper context) {
+        ServerPlayer player = connectedCreativePlayer(context);
+        context.setBlock(RELAY, AutomationContent.automationRelay());
         programCompatibilityCircle(context, player);
         AutomationRelayBlockEntity original = context.getBlockEntity(RELAY);
         original.configure(player, vectorregnum.neoforge.CircleAuthoringService.session(player).current(),
                 new AutomationRule(AutomationRule.TriggerMode.CHANGE, 7, 33));
 
-        var registries = context.getWorld().getRegistryManager();
-        NbtCompound saved = original.createNbtWithIdentifyingData(registries);
+        var registries = context.getLevel().registryAccess();
+        CompoundTag saved = original.saveWithFullMetadata(registries);
         AutomationRelayBlockEntity reloaded = new AutomationRelayBlockEntity(
-                context.getAbsolutePos(RELAY), AutomationContent.AUTOMATION_RELAY.getDefaultState());
-        reloaded.read(saved.copy(), registries);
+                context.absolutePos(RELAY), AutomationContent.automationRelay().defaultBlockState());
+        reloaded.loadWithComponents(saved.copy(), registries);
 
-        context.assertEquals(player.getUuid(), reloaded.owner().orElseThrow(),
+        context.assertValueEqual(player.getUUID(), reloaded.owner().orElseThrow(),
                 "relay owner should survive block-entity NBT");
-        context.assertEquals(new AutomationRule(AutomationRule.TriggerMode.CHANGE, 7, 33),
+        context.assertValueEqual(new AutomationRule(AutomationRule.TriggerMode.CHANGE, 7, 33),
                 reloaded.rule(), "programmable redstone rule should survive block-entity NBT");
         context.assertTrue(reloaded.configured(), "checksummed circle program should survive NBT");
-        context.complete();
+        completeAfterCleanup(context, player);
     }
 
-    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
-    public void privateClaimAndRelayOwnershipRejectRemoteStranger(TestContext context) {
-        ServerPlayerEntity owner = connectedCreativePlayer(context);
-        ServerPlayerEntity stranger = connectedCreativePlayer(context);
-        removePlayersAfterTest(context, owner, stranger);
-        context.setBlockState(RELAY, AutomationContent.AUTOMATION_RELAY);
+    @GameTest(template = "empty")
+    public void privateClaimAndRelayOwnershipRejectRemoteStranger(GameTestHelper context) {
+        ServerPlayer owner = connectedCreativePlayer(context);
+        ServerPlayer stranger = connectedCreativePlayer(context);
+        context.setBlock(RELAY, AutomationContent.automationRelay());
         programCompatibilityCircle(context, owner);
-        BlockPos absolute = context.getAbsolutePos(RELAY);
+        BlockPos absolute = context.absolutePos(RELAY);
+        clearPersistedClaim(context, owner);
         execute(context, owner, "vectorregnum security claim private", 1);
         execute(context, owner, "vectorregnum automation program "
                 + absolute.getX() + " " + absolute.getY() + " " + absolute.getZ(), 1);
         execute(context, stranger, "vectorregnum automation trigger "
                 + absolute.getX() + " " + absolute.getY() + " " + absolute.getZ(), 0);
         AutomationRelayBlockEntity relay = context.getBlockEntity(RELAY);
-        context.assertEquals(0L, relay.acceptedActivations(),
+        context.assertValueEqual(0L, relay.acceptedActivations(),
                 "a foreign remote request must not enter the server queue");
-        context.complete();
+        execute(context, owner, "vectorregnum security release", 1);
+        completeAfterCleanup(context, owner, stranger);
     }
 
-    private static void programCompatibilityCircle(TestContext context, ServerPlayerEntity player) {
+    private static void programCompatibilityCircle(GameTestHelper context, ServerPlayer player) {
         execute(context, player, "vectorregnum circle new automation-gametest", 1);
         execute(context, player, "vectorregnum circle place 0 0 ORIGIN_SELF", 1);
         execute(context, player, "vectorregnum circle place 0 1 ELEMENT_FIRE", 1);
@@ -119,39 +122,42 @@ public final class Priority18GameTests implements FabricGameTest {
         execute(context, player, "vectorregnum circle place 0 3 EXECUTE", 1);
     }
 
-    private static ServerPlayerEntity connectedCreativePlayer(TestContext context) {
-        ServerPlayerEntity player = context.createMockCreativeServerPlayerInWorld();
-        player.getAbilities().creativeMode = true;
-        player.changeGameMode(GameMode.CREATIVE);
+    private static ServerPlayer connectedCreativePlayer(GameTestHelper context) {
+        ServerPlayer player = context.makeMockServerPlayerInLevel();
+        player.getAbilities().instabuild = true;
+        player.setGameMode(GameType.CREATIVE);
         return player;
     }
 
-    private static void removePlayerAfterTest(TestContext context, ServerPlayerEntity player) {
-        removePlayersAfterTest(context, player);
+    private static void clearPersistedClaim(GameTestHelper context, ServerPlayer player) {
+        var key = MultiplayerLifecycleService.key(context.getLevel(), player.blockPosition());
+        ClaimLedger ledger = MultiplayerLifecycleService.claims(context.getLevel());
+        if (ledger.at(key).isPresent()) {
+            ClaimSavedData.get(context.getLevel()).replace(
+                    ledger.release(key, player.getUUID(), true).ledger());
+        }
     }
 
-    private static void removePlayersAfterTest(
-            TestContext context, ServerPlayerEntity... players) {
-        context.addInstantFinalTask(() -> {
-            for (ServerPlayerEntity player : players) {
-                if (context.getWorld().getServer().getPlayerManager()
-                        .getPlayer(player.getUuid()) != null) {
-                    context.getWorld().getServer().getPlayerManager().remove(player);
-                }
+    private static void completeAfterCleanup(
+            GameTestHelper context, ServerPlayer... players) {
+        for (ServerPlayer player : players) {
+            if (context.getLevel().getServer().getPlayerList().getPlayer(player.getUUID()) != null) {
+                context.getLevel().getServer().getPlayerList().remove(player);
             }
-        });
+        }
+        context.succeed();
     }
 
-    private static void execute(TestContext context, ServerPlayerEntity player,
+    private static void execute(GameTestHelper context, ServerPlayer player,
             String command, int expectedResult) {
-        CommandDispatcher<ServerCommandSource> dispatcher = context.getWorld().getServer()
-                .getCommandManager().getDispatcher();
+        CommandDispatcher<CommandSourceStack> dispatcher = context.getLevel().getServer()
+                .getCommands().getDispatcher();
         try {
             int result = dispatcher.execute(dispatcher.parse(command,
-                    player.getCommandSource().withLevel(0)));
-            context.assertEquals(expectedResult, result, "unexpected command result: /" + command);
+                    player.createCommandSourceStack().withPermission(0)));
+            context.assertValueEqual(expectedResult, result, "unexpected command result: /" + command);
         } catch (CommandSyntaxException exception) {
-            context.throwGameTestException("command failed: /" + command + " ("
+            context.fail("command failed: /" + command + " ("
                     + exception.getMessage() + ")");
         }
     }

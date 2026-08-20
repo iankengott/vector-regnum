@@ -82,7 +82,7 @@ public final class SemanticCreationExecutor {
                         case SURFACE -> y == 0;
                         case VOLUME -> true;
                     };
-                    if (include) candidates.add(anchor.add(x, y, z));
+                    if (include) candidates.add(anchor.offset(x, y, z));
                 }
             }
         }

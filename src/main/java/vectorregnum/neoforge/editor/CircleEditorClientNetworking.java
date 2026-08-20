@@ -1,32 +1,37 @@
 package vectorregnum.neoforge.editor;
 
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import vectorregnum.core.circle.CircleCoordinate;
 import vectorregnum.core.circle.SpellMedium;
 
 /** Client half of the graphical editor protocol. */
 public final class CircleEditorClientNetworking {
-    private static boolean initialized;
     private static boolean waitingForOpen;
 
     private CircleEditorClientNetworking() {
     }
 
-    public static void initialize() {
-        if (initialized) {
-            return;
+    /** Registers the server-to-client editor snapshot payload. */
+    public static void register(PayloadRegistrar registrar) {
+        registrar.playToClient(CircleEditorSnapshotPayload.TYPE, CircleEditorSnapshotPayload.CODEC,
+                CircleEditorClientNetworking::handleSnapshot);
+    }
+
+    /** Runs on the client main thread because the registrar uses its default handler thread. */
+    public static void handleSnapshot(CircleEditorSnapshotPayload payload, IPayloadContext ignored) {
+        Minecraft client = Minecraft.getInstance();
+        if (waitingForOpen || !(client.screen instanceof CircleEditorScreen)) {
+            waitingForOpen = false;
+            client.setScreen(CircleEditorScreen.from(payload));
+        } else {
+            ((CircleEditorScreen) client.screen).applySnapshot(payload);
         }
-        initialized = true;
-        ClientPlayNetworking.registerGlobalReceiver(CircleEditorSnapshotPayload.ID,
-                (payload, context) -> context.client().execute(() -> {
-                    if (waitingForOpen || !(context.client().currentScreen instanceof CircleEditorScreen)) {
-                        waitingForOpen = false;
-                        context.client().setScreen(CircleEditorScreen.from(payload));
-                    } else {
-                        ((CircleEditorScreen) context.client().currentScreen).applySnapshot(payload);
-                    }
-                }));
+    }
+
+    /** Retained as a no-op source-compatibility hook for the client entrypoint. */
+    public static void initialize() {
     }
 
     public static void open() {
@@ -55,12 +60,12 @@ public final class CircleEditorClientNetworking {
     }
 
     public static void send(String action, String data) {
-        MinecraftClient client = MinecraftClient.getInstance();
-        if (client.getNetworkHandler() == null
-                || !ClientPlayNetworking.canSend(CircleEditorPayload.ID)) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.getConnection() == null
+                || !client.getConnection().hasChannel(CircleEditorPayload.TYPE)) {
             return;
         }
-        ClientPlayNetworking.send(new CircleEditorPayload(action, data));
+        client.getConnection().send(new CircleEditorPayload(action, data));
     }
 
     private static String coordinate(CircleCoordinate coordinate) {

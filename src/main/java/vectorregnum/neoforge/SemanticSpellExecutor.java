@@ -194,7 +194,7 @@ public final class SemanticSpellExecutor {
         private void barrier() {
             player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, duration, 1));
             player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, duration, 1));
-            player.playSound(SoundEvents.ITEM_SHIELD_BLOCK, .8F, 1.3F);
+            player.playSound(SoundEvents.SHIELD_BLOCK, .8F, 1.3F);
         }
 
         private void placeLight() {

@@ -1,12 +1,13 @@
 package vectorregnum.neoforge.automation;
 
 import java.util.UUID;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import vectorregnum.core.automation.AutomationDataFrame;
 import vectorregnum.core.automation.AutomationEndpoint;
 import vectorregnum.core.automation.AutomationInvocation;
@@ -14,7 +15,7 @@ import vectorregnum.core.automation.AutomationScheduler;
 import vectorregnum.neoforge.VectorRegnumMod;
 import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
 
-/** Fabric adapter that owns dequeue and performs every world/VM mutation on the server tick. */
+/** NeoForge adapter that owns dequeue and performs every world/VM mutation on the server tick. */
 public final class AutomationService {
     private static final AutomationScheduler SCHEDULER = new AutomationScheduler();
     private static boolean initialized;
@@ -23,17 +24,24 @@ public final class AutomationService {
     }
 
     public static void initialize() {
-        if (initialized) return;
         initialized = true;
-        AutomationContent.initialize();
-        ServerTickEvents.END_SERVER_TICK.register(AutomationService::tick);
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> SCHEDULER.clear());
     }
 
-    public static boolean submit(UUID owner, ServerWorld world, BlockPos position,
+    @SubscribeEvent
+    public static void onServerTick(ServerTickEvent.Post event) {
+        tick(event.getServer());
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
+        SCHEDULER.clear();
+        initialized = false;
+    }
+
+    public static boolean submit(UUID owner, ServerLevel world, BlockPos position,
             AutomationInvocation.TriggerCause cause, AutomationDataFrame frame) {
         AutomationEndpoint endpoint = new AutomationEndpoint(
-                world.getRegistryKey().getValue().toString(),
+                world.dimension().location().toString(),
                 position.getX(), position.getY(), position.getZ());
         AutomationScheduler.SubmitResult result = SCHEDULER.submit(
                 new AutomationInvocation(owner, endpoint, cause, frame));
@@ -70,17 +78,17 @@ public final class AutomationService {
     private static void dispatch(MinecraftServer server, AutomationInvocation invocation) {
         BlockPos position = new BlockPos(invocation.endpoint().x(),
                 invocation.endpoint().y(), invocation.endpoint().z());
-        ServerWorld world = null;
-        for (ServerWorld candidate : server.getWorlds()) {
-            if (candidate.getRegistryKey().getValue().toString()
+        ServerLevel world = null;
+        for (ServerLevel candidate : server.getAllLevels()) {
+            if (candidate.dimension().location().toString()
                     .equals(invocation.endpoint().dimension())) {
                 world = candidate;
                 break;
             }
         }
-        if (world == null || !world.isChunkLoaded(position)) return;
+        if (world == null || !world.isLoaded(position)) return;
         if (!(world.getBlockEntity(position) instanceof AutomationRelayBlockEntity relay)) return;
-        ServerPlayerEntity owner = server.getPlayerManager().getPlayer(invocation.owner());
+        ServerPlayer owner = server.getPlayerList().getPlayer(invocation.owner());
         if (owner == null) {
             relay.recordUnavailable(invocation, "owner offline; request dropped");
             return;
@@ -89,7 +97,7 @@ public final class AutomationService {
             relay.recordUnavailable(invocation, "claim or world permission denied dispatch");
             return;
         }
-        if (!relay.acceptDataDispatch(invocation, world.getTime())) return;
+        if (!relay.acceptDataDispatch(invocation, world.getGameTime())) return;
         relay.execute(owner, invocation);
     }
 }

@@ -1,11 +1,9 @@
 # Vector-Regnum AI handoff
 
 This file is the starting point for any AI or developer continuing the mod.
-This is the active Vector-Regnum repository, currently carrying the playable,
-verified **but deprecated** Fabric 1.21.1 alpha as its migration baseline.
-NeoForge 1.21.1 is the active target; the exact Fabric state is preserved in a
-separate legacy repository and priority 20 ports this active repository before
-new gameplay development.
+This is the active Vector-Regnum NeoForge 1.21.1 repository. The playable,
+verified but deprecated Fabric alpha is preserved in a separate legacy
+repository and is historical reference only.
 
 ## Read first
 
@@ -25,20 +23,17 @@ end-to-end alpha passes, but still need balance and hardening.
 
 ## Current handoff checkpoint
 
-As of 2026-08-13, priorities 1–19 are checked for the deprecated Fabric alpha
-and the first unfinished canonical item is **20, the NeoForge 1.21.1 migration
-and repository split**. Priorities 17–19 add formal multiplayer lifecycle/security,
-the programmable Automation Relay and bounded concurrency/data bridge, the
-sixteen-test production Fabric GameTest matrix, and the compiler-driven layered
-client presentation runtime with LOD/accessibility controls.
+As of 2026-08-20, priorities 1–20 are checked. The first unfinished canonical
+item is **20a, the optional Veil-backed modular presentation overhaul and
+compatibility gate**. Priority 20 established the NeoForge 1.21.1 build,
+registrations, persistence, networking, lifecycle, world generation, client
+runtime, guarded launchers, 172-test JUnit suite, and 17-test production
+NeoForge GameTest matrix while retaining the priorities 1–19 behavior.
 Always re-read `ROADMAP.md` before reporting or implementing work because it
 supersedes this dated checkpoint whenever the queue changes.
 
-Do not begin priority 20a or 21 or later while this active checkout still builds
-on Fabric. Priority 20 first verifies the published legacy snapshot, then ports
-this repository's behavior and safety/test coverage to NeoForge. Priority 20a
-then establishes the optional Veil-backed modular renderer and compatibility
-gate before new gameplay development begins at priority 21.
+Priority 20a establishes the optional Veil-backed modular renderer and
+compatibility gate before new gameplay development begins at priority 21.
 
 ## Subagent collaboration
 
@@ -75,11 +70,11 @@ independently verify subagent output rather than trusting a summary.
 
 ## Repository and machine boundaries
 
-- Active Main-PC checkout (currently the Fabric-to-NeoForge migration baseline):
+- Active Main-PC NeoForge checkout:
   `/home/iank/Desktop/my mods/mods-editing/vector-regnum`
 - Frozen Main-PC Fabric legacy checkout:
   `/home/iank/Desktop/my mods/mods-editing/vector-regnum-fabric-legacy`
-- Current Fabric Hermes guarded mirror:
+- Current NeoForge Hermes guarded mirror:
   `ian-kengott@100.88.229.63:/home/ian-kengott/projects/vector-regnum`
 - Main-PC launcher: `/home/iank/Desktop/Vector-Regnum.desktop`
 - Development port: loopback `25575` only.
@@ -96,29 +91,26 @@ independently verify subagent output rather than trusting a summary.
 
 ## Required verification ladder
 
-The commands below verify the deprecated Fabric reference. Use verification
-proportionate to the change, but gameplay or visual work is not complete
-without the full ladder. Priority 20 must replace every Fabric-specific step
-with an equivalent NeoForge step and retain loader-neutral coverage.
+Use verification proportionate to the change, but gameplay or visual work is
+not complete without the full NeoForge ladder.
 
-1. On NixOS, use Java 21 and run the automated suite. During the priority 20
-   port the stage is mandatory; a bare `./gradlew build` fails on purpose so a
-   partial build cannot be mistaken for the full suite.
+1. On NixOS, use Java 21 and run the complete automated suite and the real
+   NeoForge GameTest server.
 
    ```bash
    task_jdk=$(nix eval --raw nixpkgs#jdk21.outPath)
    JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
-     ./gradlew --no-daemon -PportStage=full clean test build
+     ./gradlew --no-daemon clean test build
+     ./gradlew --no-daemon runGameTestServer
    find src -type f -name '*.json' -print0 | xargs -0 -n1 jq empty
    find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
    git diff --check
    ```
 
-   `-PportStage=full` is the real gate and will keep failing until the port
-   completes. `-PportStage=core` builds only the loader-neutral subset, 85 of
-   195 main files and 15 of 47 test classes, and is a staging check rather than
-   a verification. See `gradle/port-manifest.txt`. Drop the property once
-   priority 20 lands.
+   The GameTest process must report all 17 required tests passed. Its live
+   parity test validates registry IDs, attachments, payload directions,
+   creative-tab membership, and the command root against
+   `data/vector_regnum/registration_parity.json`.
 
 2. Exercise server/client integration on Hermes through the guarded scripts:
 
@@ -144,7 +136,7 @@ with an equivalent NeoForge step and retain loader-neutral coverage.
 
 Pure documentation changes do not require Minecraft launches. Pure core logic
 normally requires step 1 and Hermes build parity; any player-visible,
-rendering, command, persistence, or Fabric integration change requires steps
+rendering, command, persistence, or NeoForge integration change requires steps
 1–3 and direct visual inspection.
 
 ## Regression invariants

@@ -9,7 +9,7 @@ usage() {
     cat <<'USAGE'
 Usage: scripts/hermes-build.sh
 
-Verify Hermes is using JDK 21, then run the remote Gradle `test build` task
+Verify Hermes is using JDK 21, then run the remote clean NeoForge test/build task
 graph. Run hermes-sync.sh first when local sources have changed.
 USAGE
 }
@@ -44,14 +44,9 @@ java_major="$(sed -E 's/.*version "([0-9]+).*/\1/' <<< "$java_version")"
 }
 printf 'Using %s\n' "$java_version"
 
-# Priority 20 staging. The stage must be explicit: a bare gradle invocation now
-# fails rather than silently building only the loader-neutral subset.
-port_stage="${VECTOR_REGNUM_PORT_STAGE:-core}"
-printf 'Building port stage %s (see gradle/port-manifest.txt).\n' "$port_stage"
-if [[ "$port_stage" != "full" ]]; then
-    printf 'WARNING: this is a partial staged build, not the full automated suite.\n' >&2
-fi
-./gradlew --no-daemon "-PportStage=$port_stage" test build
+./gradlew --no-daemon clean test build
+find src -type f -name '*.json' -print0 | xargs -0 -n1 jq empty
+find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
 REMOTE
 
 vr_note "Hermes tests and build passed."

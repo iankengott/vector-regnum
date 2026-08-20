@@ -1,23 +1,24 @@
 package vectorregnum.neoforge;
 
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.LivingEntity;
-import net.minecraft.entity.mob.HostileEntity;
-import net.minecraft.entity.projectile.ProjectileUtil;
-import net.minecraft.particle.ParticleTypes;
-import net.minecraft.registry.Registries;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.hit.EntityHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.world.entity.projectile.ProjectileUtil;
+import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.EntityHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import vectorregnum.core.vm2.Instruction;
 import vectorregnum.core.vm2.ManaCostModel;
 import vectorregnum.core.vm2.Program;
@@ -62,41 +63,47 @@ public final class NeoForgeVmService {
     }
 
     public static void initialize() {
-        if (initialized) return;
         initialized = true;
-        ServerTickEvents.END_SERVER_TICK.register(NeoForgeVmService::tick);
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
-            ACTIVE_VMS.clear();
-            ACTIVE_FORCES.clear();
-            ABUSE_GUARD.clear();
-            CANCELLED_OWNERS.clear();
-        });
+    }
+
+    @SubscribeEvent
+    public static void onServerTick(ServerTickEvent.Post event) {
+        tick(event.getServer());
+    }
+
+    @SubscribeEvent
+    public static void onServerStopping(ServerStoppingEvent event) {
+        ACTIVE_VMS.clear();
+        ACTIVE_FORCES.clear();
+        ABUSE_GUARD.clear();
+        CANCELLED_OWNERS.clear();
+        initialized = false;
     }
 
     /** A real delayed, tick-resumed VM cast used by Vector Step and visual checks. */
     public static boolean launchVectorStep(
-            ServerPlayerEntity player, boolean chargeMana, int delayTicks, double strength) {
-        Vec3d look = player.getRotationVec(1.0F).normalize();
+            ServerPlayer player, boolean chargeMana, int delayTicks, double strength) {
+        Vec3 look = player.getViewVector(1.0F).normalize();
         Vector3 impulse = new Vector3(look.x * strength, Math.max(0.18, look.y * strength + 0.22),
                 look.z * strength);
-        Program program = impulseProgram(player.getUuidAsString(), impulse, delayTicks, 1);
+        Program program = impulseProgram(player.getStringUUID(), impulse, delayTicks, 1);
         return start(player, syntheticCompilation(program), chargeMana, "Vector Step");
     }
 
     public static boolean launchKineticWard(
-            ServerPlayerEntity player, Entity target, Vec3d impulse, boolean chargeMana) {
-        Program program = impulseProgram(target.getUuidAsString(),
+            ServerPlayer player, Entity target, Vec3 impulse, boolean chargeMana) {
+        Program program = impulseProgram(target.getStringUUID(),
                 new Vector3(impulse.x, impulse.y, impulse.z), 0, 1);
         return start(player, syntheticCompilation(program), chargeMana, "Kinetic Ward");
     }
 
     public static boolean startAuthored(
-            ServerPlayerEntity player, Program program, boolean chargeMana, String label) {
+            ServerPlayer player, Program program, boolean chargeMana, String label) {
         return start(player, syntheticCompilation(program), chargeMana, label,
                 (owner, steps) -> SemanticSpellExecutor.execute(owner, steps, false));
     }
 
-    public static boolean startAuthored(ServerPlayerEntity player,
+    public static boolean startAuthored(ServerPlayer player,
             Vm2CircleCompilation compilation, boolean chargeMana, String label) {
         if (compilation.hasErrors() || compilation.compiledProgram().isEmpty()) {
             return false;
@@ -106,16 +113,16 @@ public final class NeoForgeVmService {
     }
 
     /** Queues a lowered semantic program and applies its ordered plan only at EXECUTE. */
-    public static boolean startSemantic(ServerPlayerEntity player, Program program,
+    public static boolean startSemantic(ServerPlayer player, Program program,
             boolean chargeMana, String label,
-            BiConsumer<ServerPlayerEntity, List<SemanticInstruction>> executor) {
+            BiConsumer<ServerPlayer, List<SemanticInstruction>> executor) {
         return start(player, syntheticCompilation(program), chargeMana, label, executor);
     }
 
-    public static PerceptionReport perceptionProbe(ServerPlayerEntity player, double radius) {
+    public static PerceptionReport perceptionProbe(ServerPlayer player, double radius) {
         SourceLocation source = SourceLocation.at(0, "PERCEPTION_PROBE");
         Program program = new Program(List.of(
-                Instruction.push(new RuntimeValue.PointValue(toCore(player.getPos())), source),
+                Instruction.push(new RuntimeValue.PointValue(toCore(player.position())), source),
                 Instruction.push(new RuntimeValue.NumberValue(radius), SourceLocation.at(1, "RADIUS")),
                 Instruction.select(WorldAccess.SelectionFilter.ANY, radius, 1,
                         SourceLocation.at(2, "SELECT_RADIUS")),
@@ -130,14 +137,14 @@ public final class NeoForgeVmService {
     }
 
     /** Shares the burst limiter with compatibility casts that complete immediately. */
-    public static boolean admitImmediateCast(ServerPlayerEntity player) {
+    public static boolean admitImmediateCast(ServerPlayer player) {
         CastAbuseGuard.Admission admission = ABUSE_GUARD.acquire(
-                player.getUuid(), player.getServerWorld().getTime());
+                player.getUUID(), player.serverLevel().getGameTime());
         if (!admission.accepted()) {
-            player.sendMessage(Text.literal(admission.message()).formatted(Formatting.RED), true);
+            player.displayClientMessage(Component.literal(admission.message()).withStyle(ChatFormatting.RED), true);
             return false;
         }
-        ABUSE_GUARD.release(player.getUuid());
+        ABUSE_GUARD.release(player.getUUID());
         return true;
     }
 
@@ -159,50 +166,50 @@ public final class NeoForgeVmService {
         return new Program(instructions);
     }
 
-    private static boolean start(ServerPlayerEntity player, Vm2CircleCompilation compilation,
+    private static boolean start(ServerPlayer player, Vm2CircleCompilation compilation,
             boolean chargeMana, String label) {
         return start(player, compilation, chargeMana, label, null);
     }
 
-    private static boolean start(ServerPlayerEntity player, Vm2CircleCompilation compilation,
+    private static boolean start(ServerPlayer player, Vm2CircleCompilation compilation,
             boolean chargeMana, String label,
-            BiConsumer<ServerPlayerEntity, List<SemanticInstruction>> semanticExecutor) {
+            BiConsumer<ServerPlayer, List<SemanticInstruction>> semanticExecutor) {
         Program program = compilation.compiledProgram().orElseThrow();
         CastAbuseGuard.Admission admission = ABUSE_GUARD.acquire(
-                player.getUuid(), player.getServerWorld().getTime());
+                player.getUUID(), player.serverLevel().getGameTime());
         if (!admission.accepted()) {
-            player.sendMessage(Text.literal(admission.message()).formatted(Formatting.RED), true);
+            player.displayClientMessage(Component.literal(admission.message()).withStyle(ChatFormatting.RED), true);
             return false;
         }
         if (chargeMana && ManaData.isChannelLocked(player)) {
-            player.sendMessage(Text.literal("Mana channel locked for "
+            player.displayClientMessage(Component.literal("Mana channel locked for "
                             + ManaData.remainingLockTicks(player) + " more ticks")
-                    .formatted(Formatting.RED), true);
-            ABUSE_GUARD.release(player.getUuid());
+                    .withStyle(ChatFormatting.RED), true);
+            ABUSE_GUARD.release(player.getUUID());
             return false;
         }
         double cost = program.manaCost().total();
         if (chargeMana && (!ManaData.ensureAvailable(player, cost)
                 || !ManaData.trySpend(player, cost))) {
-            player.sendMessage(Text.literal(String.format(
+            player.displayClientMessage(Component.literal(String.format(
                             "%s needs %.2f μ; only %.2f μ is available",
                             label, cost, ManaData.available(player)))
-                    .formatted(Formatting.RED), true);
-            ABUSE_GUARD.release(player.getUuid());
+                    .withStyle(ChatFormatting.RED), true);
+            ABUSE_GUARD.release(player.getUUID());
             return false;
         }
-        long presentationSeed = player.getUuid().getMostSignificantBits()
-                ^ player.getServerWorld().getTime() ^ program.instructions().hashCode();
+        long presentationSeed = player.getUUID().getMostSignificantBits()
+                ^ player.serverLevel().getGameTime() ^ program.instructions().hashCode();
         VmPresentationBridge presentation = new VmPresentationBridge(player,
                 PresentationCompiler.compile(label, presentationSeed, program));
-        ActiveVm active = new ActiveVm(player.getUuid(), player.getServerWorld(),
+        ActiveVm active = new ActiveVm(player.getUUID(), player.serverLevel(),
                 new SpellVm(program, new MinecraftWorldAccess(player), presentation), label,
                 presentation, compilation, new ArrayList<>(), semanticExecutor, new ArrayList<>());
         ACTIVE_VMS.add(active);
         publishLiveTrace(player, active);
-        player.sendMessage(Text.literal(String.format(
+        player.displayClientMessage(Component.literal(String.format(
                         "%s queued in vm2 • %.2f μ • tick-resumable",
-                        label, cost)).formatted(Formatting.AQUA), true);
+                        label, cost)).withStyle(ChatFormatting.AQUA), true);
         return true;
     }
 
@@ -210,7 +217,7 @@ public final class NeoForgeVmService {
         Iterator<ActiveVm> vmIterator = ACTIVE_VMS.iterator();
         while (vmIterator.hasNext()) {
             ActiveVm active = vmIterator.next();
-            ServerPlayerEntity currentOwner = server.getPlayerManager().getPlayer(active.owner);
+            ServerPlayer currentOwner = server.getPlayerList().getPlayer(active.owner);
             if (CANCELLED_OWNERS.contains(active.owner) || !validLifecycle(currentOwner, active)) {
                 ABUSE_GUARD.release(active.owner);
                 vmIterator.remove();
@@ -226,29 +233,29 @@ public final class NeoForgeVmService {
                 }
             }
             if (result.status() == TickResult.Status.FAULTED) {
-                ServerPlayerEntity owner = server.getPlayerManager().getPlayer(active.owner);
+                ServerPlayer owner = server.getPlayerList().getPlayer(active.owner);
                 result.fault().ifPresent(fault -> {
                     VectorRegnumMod.LOGGER.warn("vm2 {} fault {} at {}:{}: {}", active.label,
                             fault.code(), fault.source().line(), fault.source().column(), fault.message());
                     if (owner != null) {
-                        owner.sendMessage(Text.literal("VM fault " + fault.code() + " at sigil "
+                        owner.sendSystemMessage(Component.literal("VM fault " + fault.code() + " at sigil "
                                         + fault.source().sourceIndex() + ": " + fault.message())
-                                .formatted(Formatting.RED), false);
+                                .withStyle(ChatFormatting.RED));
                     }
                 });
                 publishTrace(owner, active);
                 ABUSE_GUARD.release(active.owner);
                 vmIterator.remove();
             } else if (result.status() == TickResult.Status.HALTED) {
-                ServerPlayerEntity owner = server.getPlayerManager().getPlayer(active.owner);
+                ServerPlayer owner = server.getPlayerList().getPlayer(active.owner);
                 if (owner != null && active.semanticExecutor != null && !active.semanticSteps.isEmpty()) {
                     try {
                         active.semanticExecutor.accept(owner, List.copyOf(active.semanticSteps));
                     } catch (RuntimeException exception) {
                         VectorRegnumMod.LOGGER.error("Semantic adapter rejected {} after validated VM execution",
                                 active.label, exception);
-                        owner.sendMessage(Text.literal("Semantic execution failed safely for " + active.label)
-                                .formatted(Formatting.RED), false);
+                        owner.sendSystemMessage(Component.literal("Semantic execution failed safely for " + active.label)
+                                .withStyle(ChatFormatting.RED));
                     }
                 }
                 publishTrace(owner, active);
@@ -256,14 +263,14 @@ public final class NeoForgeVmService {
                 vmIterator.remove();
             } else if (active.trace.size() == 1
                     || active.trace.size() % PONDER_LIVE_INTERVAL_TICKS == 0) {
-                publishLiveTrace(server.getPlayerManager().getPlayer(active.owner), active);
+                publishLiveTrace(server.getPlayerList().getPlayer(active.owner), active);
             }
         }
 
         Iterator<ActiveForce> forceIterator = ACTIVE_FORCES.iterator();
         while (forceIterator.hasNext()) {
             ActiveForce active = forceIterator.next();
-            ServerPlayerEntity owner = server.getPlayerManager().getPlayer(active.owner);
+            ServerPlayer owner = server.getPlayerList().getPlayer(active.owner);
             if (CANCELLED_OWNERS.contains(active.owner) || owner == null
                     || !applyTimed(owner, active) || --active.remaining <= 0) {
                 forceIterator.remove();
@@ -272,11 +279,11 @@ public final class NeoForgeVmService {
         CANCELLED_OWNERS.clear();
     }
 
-    private static boolean validLifecycle(ServerPlayerEntity owner, ActiveVm active) {
+    private static boolean validLifecycle(ServerPlayer owner, ActiveVm active) {
         return SpellLeasePolicy.shouldContinue(owner != null && !owner.isRemoved(),
                 owner != null && owner.isAlive(),
-                owner != null && owner.getServerWorld() == active.world,
-                owner != null && active.world.isChunkLoaded(owner.getBlockPos()));
+                owner != null && owner.serverLevel() == active.world,
+                owner != null && active.world.isLoaded(owner.blockPosition()));
     }
 
     public static void cancelOwner(UUID owner, String reason) {
@@ -287,21 +294,21 @@ public final class NeoForgeVmService {
                 pending, owner, reason);
     }
 
-    private static void apply(ServerPlayerEntity owner, ServerWorld world, WorldEffect effect) {
+    private static void apply(ServerPlayer owner, ServerLevel world, WorldEffect effect) {
         if (effect instanceof WorldEffect.SemanticStep) return;
         Entity entity = find(world, effect.entityId());
         if (entity == null || !SpellSecurityPolicy.canAffectEntity(owner, entity)) return;
         switch (effect) {
             case WorldEffect.Impulse impulse -> {
-                Vec3d change = clamped(toMinecraft(impulse.impulse()), 4.0);
-                entity.addVelocity(change);
-                entity.velocityModified = true;
-                world.spawnParticles(ParticleTypes.ELECTRIC_SPARK,
-                        entity.getX(), entity.getBodyY(0.5), entity.getZ(),
+                Vec3 change = clamped(toMinecraft(impulse.impulse()), 4.0);
+                entity.setDeltaMovement(entity.getDeltaMovement().add(change));
+                entity.hasImpulse = true;
+                world.sendParticles(ParticleTypes.ELECTRIC_SPARK,
+                        entity.getX(), entity.getY() + entity.getBbHeight() * 0.5, entity.getZ(),
                         24, 0.35, 0.45, 0.35, 0.12);
             }
             default -> {
-                ActiveForce active = new ActiveForce(owner.getUuid(), world, effect, effect.durationTicks());
+                ActiveForce active = new ActiveForce(owner.getUUID(), world, effect, effect.durationTicks());
                 if (applyTimed(owner, active) && effect.durationTicks() > 1) {
                     active.remaining--;
                     ACTIVE_FORCES.add(active);
@@ -310,8 +317,8 @@ public final class NeoForgeVmService {
         }
     }
 
-    private static boolean applyTimed(ServerPlayerEntity owner, ActiveForce active) {
-        ServerWorld world = active.world;
+    private static boolean applyTimed(ServerPlayer owner, ActiveForce active) {
+        ServerLevel world = active.world;
         WorldEffect effect = active.effect;
         Entity entity = find(world, effect.entityId());
         if (entity == null || !SpellSecurityPolicy.canAffectEntity(owner, entity)) return false;
@@ -319,20 +326,21 @@ public final class NeoForgeVmService {
             case WorldEffect.Impulse ignored -> { return false; }
             case WorldEffect.SemanticStep ignored -> { return false; }
             case WorldEffect.Acceleration acceleration ->
-                    entity.addVelocity(clamped(toMinecraft(acceleration.acceleration()), 1.0));
+                    entity.setDeltaMovement(entity.getDeltaMovement()
+                            .add(clamped(toMinecraft(acceleration.acceleration()), 1.0)));
             case WorldEffect.Damping damping ->
-                    entity.setVelocity(entity.getVelocity().multiply(damping.factor()));
+                    entity.setDeltaMovement(entity.getDeltaMovement().scale(damping.factor()));
             case WorldEffect.FollowPath path -> {
-                Vec3d current = entity.getPos();
+                Vec3 current = entity.position();
                 while (active.pathIndex < path.points().size() - 1
                         && toMinecraft(path.points().get(active.pathIndex))
-                                .squaredDistanceTo(current) < 0.16) {
+                                .distanceToSqr(current) < 0.16) {
                     active.pathIndex++;
                 }
-                Vec3d target = toMinecraft(path.points().get(active.pathIndex));
+                Vec3 target = toMinecraft(path.points().get(active.pathIndex));
                 if (active.pathIndex == path.points().size() - 1
-                        && target.squaredDistanceTo(current) < 0.16) {
-                    entity.setVelocity(Vec3d.ZERO);
+                        && target.distanceToSqr(current) < 0.16) {
+                    entity.setDeltaMovement(Vec3.ZERO);
                     return false;
                 }
                 moveToward(entity, target, path.speed());
@@ -342,26 +350,26 @@ public final class NeoForgeVmService {
             case WorldEffect.KeepDistance keep -> {
                 Entity target = find(world, keep.targetId());
                 if (target == null || !SpellSecurityPolicy.canAffectEntity(owner, target)) return false;
-                Vec3d delta = entity.getPos().subtract(target.getPos());
+                Vec3 delta = entity.position().subtract(target.position());
                 double current = delta.length();
                 if (current > 1.0e-6) {
                     double correction = Math.clamp((keep.distance() - current) * 0.08, -0.5, 0.5);
-                    entity.addVelocity(delta.normalize().multiply(correction));
+                    entity.setDeltaMovement(entity.getDeltaMovement().add(delta.normalize().scale(correction)));
                 }
             }
         }
-        entity.velocityModified = true;
+        entity.hasImpulse = true;
         return true;
     }
 
-    private static void moveToward(Entity entity, Vec3d target, double speed) {
-        Vec3d delta = target.subtract(entity.getPos());
-        if (delta.lengthSquared() > 1.0e-8) {
-            entity.setVelocity(delta.normalize().multiply(Math.min(4.0, speed)));
+    private static void moveToward(Entity entity, Vec3 target, double speed) {
+        Vec3 delta = target.subtract(entity.position());
+        if (delta.lengthSqr() > 1.0e-8) {
+            entity.setDeltaMovement(delta.normalize().scale(Math.min(4.0, speed)));
         }
     }
 
-    private static Entity find(ServerWorld world, String entityId) {
+    private static Entity find(ServerLevel world, String entityId) {
         try {
             return world.getEntity(UUID.fromString(entityId));
         } catch (IllegalArgumentException exception) {
@@ -369,20 +377,20 @@ public final class NeoForgeVmService {
         }
     }
 
-    private static Vec3d clamped(Vec3d vector, double maximum) {
+    private static Vec3 clamped(Vec3 vector, double maximum) {
         double length = vector.length();
-        return length > maximum ? vector.multiply(maximum / length) : vector;
+        return length > maximum ? vector.scale(maximum / length) : vector;
     }
 
-    private static Vector3 toCore(Vec3d vector) {
+    private static Vector3 toCore(Vec3 vector) {
         return new Vector3(vector.x, vector.y, vector.z);
     }
 
-    private static Vec3d toMinecraft(Vector3 vector) {
-        return new Vec3d(vector.x(), vector.y(), vector.z());
+    private static Vec3 toMinecraft(Vector3 vector) {
+        return new Vec3(vector.x(), vector.y(), vector.z());
     }
 
-    private static void publishTrace(ServerPlayerEntity owner, ActiveVm active) {
+    private static void publishTrace(ServerPlayer owner, ActiveVm active) {
         if (owner == null) return;
         try {
             PonderTimeline timeline = PonderTimelineBuilder.fromVm2("server-vm-trace",
@@ -394,7 +402,7 @@ public final class NeoForgeVmService {
         }
     }
 
-    private static void publishLiveTrace(ServerPlayerEntity owner, ActiveVm active) {
+    private static void publishLiveTrace(ServerPlayer owner, ActiveVm active) {
         if (owner == null) return;
         try {
             PonderTimeline timeline = PonderTimelineBuilder.fromVm2("server-vm-trace",
@@ -430,21 +438,21 @@ public final class NeoForgeVmService {
             TickResult.Status status, int entityCount, ManaCostModel.Breakdown cost) {
     }
 
-    private record ActiveVm(UUID owner, ServerWorld world, SpellVm vm, String label,
+    private record ActiveVm(UUID owner, ServerLevel world, SpellVm vm, String label,
             VmPresentationBridge presentation, Vm2CircleCompilation compilation,
             List<TickResult> trace,
-            BiConsumer<ServerPlayerEntity, List<SemanticInstruction>> semanticExecutor,
+            BiConsumer<ServerPlayer, List<SemanticInstruction>> semanticExecutor,
             List<SemanticInstruction> semanticSteps) {
     }
 
     private static final class ActiveForce {
         private final UUID owner;
-        private final ServerWorld world;
+        private final ServerLevel world;
         private final WorldEffect effect;
         private int remaining;
         private int pathIndex;
 
-        private ActiveForce(UUID owner, ServerWorld world, WorldEffect effect, int remaining) {
+        private ActiveForce(UUID owner, ServerLevel world, WorldEffect effect, int remaining) {
             this.owner = owner;
             this.world = world;
             this.effect = effect;
@@ -453,12 +461,12 @@ public final class NeoForgeVmService {
     }
 
     private static final class MinecraftWorldAccess implements WorldAccess {
-        private final ServerPlayerEntity caster;
-        private final ServerWorld world;
+        private final ServerPlayer caster;
+        private final ServerLevel world;
 
-        private MinecraftWorldAccess(ServerPlayerEntity caster) {
+        private MinecraftWorldAccess(ServerPlayer caster) {
             this.caster = caster;
-            this.world = caster.getServerWorld();
+            this.world = caster.serverLevel();
         }
 
         @Override
@@ -469,30 +477,30 @@ public final class NeoForgeVmService {
         @Override
         public Optional<RaycastHit> raycast(
                 Vector3 origin, Vector3 normalizedDirection, double maxDistance, SelectionFilter filter) {
-            Vec3d start = toMinecraft(origin);
-            Vec3d end = start.add(toMinecraft(normalizedDirection).multiply(maxDistance));
-            EntityHitResult hit = ProjectileUtil.raycast(caster, start, end,
-                    new Box(start, end).expand(1.0), entity -> matches(entity, filter),
+            Vec3 start = toMinecraft(origin);
+            Vec3 end = start.add(toMinecraft(normalizedDirection).scale(maxDistance));
+            EntityHitResult hit = ProjectileUtil.getEntityHitResult(caster, start, end,
+                    new AABB(start, end).inflate(1.0), entity -> matches(entity, filter),
                     maxDistance * maxDistance);
             if (hit == null) return Optional.empty();
-            HitResult blockHit = world.raycast(new RaycastContext(start, end,
-                    RaycastContext.ShapeType.COLLIDER, RaycastContext.FluidHandling.NONE, caster));
+            HitResult blockHit = world.clip(new ClipContext(start, end,
+                    ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, caster));
             if (blockHit.getType() != HitResult.Type.MISS
-                    && start.squaredDistanceTo(blockHit.getPos())
-                            + 1.0e-9 < start.squaredDistanceTo(hit.getPos())) {
+                    && start.distanceToSqr(blockHit.getLocation())
+                            + 1.0e-9 < start.distanceToSqr(hit.getLocation())) {
                 return Optional.empty();
             }
-            return Optional.of(new RaycastHit(toCore(hit.getPos()),
-                    Optional.of(snapshot(hit.getEntity())), start.distanceTo(hit.getPos())));
+            return Optional.of(new RaycastHit(toCore(hit.getLocation()),
+                    Optional.of(snapshot(hit.getEntity())), start.distanceTo(hit.getLocation())));
         }
 
         @Override
         public List<EntitySnapshot> select(
                 Vector3 center, double radius, SelectionFilter filter) {
-            Vec3d point = toMinecraft(center);
-            return world.getOtherEntities(filter.includeCaster() ? null : caster,
-                            new Box(point, point).expand(radius), entity ->
-                                    entity.squaredDistanceTo(point) <= radius * radius
+            Vec3 point = toMinecraft(center);
+            return world.getEntities(filter.includeCaster() ? null : caster,
+                            new AABB(point, point).inflate(radius), entity ->
+                                    entity.distanceToSqr(point) <= radius * radius
                                             && matches(entity, filter))
                     .stream().map(this::snapshot).toList();
         }
@@ -502,21 +510,21 @@ public final class NeoForgeVmService {
             Set<String> tags = tags(entity);
             if (!tags.containsAll(filter.requiredTags())) return false;
             return filter.kind().map(kind -> tags.contains(kind)
-                    || Registries.ENTITY_TYPE.getId(entity.getType()).toString().equals(kind)).orElse(true);
+                    || BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString().equals(kind)).orElse(true);
         }
 
         private EntitySnapshot snapshot(Entity entity) {
-            double mass = Math.max(0.1, entity.getWidth() * entity.getHeight());
-            return new EntitySnapshot(entity.getUuidAsString(), toCore(entity.getPos()), mass,
-                    Registries.ENTITY_TYPE.getId(entity.getType()).toString(), tags(entity));
+            double mass = Math.max(0.1, entity.getBbWidth() * entity.getBbHeight());
+            return new EntitySnapshot(entity.getStringUUID(), toCore(entity.position()), mass,
+                    BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).toString(), tags(entity));
         }
 
         private Set<String> tags(Entity entity) {
             Set<String> tags = new HashSet<>();
             tags.add("entity");
             if (entity instanceof LivingEntity) tags.add("living");
-            if (entity instanceof HostileEntity) tags.add("hostile");
-            if (entity instanceof ServerPlayerEntity) tags.add("player");
+            if (entity instanceof Monster) tags.add("hostile");
+            if (entity instanceof ServerPlayer) tags.add("player");
             return Set.copyOf(tags);
         }
     }

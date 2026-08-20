@@ -2,81 +2,92 @@ package vectorregnum.neoforge.gametest;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
-import net.fabricmc.fabric.api.gametest.v1.FabricGameTest;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.test.GameTest;
-import net.minecraft.test.TestContext;
-import net.minecraft.world.GameMode;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.gametest.framework.GameTest;
+import net.minecraft.gametest.framework.GameTestHelper;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.GameType;
+import net.neoforged.neoforge.gametest.GameTestHolder;
+import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import vectorregnum.neoforge.NeoForgeVmService;
 import vectorregnum.neoforge.ManaData;
 import vectorregnum.neoforge.multiplayer.ClaimLedger;
+import vectorregnum.neoforge.multiplayer.ClaimSavedData;
 import vectorregnum.neoforge.multiplayer.MultiplayerLifecycleService;
 
 /** Real-server integration coverage for priority 17 lifecycle/security policy. */
-public final class Priority17GameTests implements FabricGameTest {
-    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
-    public void claimCommandPersistsAndRejectsAnotherOwner(TestContext context) {
-        ServerPlayerEntity owner = connectedCreativePlayer(context, "claim-owner");
-        ServerPlayerEntity stranger = connectedCreativePlayer(context, "claim-stranger");
-        removePlayersAfterTest(context, owner, stranger);
+@GameTestHolder("vector_regnum")
+@PrefixGameTestTemplate(false)
+public final class Priority17GameTests {
+    @GameTest(template = "empty")
+    public void claimCommandPersistsAndRejectsAnotherOwner(GameTestHelper context) {
+        ServerPlayer owner = connectedCreativePlayer(context, "claim-owner");
+        ServerPlayer stranger = connectedCreativePlayer(context, "claim-stranger");
+        clearPersistedClaim(context, owner);
         execute(context, owner, "vectorregnum security claim private", 1);
 
-        var key = MultiplayerLifecycleService.key(context.getWorld(), owner.getBlockPos());
-        ClaimLedger ledger = MultiplayerLifecycleService.claims(context.getWorld());
-        context.assertEquals(owner.getUuid(), ledger.at(key).orElseThrow().owner(),
+        var key = MultiplayerLifecycleService.key(context.getLevel(), owner.blockPosition());
+        ClaimLedger ledger = MultiplayerLifecycleService.claims(context.getLevel());
+        context.assertValueEqual(owner.getUUID(), ledger.at(key).orElseThrow().owner(),
                 "claim attachment should retain its server-authoritative owner");
-        context.assertTrue(!ledger.permits(key, stranger.getUuid(), "", false),
+        context.assertTrue(!ledger.permits(key, stranger.getUUID(), "", false),
                 "another player must not mutate the claimed chunk");
         execute(context, stranger, "vectorregnum security release", 0);
         execute(context, owner, "vectorregnum security release", 1);
-        context.complete();
+        completeAfterCleanup(context, owner, stranger);
     }
 
-    @GameTest(templateName = FabricGameTest.EMPTY_STRUCTURE)
-    public void deathMigrationKeepsManaProgressAndCancelsRunningVm(TestContext context) {
-        ServerPlayerEntity player = connectedCreativePlayer(context, "lifecycle-owner");
-        removePlayersAfterTest(context, player);
+    @GameTest(template = "empty")
+    public void deathMigrationKeepsManaProgressAndCancelsRunningVm(GameTestHelper context) {
+        ServerPlayer player = connectedCreativePlayer(context, "lifecycle-owner");
         ManaData.setForTesting(player, 100, 80);
         ManaData.lockChannel(player, 200);
         ManaData.migrateAndSanitize(player, true, 1);
-        context.assertEquals(100.0, ManaData.capacity(player),
+        context.assertValueEqual(100.0, ManaData.capacity(player),
                 "death copy should preserve capacity progression");
-        context.assertEquals(80.0, ManaData.available(player),
+        context.assertValueEqual(80.0, ManaData.available(player),
                 "death copy should preserve held mana");
         context.assertTrue(!ManaData.isChannelLocked(player),
                 "death copy should clear transient channel lock");
-        NeoForgeVmService.cancelOwner(player.getUuid(), "gametest death fixture");
-        context.complete();
+        NeoForgeVmService.cancelOwner(player.getUUID(), "gametest death fixture");
+        completeAfterCleanup(context, player);
     }
 
-    private static ServerPlayerEntity connectedCreativePlayer(TestContext context, String name) {
-        ServerPlayerEntity player = context.createMockCreativeServerPlayerInWorld();
-        player.getAbilities().creativeMode = true;
-        player.changeGameMode(GameMode.CREATIVE);
+    private static ServerPlayer connectedCreativePlayer(GameTestHelper context, String name) {
+        ServerPlayer player = context.makeMockServerPlayerInLevel();
+        player.getAbilities().instabuild = true;
+        player.setGameMode(GameType.CREATIVE);
         return player;
     }
 
-    private static void removePlayersAfterTest(TestContext context, ServerPlayerEntity... players) {
-        context.addInstantFinalTask(() -> {
-            for (ServerPlayerEntity player : players) {
-                if (context.getWorld().getServer().getPlayerManager().getPlayer(player.getUuid()) != null) {
-                    context.getWorld().getServer().getPlayerManager().remove(player);
-                }
-            }
-        });
+    private static void clearPersistedClaim(GameTestHelper context, ServerPlayer player) {
+        var key = MultiplayerLifecycleService.key(context.getLevel(), player.blockPosition());
+        ClaimLedger ledger = MultiplayerLifecycleService.claims(context.getLevel());
+        if (ledger.at(key).isPresent()) {
+            ClaimSavedData.get(context.getLevel()).replace(
+                    ledger.release(key, player.getUUID(), true).ledger());
+        }
     }
 
-    private static void execute(TestContext context, ServerPlayerEntity player,
+    private static void completeAfterCleanup(GameTestHelper context, ServerPlayer... players) {
+        for (ServerPlayer player : players) {
+            if (context.getLevel().getServer().getPlayerList().getPlayer(player.getUUID()) != null) {
+                context.getLevel().getServer().getPlayerList().remove(player);
+            }
+        }
+        context.succeed();
+    }
+
+    private static void execute(GameTestHelper context, ServerPlayer player,
             String command, int expected) {
-        CommandDispatcher<ServerCommandSource> dispatcher = context.getWorld().getServer()
-                .getCommandManager().getDispatcher();
+        CommandDispatcher<CommandSourceStack> dispatcher = context.getLevel().getServer()
+                .getCommands().getDispatcher();
         try {
             int result = dispatcher.execute(dispatcher.parse(command,
-                    player.getCommandSource().withLevel(0)));
-            context.assertEquals(expected, result, "unexpected command result: /" + command);
+                    player.createCommandSourceStack().withPermission(0)));
+            context.assertValueEqual(expected, result, "unexpected command result: /" + command);
         } catch (CommandSyntaxException exception) {
-            context.throwGameTestException("command failed: /" + command + " ("
+            context.fail("command failed: /" + command + " ("
                     + exception.getMessage() + ")");
         }
     }

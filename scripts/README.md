@@ -1,19 +1,8 @@
 # Development launch workflows
 
-> **Legacy workflow:** these scripts validate the deprecated Fabric 1.21.1
-> alpha in the current checkout. NeoForge 1.21.1 is the active development
-> target, but its separate repository and replacement launch/test scripts do
-> not exist until roadmap priority 20. Do not treat a successful Fabric run as
-> proof that the NeoForge port works.
-
-> **Disabled during the priority 20 NeoForge port.** `scripts/local-play.sh`
-> and `scripts/hermes-client.sh` exit immediately with an explanation. The
-> build no longer compiles the Fabric entrypoints and no NeoForge `@Mod`
-> entrypoint exists yet, so a launch would start vanilla Minecraft with no
-> Vector-Regnum loaded and look like it succeeded. `scripts/hermes-build.sh`
-> still works but passes an explicit port stage and warns that a non-`full`
-> stage is a partial build. Use the frozen legacy checkout at `c7371ca` for a
-> playable Fabric alpha.
+These scripts build and launch the active NeoForge 1.21.1 repository. The
+deprecated Fabric alpha remains reproducible in the separate
+`vector-regnum-fabric-legacy` checkout at `c7371ca`.
 
 ## Main PC one-click launcher
 
@@ -34,10 +23,10 @@ break it.
 ## Hermes development workflow
 
 These scripts synchronize Vector-Regnum to a dedicated development worktree on
-Hermes, verify it with JDK 21, launch an isolated Loom server and client, and
-bring visual evidence back to this repository. They do not install Fabric into
-Hermes's normal Minecraft launcher and do not control any production server,
-tmux session, or dashboard service.
+Hermes, verify it with JDK 21, launch an isolated NeoForge server and client,
+and bring visual evidence back to this repository. They do not install the mod
+into Hermes's normal Minecraft launcher and do not control any production
+server, tmux session, or dashboard service.
 
 The default destination is fixed:
 
@@ -56,21 +45,26 @@ scripts/hermes-client.sh restart
 scripts/hermes-client.sh logs
 ```
 
-## Production Fabric GameTests
+## Production NeoForge GameTests
 
-The ordinary Gradle `test` task runs loader-independent JUnit/contract tests.
-The sixteen production Fabric GameTests must additionally run inside a real isolated
-Minecraft server when their integration surface changes. Enable Fabric API's
-automatic GameTest server with the JVM properties
-`-Dfabric-api.gametest` and
-`-Dfabric-api.gametest.report-file=<absolute-xml-path>`, pass `runServer` an
-isolated `mktemp -d` universe, and use only the development port/configuration.
-The automatic runner exits after the matrix completes. Verify the XML has sixteen
-testcases and no failures, then confirm no server process or port 25575 listener
-remains. This covers real commands, players, attachments, media/tablet and
-crystal block entities, scheduled expiry, serialized tick-queue reload,
-claim/death migration, relay persistence, remote ownership, and redstone/data
-automation.
+The ordinary Gradle `test` task runs JUnit and contract tests. The 17 production
+NeoForge GameTests must additionally run inside the real isolated GameTest
+server when their integration surface changes:
+
+```bash
+task_jdk=$(nix eval --raw nixpkgs#jdk21.outPath)
+JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
+  ./gradlew --no-daemon runGameTestServer
+```
+
+The runner exits after the matrix completes and must report all 17 required
+tests passed. The tests cover live registration parity, commands, players,
+attachments, media/tablet and crystal block entities, scheduled expiry,
+serialized tick-queue reload, claim/death migration, relay persistence, remote
+ownership, and redstone/data automation. The parity test reads
+`data/vector_regnum/registration_parity.json` and queries the running registry,
+payload, attachment, creative-tab, and command state; update that manifest when
+an intentional registration changes.
 A true OS-process stop/start remains part of the Hermes and local launcher
 ladder below.
 

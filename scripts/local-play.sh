@@ -1,17 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Priority 20 staging guard. The Fabric entrypoints are excluded from the build
-# and no NeoForge @Mod entrypoint exists yet, so runClient/runServer would start
-# Minecraft with no Vector-Regnum loaded and look like a working launch.
-# Remove this guard when a complete NeoForge slice provides an entrypoint.
-printf 'This launcher is disabled during the NeoForge port (roadmap priority 20).\n' >&2
-printf 'There is no NeoForge entrypoint yet, so a launch would run vanilla Minecraft\n' >&2
-printf 'and appear to succeed. For a playable Fabric alpha use the frozen legacy\n' >&2
-printf 'checkout at ../vector-regnum-fabric-legacy (commit c7371ca).\n' >&2
-exit 1
-
-
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd -P)"
 readonly SCRIPT_DIR REPO_ROOT
@@ -101,7 +90,7 @@ vector_path="$vector_jdk/bin:/run/current-system/sw/bin:/etc/profiles/per-user/i
 printf 'Starting Vector-Regnum\n'
 printf '  World: %s/run/server/vector-regnum-test\n' "$REPO_ROOT"
 printf '  Server: 127.0.0.1:%s\n' "$SERVER_PORT"
-printf '  Mods: Vector-Regnum + required Fabric runtime only\n\n'
+printf '  Loader: NeoForge 21.1.1 development runtime\n\n'
 
 systemd-run \
     --user \

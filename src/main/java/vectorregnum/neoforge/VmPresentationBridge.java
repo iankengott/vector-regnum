@@ -4,10 +4,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.entity.Entity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.network.PacketDistributor;
 import vectorregnum.core.presentation.ExecutionEvent;
 import vectorregnum.core.presentation.ExecutionEventSink;
 import vectorregnum.core.presentation.PresentationProgram;
@@ -25,12 +26,12 @@ public final class VmPresentationBridge implements ExecutionEventSink {
     private static final double BROADCAST_DISTANCE_SQUARED = 96.0 * 96.0;
     private static final AtomicLong NEXT_INSTANCE = new AtomicLong();
 
-    private final ServerPlayerEntity player;
+    private final ServerPlayer player;
     private final PresentationProgram program;
     private final long instanceId;
     private final List<ExecutionEvent> events = new ArrayList<>();
 
-    public VmPresentationBridge(ServerPlayerEntity player, PresentationProgram program) {
+    public VmPresentationBridge(ServerPlayer player, PresentationProgram program) {
         this.player = player;
         this.program = program;
         this.instanceId = NEXT_INSTANCE.getAndIncrement() & Long.MAX_VALUE;
@@ -58,31 +59,30 @@ public final class VmPresentationBridge implements ExecutionEventSink {
     }
 
     private void broadcastStart() {
-        Vec3d origin = player.getEyePos();
-        Vec3d direction = player.getRotationVec(1.0F).normalize();
+        Vec3 origin = player.getEyePosition();
+        Vec3 direction = player.getViewVector(1.0F).normalize();
         PresentationStartPayload payload = new PresentationStartPayload(instanceId,
-                player.getUuid(), player.getServerWorld().getTime(), origin.x, origin.y,
+                player.getUUID(), player.serverLevel().getGameTime(), origin.x, origin.y,
                 origin.z, direction.x, direction.y, direction.z,
                 PresentationProgramCodec.encode(program));
         broadcast(origin, payload);
     }
 
     private void broadcastSignal(PresentationSignal signal) {
-        broadcast(new Vec3d(signal.x(), signal.y(), signal.z()),
+        broadcast(new Vec3(signal.x(), signal.y(), signal.z()),
                 new PresentationSignalPayload(instanceId, signal));
     }
 
-    private void broadcast(Vec3d origin, net.minecraft.network.packet.CustomPayload payload) {
-        for (ServerPlayerEntity observer : player.getServerWorld().getPlayers(candidate ->
-                candidate.squaredDistanceTo(origin) <= BROADCAST_DISTANCE_SQUARED)) {
-            if (ServerPlayNetworking.canSend(observer, payload.getId())) {
-                ServerPlayNetworking.send(observer, payload);
-            }
-        }
+    private void broadcast(Vec3 origin, CustomPacketPayload payload) {
+        // PacketDistributor performs the same-dimension/radius filtering on the
+        // server thread. Registration is owned by the mod's payload event;
+        // this bridge only emits compact authoritative presentation events.
+        PacketDistributor.sendToPlayersNear(player.serverLevel(), null,
+                origin.x, origin.y, origin.z, Math.sqrt(BROADCAST_DISTANCE_SQUARED), payload);
     }
 
     private Optional<PresentationSignal> signal(ExecutionEvent event) {
-        Vec3d point = player.getEyePos();
+        Vec3 point = player.getEyePosition();
         int source = -1;
         PresentationTrigger.Kind kind;
         Optional<Opcode> opcode = Optional.empty();
@@ -124,20 +124,20 @@ public final class VmPresentationBridge implements ExecutionEventSink {
                 opcode, semantic, source, point.x, point.y, point.z));
     }
 
-    private Vec3d resolvedPoint(WorldEffect effect) {
+    private Vec3 resolvedPoint(WorldEffect effect) {
         if (effect instanceof WorldEffect.MoveToward move) {
-            return new Vec3d(move.point().x(), move.point().y(), move.point().z());
+            return new Vec3(move.point().x(), move.point().y(), move.point().z());
         }
         if (effect instanceof WorldEffect.FollowPath path) {
             var last = path.points().getLast();
-            return new Vec3d(last.x(), last.y(), last.z());
+            return new Vec3(last.x(), last.y(), last.z());
         }
         try {
-            Entity entity = player.getServerWorld().getEntity(java.util.UUID.fromString(effect.entityId()));
-            if (entity != null) return entity.getPos().add(0.0, entity.getHeight() * .5, 0.0);
+            Entity entity = player.serverLevel().getEntity(java.util.UUID.fromString(effect.entityId()));
+            if (entity != null) return entity.position().add(0.0, entity.getBbHeight() * .5, 0.0);
         } catch (IllegalArgumentException ignored) {
             // Missing entities use the truthful cast origin; presentation remains cosmetic.
         }
-        return player.getEyePos();
+        return player.getEyePosition();
     }
 }

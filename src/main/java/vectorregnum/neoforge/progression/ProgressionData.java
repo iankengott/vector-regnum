@@ -1,47 +1,37 @@
 package vectorregnum.neoforge.progression;
 
-import com.mojang.serialization.Codec;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.ChatFormatting;
+import vectorregnum.neoforge.PlayerAttachmentContent;
 
 /** Persistent, server-authoritative progression discoveries. */
 public final class ProgressionData {
-    private static final Codec<ProgressionState> CODEC = Codec.STRING.listOf().xmap(
-            ProgressionState::fromIds,
-            ProgressionState::ids);
-
-    private static final AttachmentType<ProgressionState> STATE = AttachmentRegistry.create(
-            Identifier.of("vector_regnum", "progression_unlocks"),
-            builder -> builder.initializer(() -> ProgressionState.EMPTY).persistent(CODEC).copyOnDeath());
-
     private ProgressionData() {
     }
 
     public static void initialize() {
-        // Loading the class registers the attachment type.
+        // Registration is owned by vectorregnum.neoforge.PlayerAttachmentContent.
     }
 
-    public static ProgressionState get(ServerPlayerEntity player) {
-        return player.getAttachedOrCreate(STATE);
+    public static ProgressionState get(ServerPlayer player) {
+        return player.getData(PlayerAttachmentContent.PROGRESSION_UNLOCKS);
     }
 
-    public static boolean unlock(ServerPlayerEntity player, ProgressionUnlock unlock) {
+    public static boolean unlock(ServerPlayer player, ProgressionUnlock unlock) {
         ProgressionState current = get(player);
         if (current.has(unlock)) {
             return false;
         }
-        player.setAttached(STATE, current.unlock(unlock));
+        player.setData(PlayerAttachmentContent.PROGRESSION_UNLOCKS, current.unlock(unlock));
         ProgressionSync.send(player);
-        player.sendMessage(Text.translatable("message.vector_regnum.progression_unlocked",
-                Text.translatable("unlock.vector_regnum." + unlock.id())).formatted(Formatting.AQUA), false);
+        player.sendSystemMessage(Component.translatable("message.vector_regnum.progression_unlocked",
+                Component.translatable("unlock.vector_regnum." + unlock.id()))
+                .withStyle(ChatFormatting.AQUA));
         return true;
     }
 
-    public static int unlockAll(ServerPlayerEntity player) {
+    public static int unlockAll(ServerPlayer player) {
         int changed = 0;
         for (ProgressionUnlock unlock : ProgressionUnlock.values()) {
             if (unlock(player, unlock)) {

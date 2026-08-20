@@ -1,32 +1,31 @@
 package vectorregnum.neoforge.editor;
 
-import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.level.ServerPlayer;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import vectorregnum.core.circle.CirclePersistence;
 import vectorregnum.core.circle.SpellMedium;
 import vectorregnum.neoforge.CircleAuthoringService;
 
 /** Server-authoritative gateway for the graphical editor request protocol. */
 public final class CircleEditorNetworking {
-    private static boolean initialized;
-
     private CircleEditorNetworking() {
     }
 
-    public static void initialize() {
-        if (initialized) {
-            return;
-        }
-        initialized = true;
-        PayloadTypeRegistry.playC2S().register(CircleEditorPayload.ID, CircleEditorPayload.CODEC);
-        PayloadTypeRegistry.playS2C().register(CircleEditorSnapshotPayload.ID,
-                CircleEditorSnapshotPayload.CODEC);
-        ServerPlayNetworking.registerGlobalReceiver(CircleEditorPayload.ID,
-                (payload, context) -> context.server().execute(() -> handle(context.player(), payload)));
+    /** Registers the client-to-server editor request payload. */
+    public static void register(PayloadRegistrar registrar) {
+        registrar.playToServer(CircleEditorPayload.TYPE, CircleEditorPayload.CODEC,
+                CircleEditorNetworking::handlePayload);
     }
 
-    private static void handle(ServerPlayerEntity player, CircleEditorPayload payload) {
+    /** Handles requests on NeoForge's main server thread (the registrar default). */
+    public static void handlePayload(CircleEditorPayload payload, IPayloadContext context) {
+        if (context.player() instanceof ServerPlayer player) {
+            handle(player, payload);
+        }
+    }
+
+    private static void handle(ServerPlayer player, CircleEditorPayload payload) {
         String status;
         boolean bindable = false;
         try {
@@ -95,12 +94,12 @@ public final class CircleEditorNetworking {
         send(player, status, bindable);
     }
 
-    public static void send(ServerPlayerEntity player, String status, boolean bindable) {
-        if (!ServerPlayNetworking.canSend(player, CircleEditorSnapshotPayload.ID)) {
+    public static void send(ServerPlayer player, String status, boolean bindable) {
+        if (!player.connection.hasChannel(CircleEditorSnapshotPayload.TYPE)) {
             return;
         }
         String encoded = CirclePersistence.encode(CircleAuthoringService.session(player).current());
-        ServerPlayNetworking.send(player, new CircleEditorSnapshotPayload(encoded, status, bindable,
+        player.connection.send(new CircleEditorSnapshotPayload(encoded, status, bindable,
                 CircleAuthoringService.editorAnchorDescription(player)));
     }
 

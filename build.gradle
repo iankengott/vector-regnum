@@ -14,65 +14,6 @@ repositories {
     mavenCentral()
 }
 
-// Priority 20 port staging. See gradle/port-manifest.txt, which is the
-// authoritative list. A gate that compiles more or less than the manifest says
-// is not a gate, so the two must be edited together.
-// No default. A silent default turns every documented plain `./gradlew build`
-// into a partial build that still reports success, which is exactly the failure
-// this manifest exists to prevent.
-if (!providers.gradleProperty("portStage").isPresent()) {
-    throw new GradleException(
-        "portStage must be set explicitly during the priority 20 port.\n" +
-        "  -PportStage=core   loader-neutral only: 85 of 195 main files, 15 of 47 test classes\n" +
-        "  -PportStage=full   everything; only passes once the port completes\n" +
-        "See gradle/port-manifest.txt. Remove this guard when priority 20 lands.")
-}
-def portStage = providers.gradleProperty("portStage").get()
-def manifest = file("gradle/port-manifest.txt")
-def readStagePatterns
-readStagePatterns = { String stage, String key, Set<String> seen ->
-    if (!seen.add(stage)) {
-        throw new GradleException("port-manifest.txt contains a stage inheritance cycle at '${stage}'")
-    }
-    def out = []
-    def parents = []
-    def active = false
-    manifest.eachLine { line ->
-        def t = line.trim()
-        if (t.startsWith("[stage:")) {
-            active = (t == "[stage:${stage}]")
-        } else if (active && t.startsWith("extends =")) {
-            parents << t.substring(t.indexOf('=') + 1).trim()
-        } else if (active && t.startsWith("${key} =")) {
-            out << t.substring(t.indexOf('=') + 1).trim()
-        }
-    }
-    parents.each { parent ->
-        out.addAll(0, readStagePatterns(parent, key, new LinkedHashSet<>(seen)))
-    }
-    return out
-}
-def stagePatterns = { String stage, String key ->
-    def out = readStagePatterns(stage, key, new LinkedHashSet<>()).unique()
-    if (out.isEmpty()) {
-        throw new GradleException("port-manifest.txt defines no ${key} for stage '${stage}'")
-    }
-    return out
-}
-
-sourceSets {
-    main {
-        java {
-            setIncludes(stagePatterns(portStage, "main.include"))
-        }
-    }
-    test {
-        java {
-            setIncludes(stagePatterns(portStage, "test.include"))
-        }
-    }
-}
-
 neoForge {
     version = project.neo_version
 
@@ -144,9 +85,6 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.release = 21
-    // The priority-20 full gate is also the migration work queue. Do not let
-    // javac's default 100-error cap hide later Fabric/Yarn ownership clusters.
-    options.compilerArgs.addAll(["-Xmaxerrs", "1000"])
 }
 
 jar {
@@ -161,15 +99,5 @@ publishing {
             artifactId = project.archives_base_name
             from components.java
         }
-    }
-}
-
-// Print what the manifest actually selected, so a green build cannot hide an
-// empty source set.
-tasks.register("portStageReport") {
-    doLast {
-        println "portStage       = ${portStage}"
-        println "main sources    = ${sourceSets.main.java.files.size()} files"
-        println "test sources    = ${sourceSets.test.java.files.size()} files"
     }
 }

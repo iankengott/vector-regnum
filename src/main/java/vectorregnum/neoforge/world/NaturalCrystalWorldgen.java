@@ -1,39 +1,73 @@
 package vectorregnum.neoforge.world;
 
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerChunkEvents;
-import net.minecraft.block.BlockState;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.chunk.WorldChunk;
-import net.minecraft.world.tick.OrderedTick;
-import net.minecraft.world.tick.TickPriority;
+import com.mojang.serialization.Codec;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.world.level.ChunkPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.level.WorldGenLevel;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.feature.Feature;
+import net.minecraft.world.level.levelgen.feature.FeaturePlaceContext;
+import net.minecraft.world.level.levelgen.feature.configurations.NoneFeatureConfiguration;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.registries.DeferredHolder;
+import net.neoforged.neoforge.registries.DeferredRegister;
 import vectorregnum.neoforge.progression.ManaAffinity;
 import vectorregnum.neoforge.progression.ManaCrystalNodeBlock;
 import vectorregnum.neoforge.progression.ManaSourceGrowthRules;
 import vectorregnum.neoforge.progression.ProgressionContent;
 
-/** Places sparse buried crystal veins during chunk generation. */
+/**
+ * Registers and places sparse buried crystal veins during NeoForge world generation.
+ *
+ * <p>The feature deliberately delegates all placement decisions to
+ * {@link ManaCrystalGeology}. The placed-feature origin only identifies the
+ * owner chunk; its random X/Z/Y values are not used for geology, so a seed
+ * produces the same plan as the legacy chunk-generation adapter.</p>
+ */
 public final class NaturalCrystalWorldgen {
-    private static boolean initialized;
+    public static final String MOD_ID = "vector_regnum";
+
+    private static final DeferredRegister<Feature<?>> FEATURES =
+            DeferredRegister.create(BuiltInRegistries.FEATURE, MOD_ID);
+
+    /** The registered configured-feature type used by the data-driven feature. */
+    public static final DeferredHolder<Feature<?>, NaturalCrystalFeature>
+            NATURAL_CRYSTAL_FEATURE = FEATURES.register("natural_crystal",
+                    () -> new NaturalCrystalFeature(NoneFeatureConfiguration.CODEC));
 
     private NaturalCrystalWorldgen() {
     }
 
-    public static void initialize() {
-        if (initialized) {
-            return;
+    /** Registers the custom feature on the NeoForge mod event bus. */
+    public static void register(IEventBus modBus) {
+        FEATURES.register(modBus);
+    }
+
+    /**
+     * The custom feature implementation. NeoForge supplies a world-generation
+     * region containing the owner chunk and a safe surrounding halo; this
+     * implementation intentionally writes only the interior positions selected
+     * by {@link ManaCrystalGeology#localVeinPositions}.
+     */
+    static final class NaturalCrystalFeature extends Feature<NoneFeatureConfiguration> {
+        private NaturalCrystalFeature(Codec<NoneFeatureConfiguration> codec) {
+            super(codec);
         }
-        initialized = true;
-        ServerChunkEvents.CHUNK_GENERATE.register(NaturalCrystalWorldgen::generate);
+
+        @Override
+        public boolean place(FeaturePlaceContext<NoneFeatureConfiguration> context) {
+            WorldGenLevel level = context.level();
+            ChunkPos ownerChunk = new ChunkPos(context.origin());
+            return ManaCrystalGeology.planForChunk(level.getSeed(), ownerChunk.x, ownerChunk.z)
+                    .map(plan -> placeVein(level, ownerChunk, plan))
+                    .orElse(false);
+        }
     }
 
-    private static void generate(ServerWorld world, WorldChunk chunk) {
-        ManaCrystalGeology.planForChunk(world.getSeed(), chunk.getPos().x, chunk.getPos().z)
-                .ifPresent(plan -> placeVein(world, chunk, plan));
-    }
-
-    private static void placeVein(ServerWorld world, WorldChunk chunk,
+    private static boolean placeVein(WorldGenLevel level, ChunkPos ownerChunk,
             ManaCrystalGeology.VeinPlan plan) {
         int initialCharge = switch (plan.grade()) {
             case TRACE -> 1;
@@ -45,37 +79,40 @@ public final class NaturalCrystalWorldgen {
             case RESONANT -> 1;
             case PRIMAL -> 2;
         };
+        Block crystalBlock = ProgressionContent.manaCrystalNode();
+        boolean placed = false;
         for (ManaCrystalGeology.LocalPosition local
                 : ManaCrystalGeology.localVeinPositions(plan)) {
-            BlockPos pos = new BlockPos(chunk.getPos().getStartX() + local.x(), local.y(),
-                    chunk.getPos().getStartZ() + local.z());
-            BlockState hostState = chunk.getBlockState(pos);
+            BlockPos pos = new BlockPos(ownerChunk.getMinBlockX() + local.x(), local.y(),
+                    ownerChunk.getMinBlockZ() + local.z());
+            BlockState hostState = level.getBlockState(pos);
             ManaCrystalGeology.HostRock host = ManaCrystalGeology.HostRock.from(hostState.getBlock());
-            if (!ManaCrystalGeology.canReplace(host, pos.getY(), exposedToAir(chunk, pos),
+            if (!ManaCrystalGeology.canReplace(host, pos.getY(), exposedToAir(level, ownerChunk, pos),
                     ManaCrystalGeology.DEFAULT)) {
                 continue;
             }
-            BlockState crystal = ProgressionContent.MANA_CRYSTAL_NODE.getDefaultState()
-                    .with(ManaCrystalNodeBlock.CHARGE, initialCharge)
-                    .with(ManaCrystalNodeBlock.GROWTH_STAGE, growthStage)
-                    .with(ManaCrystalNodeBlock.NATURAL, true)
-                    .with(ManaCrystalNodeBlock.AFFINITY, ManaAffinity.ARCANE);
-            chunk.setBlockState(pos, crystal, false);
-            chunk.getBlockTickScheduler().scheduleTick(new OrderedTick<>(
-                    ProgressionContent.MANA_CRYSTAL_NODE, pos,
-                    world.getTime() + ManaSourceGrowthRules.TICKS_PER_DAY,
-                    TickPriority.NORMAL, 0));
+            BlockState crystal = crystalBlock.defaultBlockState()
+                    .setValue(ManaCrystalNodeBlock.CHARGE, initialCharge)
+                    .setValue(ManaCrystalNodeBlock.GROWTH_STAGE, growthStage)
+                    .setValue(ManaCrystalNodeBlock.NATURAL, true)
+                    .setValue(ManaCrystalNodeBlock.AFFINITY, ManaAffinity.ARCANE);
+            if (!level.setBlock(pos, crystal, 2)) {
+                continue;
+            }
+            level.scheduleTick(pos, crystalBlock, ManaSourceGrowthRules.TICKS_PER_DAY);
+            placed = true;
         }
+        return placed;
     }
 
-    private static boolean exposedToAir(WorldChunk chunk, BlockPos pos) {
+    private static boolean exposedToAir(WorldGenLevel level, ChunkPos ownerChunk, BlockPos pos) {
         for (Direction direction : Direction.values()) {
-            BlockPos adjacentPos = pos.offset(direction);
-            if (!chunk.getPos().equals(new net.minecraft.util.math.ChunkPos(adjacentPos))) {
-                // Conservatively clip rather than asking the server chunk manager for a neighbor.
+            BlockPos adjacentPos = pos.relative(direction);
+            if (!ownerChunk.equals(new ChunkPos(adjacentPos))) {
+                // Clip at the owner-chunk edge rather than requesting a neighbor.
                 return true;
             }
-            BlockState adjacent = chunk.getBlockState(adjacentPos);
+            BlockState adjacent = level.getBlockState(adjacentPos);
             if (adjacent.isAir() || !adjacent.getFluidState().isEmpty()) {
                 return true;
             }

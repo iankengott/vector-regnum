@@ -1,27 +1,24 @@
 package vectorregnum.neoforge;
 
-import com.mojang.serialization.Codec;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
-import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.component.DataComponentTypes;
-import net.minecraft.component.type.NbtComponent;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.TypedActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
+import net.neoforged.neoforge.common.NeoForge;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import vectorregnum.core.CastResult;
 import vectorregnum.core.circle.CircleAuthoringCompiler;
 import vectorregnum.core.circle.CircleCompilation;
@@ -55,51 +52,47 @@ public final class CircleAuthoringService {
     private static final Map<UUID, CircleEditorSession> SESSIONS = new ConcurrentHashMap<>();
     private static final Map<UUID, CircleEditorAnchor> EDITOR_ANCHORS = new ConcurrentHashMap<>();
 
-    private static final AttachmentType<String> SAVED_CIRCLE = AttachmentRegistry.<String>create(
-            Identifier.of(VectorRegnumMod.MOD_ID, "authored_circle"),
-            builder -> builder
-                    .initializer(() -> CirclePersistence.encode(starterCircle()))
-                    .persistent(Codec.STRING)
-                    .copyOnDeath());
-
     private CircleAuthoringService() {
     }
 
     public static void initialize() {
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-                SESSIONS.put(handler.player.getUuid(), load(handler.player)));
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-        {
-            SESSIONS.remove(handler.player.getUuid());
-            EDITOR_ANCHORS.remove(handler.player.getUuid());
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent event) -> {
+            if (event.getEntity() instanceof ServerPlayer player) {
+                SESSIONS.put(player.getUUID(), load(player));
+            }
+        });
+        NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent event) -> {
+            SESSIONS.remove(event.getEntity().getUUID());
+            EDITOR_ANCHORS.remove(event.getEntity().getUUID());
         });
     }
 
-    public static CircleEditorSession session(ServerPlayerEntity player) {
-        return SESSIONS.computeIfAbsent(player.getUuid(), ignored -> load(player));
+    public static CircleEditorSession session(ServerPlayer player) {
+        return SESSIONS.computeIfAbsent(player.getUUID(), ignored -> load(player));
     }
 
-    public static void newCircle(ServerPlayerEntity player, String id) {
+    public static void newCircle(ServerPlayer player, String id) {
         replace(player, MagicCircle.empty(id, displayName(id), 3, 8));
-        player.sendMessage(Text.literal("New 3-ring circle: " + id).formatted(Formatting.GOLD), false);
+        player.sendSystemMessage(Component.literal("New 3-ring circle: " + id)
+                .withStyle(ChatFormatting.GOLD));
         showEditorPreview(player, session(player).current(), List.of());
     }
 
-    public static void loadStarter(ServerPlayerEntity player) {
+    public static void loadStarter(ServerPlayer player) {
         replace(player, starterCircle());
-        player.sendMessage(Text.literal("Loaded the editable Fire Aura example")
-                .formatted(Formatting.GOLD), false);
+        player.sendSystemMessage(Component.literal("Loaded the editable Fire Aura example")
+                .withStyle(ChatFormatting.GOLD));
         show(player);
     }
 
-    public static void loadVmStarter(ServerPlayerEntity player) {
+    public static void loadVmStarter(ServerPlayer player) {
         replace(player, vmStarterCircle());
-        player.sendMessage(Text.literal("Loaded a typed delayed Vector Step circle")
-                .formatted(Formatting.GOLD), false);
+        player.sendSystemMessage(Component.literal("Loaded a typed delayed Vector Step circle")
+                .withStyle(ChatFormatting.GOLD));
         show(player);
     }
 
-    public static boolean place(ServerPlayerEntity player, int ring, int slot, String sigil) {
+    public static boolean place(ServerPlayer player, int ring, int slot, String sigil) {
         CircleEditorSession.EditResult result = session(player).place(
                 new CircleCoordinate(ring, slot), sigil.toUpperCase());
         finishEdit(player, result);
@@ -107,14 +100,14 @@ public final class CircleAuthoringService {
     }
 
     public static boolean parameterize(
-            ServerPlayerEntity player, int ring, int slot, String canonicalNumber) {
+            ServerPlayer player, int ring, int slot, String canonicalNumber) {
         CircleEditorSession.EditResult result;
         try {
             result = session(player).parameterize(new CircleCoordinate(ring, slot),
                     List.of(new CircleValue.NumberValue(canonicalNumber)));
         } catch (RuntimeException exception) {
-            player.sendMessage(Text.literal("Invalid finite number: " + canonicalNumber)
-                    .formatted(Formatting.RED), false);
+            player.sendSystemMessage(Component.literal("Invalid finite number: " + canonicalNumber)
+                    .withStyle(ChatFormatting.RED));
             return false;
         }
         finishEdit(player, result);
@@ -122,7 +115,7 @@ public final class CircleAuthoringService {
     }
 
     public static boolean parameterizeValues(
-            ServerPlayerEntity player, int ring, int slot, String rawValues) {
+            ServerPlayer player, int ring, int slot, String rawValues) {
         try {
             List<CircleValue> values = CircleEditorInteraction.parseParameterInput(rawValues).stream()
                     .map(CircleAuthoringService::parseValue)
@@ -132,19 +125,19 @@ public final class CircleAuthoringService {
             finishEdit(player, result);
             return result.changed();
         } catch (RuntimeException exception) {
-            player.sendMessage(Text.literal("Invalid parameter list: " + exception.getMessage())
-                    .formatted(Formatting.RED), false);
+            player.sendSystemMessage(Component.literal("Invalid parameter list: " + exception.getMessage())
+                    .withStyle(ChatFormatting.RED));
             return false;
         }
     }
 
-    public static boolean remove(ServerPlayerEntity player, int ring, int slot) {
+    public static boolean remove(ServerPlayer player, int ring, int slot) {
         CircleEditorSession.EditResult result = session(player).remove(new CircleCoordinate(ring, slot));
         finishEdit(player, result);
         return result.changed();
     }
 
-    public static boolean move(ServerPlayerEntity player, int sourceRing, int sourceSlot,
+    public static boolean move(ServerPlayer player, int sourceRing, int sourceSlot,
             int destinationRing, int destinationSlot) {
         CircleEditorSession.EditResult result = session(player).move(
                 new CircleCoordinate(sourceRing, sourceSlot),
@@ -153,13 +146,13 @@ public final class CircleAuthoringService {
         return result.changed();
     }
 
-    public static boolean undo(ServerPlayerEntity player) {
+    public static boolean undo(ServerPlayer player) {
         CircleEditorSession.EditResult result = session(player).undo();
         finishEdit(player, result);
         return result.changed();
     }
 
-    public static AuthoringCompilation compile(ServerPlayerEntity player) {
+    public static AuthoringCompilation compile(ServerPlayer player) {
         MagicCircle circle = session(player).current();
         if (Vm2CircleCompiler.isVm2Circle(circle)) {
             Vm2CircleCompilation typed = Vm2CircleCompiler.compile(circle,
@@ -177,137 +170,138 @@ public final class CircleAuthoringService {
     }
 
     /** Captures the server's current block raycast; the client never supplies coordinates. */
-    public static EditorAnchorResult captureEditorAnchor(ServerPlayerEntity player) {
-        HitResult rawHit = player.raycast(EDITOR_ANCHOR_RANGE, 1.0F, false);
+    public static EditorAnchorResult captureEditorAnchor(ServerPlayer player) {
+        HitResult rawHit = player.pick(EDITOR_ANCHOR_RANGE, 1.0F, false);
         if (!(rawHit instanceof BlockHitResult hit) || rawHit.getType() != HitResult.Type.BLOCK) {
             return EditorAnchorResult.rejected("Look at a block face within 8 blocks, then try again");
         }
         BlockPos position = hit.getBlockPos();
-        if (!player.getServerWorld().isChunkLoaded(position)
-                || player.getServerWorld().getBlockState(position).isAir()) {
+        if (!player.serverLevel().hasChunkAt(position)
+                || player.serverLevel().getBlockState(position).isAir()) {
             return EditorAnchorResult.rejected("The targeted block face is not loaded or solid");
         }
         CircleEditorAnchor anchor = new CircleEditorAnchor(
-                player.getServerWorld().getRegistryKey().getValue().toString(),
+                player.serverLevel().dimension().location().toString(),
                 position.getX(), position.getY(), position.getZ(),
-                CircleEditorAnchor.Face.valueOf(hit.getSide().name()));
-        EDITOR_ANCHORS.put(player.getUuid(), anchor);
+                CircleEditorAnchor.Face.valueOf(hit.getDirection().name()));
+        EDITOR_ANCHORS.put(player.getUUID(), anchor);
         showEditorPreview(player, session(player).current(), List.of());
         return EditorAnchorResult.accepted("Anchored to " + anchor.description());
     }
 
-    public static EditorAnchorResult clearEditorAnchor(ServerPlayerEntity player) {
-        CircleEditorAnchor removed = EDITOR_ANCHORS.remove(player.getUuid());
+    public static EditorAnchorResult clearEditorAnchor(ServerPlayer player) {
+        CircleEditorAnchor removed = EDITOR_ANCHORS.remove(player.getUUID());
         showEditorPreview(player, session(player).current(), List.of());
         return removed == null
                 ? EditorAnchorResult.rejected("No editor anchor was set")
                 : EditorAnchorResult.accepted("World-face anchor cleared");
     }
 
-    public static String editorAnchorDescription(ServerPlayerEntity player) {
+    public static String editorAnchorDescription(ServerPlayer player) {
         return validEditorAnchor(player).map(CircleEditorAnchor::description).orElse("");
     }
 
-    public static boolean cast(ServerPlayerEntity player) {
-        return activateCircleAt(player, session(player).current(), true, player.getEyePos());
+    public static boolean cast(ServerPlayer player) {
+        return activateCircleAt(player, session(player).current(), true, player.getEyePosition());
     }
 
-    public static void show(ServerPlayerEntity player) {
+    public static void show(ServerPlayer player) {
         MagicCircle circle = session(player).current();
-        player.sendMessage(Text.literal(circle.name() + " • " + circle.ringCount() + " rings • "
+        player.sendSystemMessage(Component.literal(circle.name() + " • " + circle.ringCount() + " rings • "
                         + circle.sigils().size() + " sigils")
-                .formatted(Formatting.AQUA, Formatting.BOLD), false);
+                .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD));
         if (circle.sigils().isEmpty()) {
-            player.sendMessage(Text.literal("Empty — use /vectorregnum circle place <ring> <slot> <sigil>"), false);
+            player.sendSystemMessage(Component.literal(
+                    "Empty — use /vectorregnum circle place <ring> <slot> <sigil>"));
         } else {
             for (int index = 0; index < circle.executionOrder().size(); index++) {
                 PlacedSigil sigil = circle.executionOrder().get(index);
                 String parameters = sigil.parameters().isEmpty() ? "" : " " + sigil.parameters();
-                player.sendMessage(Text.literal(String.format("%d. r%d:s%d  %s%s", index + 1,
+                player.sendSystemMessage(Component.literal(String.format("%d. r%d:s%d  %s%s", index + 1,
                         sigil.coordinate().ring(), sigil.coordinate().clockwiseSlot(),
-                        sigil.type(), parameters)).formatted(Formatting.GRAY), false);
+                        sigil.type(), parameters)).withStyle(ChatFormatting.GRAY));
             }
         }
         showEditorPreview(player, circle, List.of());
     }
 
-    public static boolean giveMedium(ServerPlayerEntity player, SpellMedium medium) {
+    public static boolean giveMedium(ServerPlayer player, SpellMedium medium) {
         AuthoringCompilation compilation = compile(player);
         if (compilation.hasErrors()) {
             return false;
         }
         MagicCircle circle = session(player).current();
         ItemStack blank = new ItemStack(switch (medium) {
-            case SCROLL -> SpellMediaContent.SPELL_SCROLL;
-            case BOOK -> SpellMediaContent.SPELL_BOOK;
-            case TABLET -> SpellMediaContent.CARVED_TABLET_ITEM;
+            case SCROLL -> SpellMediaContent.spellScroll();
+            case BOOK -> SpellMediaContent.spellBook();
+            case TABLET -> SpellMediaContent.carvedTabletItem();
         });
-        if (!player.getAbilities().creativeMode && !consumeBlank(player, blank)) {
-            player.sendMessage(Text.literal("Craft a blank " + medium.name().toLowerCase()
+        if (!player.isCreative() && !consumeBlank(player, blank)) {
+            player.sendSystemMessage(Component.literal("Craft a blank " + medium.name().toLowerCase()
                             + " before binding")
-                    .formatted(Formatting.RED), false);
+                    .withStyle(ChatFormatting.RED));
             return false;
         }
-        long identity = player.getUuid().getMostSignificantBits()
-                ^ player.getUuid().getLeastSignificantBits();
+        long identity = player.getUUID().getMostSignificantBits()
+                ^ player.getUUID().getLeastSignificantBits();
         String id = "artifact-" + Long.toUnsignedString(identity, 36) + "-"
-                + Long.toUnsignedString(player.getServerWorld().getTime(), 36);
+                + Long.toUnsignedString(player.serverLevel().getGameTime(), 36);
         SpellArtifact artifact = switch (medium) {
             case SCROLL -> SpellArtifact.scroll(id, circle);
             case BOOK -> SpellArtifact.book(id, circle);
             case TABLET -> SpellArtifact.tablet(id, circle);
         };
         ItemStack stack = createArtifactStack(artifact);
-        player.getInventory().offerOrDrop(stack);
-        player.sendMessage(Text.literal("Bound " + circle.name() + " into a "
+        player.getInventory().placeItemBackInInventory(stack);
+        player.sendSystemMessage(Component.literal("Bound " + circle.name() + " into a "
                         + medium.name().toLowerCase())
-                .formatted(Formatting.GOLD), false);
+                .withStyle(ChatFormatting.GOLD));
         return true;
     }
 
-    static TypedActionResult<ItemStack> useHandheldArtifact(
-            PlayerEntity player, World world, Hand hand) {
-        ItemStack stack = player.getStackInHand(hand);
-        if (!stack.isOf(SpellMediaContent.SPELL_SCROLL)
-                && !stack.isOf(SpellMediaContent.SPELL_BOOK)) {
-            return TypedActionResult.pass(stack);
+    static InteractionResultHolder<ItemStack> useHandheldArtifact(
+            Player player, Level world, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (!stack.is(SpellMediaContent.spellScroll())
+                && !stack.is(SpellMediaContent.spellBook())) {
+            return InteractionResultHolder.pass(stack);
         }
-        if (world.isClient()) {
-            return TypedActionResult.success(stack, true);
+        if (world.isClientSide) {
+            return InteractionResultHolder.sidedSuccess(stack, true);
         }
-        if (!(player instanceof ServerPlayerEntity serverPlayer)
-                || player.getItemCooldownManager().isCoolingDown(stack.getItem())) {
-            return TypedActionResult.fail(stack);
+        if (!(player instanceof ServerPlayer serverPlayer)
+                || player.getCooldowns().isOnCooldown(stack.getItem())) {
+            return InteractionResultHolder.fail(stack);
         }
         Optional<SpellArtifact> decoded = readArtifact(stack);
         if (decoded.isEmpty()) {
-            serverPlayer.sendMessage(Text.literal("This medium contains no valid spell")
-                    .formatted(Formatting.RED), true);
-            return TypedActionResult.fail(stack);
+            serverPlayer.sendSystemMessage(Component.literal("This medium contains no valid spell")
+                    .withStyle(ChatFormatting.RED), true);
+            return InteractionResultHolder.fail(stack);
         }
         SpellArtifact artifact = decoded.orElseThrow();
         if (artifact.state() == SpellArtifact.State.CONSUMED) {
-            serverPlayer.sendMessage(Text.literal("This scroll has already been consumed")
-                    .formatted(Formatting.RED), true);
-            return TypedActionResult.fail(stack);
+            serverPlayer.sendSystemMessage(Component.literal("This scroll has already been consumed")
+                    .withStyle(ChatFormatting.RED), true);
+            return InteractionResultHolder.fail(stack);
         }
-        if (activateCircleAt(serverPlayer, artifact.circle(), true, serverPlayer.getEyePos())) {
+        if (activateCircleAt(serverPlayer, artifact.circle(), true, serverPlayer.getEyePosition())) {
             SpellArtifact.Transition transition = artifact.recordSuccessfulActivation();
             if (artifact.medium() == SpellMedium.SCROLL) {
                 // Single-use is a spell-medium rule, not a survival inventory rule.
-                stack.decrement(1);
-                serverPlayer.sendMessage(Text.literal("The successful scroll burns into silver ash")
-                        .formatted(Formatting.GOLD), false);
+                stack.shrink(1);
+                serverPlayer.sendSystemMessage(Component.literal("The successful scroll burns into silver ash")
+                        .withStyle(ChatFormatting.GOLD));
             } else {
                 writeArtifact(stack, transition.artifact());
             }
-            player.getItemCooldownManager().set(stack.getItem(), 20);
+            player.getCooldowns().addCooldown(stack.getItem(), 20);
         }
-        return TypedActionResult.success(stack, false);
+        return InteractionResultHolder.sidedSuccess(stack, false);
     }
 
-    public static boolean activateCircleAt(ServerPlayerEntity player, MagicCircle circle,
-            boolean chargeMana, Vec3d origin) {
+    public static boolean activateCircleAt(ServerPlayer player, MagicCircle circle,
+            boolean chargeMana, Vec3 origin) {
         if (Vm2CircleCompiler.isVm2Circle(circle)) {
             Vm2CircleCompilation compilation = Vm2CircleCompiler.compile(circle, vmContext(player, origin));
             sendVmCompilation(player, compilation);
@@ -324,7 +318,7 @@ public final class CircleAuthoringService {
         SpellVisualManager.showAuthoredCircleAt(player, circle, compilation.diagnostics(), origin);
         if (compilation.hasErrors()) return false;
         CastResult result = CastService.castAt(player, compilation.compatibilitySource(), chargeMana,
-                origin, player.getRotationVec(1.0F));
+                origin, player.getViewVector(1.0F));
         PonderTraceNetworking.publishCompatibility(player, "server-authored-compatibility-trace",
                 circle.name() + " — authoritative result", compilation, result);
         return result instanceof CastResult.Success;
@@ -332,33 +326,33 @@ public final class CircleAuthoringService {
 
     public static ItemStack createArtifactStack(SpellArtifact artifact) {
         ItemStack stack = switch (artifact.medium()) {
-            case SCROLL -> new ItemStack(SpellMediaContent.SPELL_SCROLL);
-            case BOOK -> new ItemStack(SpellMediaContent.SPELL_BOOK);
-            case TABLET -> new ItemStack(SpellMediaContent.CARVED_TABLET_ITEM);
+            case SCROLL -> new ItemStack(SpellMediaContent.spellScroll());
+            case BOOK -> new ItemStack(SpellMediaContent.spellBook());
+            case TABLET -> new ItemStack(SpellMediaContent.carvedTabletItem());
         };
-        stack.set(DataComponentTypes.CUSTOM_NAME, Text.literal(artifact.circle().name() + " "
+        stack.set(DataComponents.CUSTOM_NAME, Component.literal(artifact.circle().name() + " "
                 + switch (artifact.medium()) {
                     case SCROLL -> "Scroll";
                     case BOOK -> "Spellbook";
                     case TABLET -> "Tablet";
-                }).formatted(Formatting.LIGHT_PURPLE));
+                }).withStyle(ChatFormatting.LIGHT_PURPLE));
         writeArtifact(stack, artifact);
         if (artifact.medium() == SpellMedium.TABLET) {
-            NbtCompound blockData = new NbtCompound();
+            CompoundTag blockData = new CompoundTag();
             blockData.putString(SpellTabletBlockEntity.PAYLOAD_KEY,
                     SpellArtifactPersistence.encode(artifact));
-            BlockItem.setBlockEntityData(stack, SpellMediaContent.TABLET_BLOCK_ENTITY, blockData);
+            BlockItem.setBlockEntityData(stack, SpellMediaContent.tabletBlockEntity(), blockData);
         }
         return stack;
     }
 
     public static Optional<SpellArtifact> readArtifact(ItemStack stack) {
-        NbtComponent component = stack.getOrDefault(DataComponentTypes.CUSTOM_DATA, NbtComponent.DEFAULT);
+        CustomData component = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
         if (!component.contains(ARTIFACT_KEY)) {
             return Optional.empty();
         }
         try {
-            return Optional.of(SpellArtifactPersistence.decode(component.getNbt().getString(ARTIFACT_KEY)));
+            return Optional.of(SpellArtifactPersistence.decode(component.copyTag().getString(ARTIFACT_KEY)));
         } catch (RuntimeException exception) {
             VectorRegnumMod.LOGGER.warn("Rejected corrupt spell medium", exception);
             return Optional.empty();
@@ -366,96 +360,100 @@ public final class CircleAuthoringService {
     }
 
     private static void writeArtifact(ItemStack stack, SpellArtifact artifact) {
-        NbtComponent.set(DataComponentTypes.CUSTOM_DATA, stack,
+        CustomData.update(DataComponents.CUSTOM_DATA, stack,
                 nbt -> nbt.putString(ARTIFACT_KEY, SpellArtifactPersistence.encode(artifact)));
     }
 
-    private static boolean consumeBlank(ServerPlayerEntity player, ItemStack expected) {
-        for (int slot = 0; slot < player.getInventory().size(); slot++) {
-            ItemStack candidate = player.getInventory().getStack(slot);
-            if (candidate.isOf(expected.getItem()) && readArtifact(candidate).isEmpty()) {
-                candidate.decrement(1);
+    private static boolean consumeBlank(ServerPlayer player, ItemStack expected) {
+        for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
+            ItemStack candidate = player.getInventory().getItem(slot);
+            if (candidate.is(expected.getItem()) && readArtifact(candidate).isEmpty()) {
+                candidate.shrink(1);
                 return true;
             }
         }
         return false;
     }
 
-    private static CircleEditorSession load(ServerPlayerEntity player) {
+    private static CircleEditorSession load(ServerPlayer player) {
         try {
-            return new CircleEditorSession(CirclePersistence.decode(player.getAttachedOrCreate(SAVED_CIRCLE)));
+            return new CircleEditorSession(CirclePersistence.decode(
+                    player.getData(PlayerAttachmentContent.AUTHORED_CIRCLE)));
         } catch (RuntimeException exception) {
             VectorRegnumMod.LOGGER.warn("Reset corrupt saved circle for {}",
                     player.getGameProfile().getName(), exception);
             MagicCircle fallback = starterCircle();
-            player.setAttached(SAVED_CIRCLE, CirclePersistence.encode(fallback));
+            player.setData(PlayerAttachmentContent.AUTHORED_CIRCLE, CirclePersistence.encode(fallback));
             return new CircleEditorSession(fallback);
         }
     }
 
-    private static void replace(ServerPlayerEntity player, MagicCircle circle) {
-        SESSIONS.put(player.getUuid(), new CircleEditorSession(circle));
+    private static void replace(ServerPlayer player, MagicCircle circle) {
+        SESSIONS.put(player.getUUID(), new CircleEditorSession(circle));
         persist(player);
     }
 
-    private static void finishEdit(ServerPlayerEntity player, CircleEditorSession.EditResult result) {
+    private static void finishEdit(ServerPlayer player, CircleEditorSession.EditResult result) {
         if (result.changed()) {
             persist(player);
-            player.sendMessage(Text.literal("Circle updated • " + result.circle().sigils().size() + " sigils")
-                    .formatted(Formatting.AQUA), true);
+            player.sendSystemMessage(Component.literal(
+                    "Circle updated • " + result.circle().sigils().size() + " sigils")
+                    .withStyle(ChatFormatting.AQUA), true);
             showEditorPreview(player, result.circle(), List.of());
         } else {
             sendDiagnostics(player, result.diagnostics());
         }
     }
 
-    private static void persist(ServerPlayerEntity player) {
-        player.setAttached(SAVED_CIRCLE, CirclePersistence.encode(session(player).current()));
+    private static void persist(ServerPlayer player) {
+        player.setData(PlayerAttachmentContent.AUTHORED_CIRCLE,
+                CirclePersistence.encode(session(player).current()));
     }
 
-    private static void sendCompilation(ServerPlayerEntity player, CircleCompilation compilation) {
+    private static void sendCompilation(ServerPlayer player, CircleCompilation compilation) {
         if (compilation.hasErrors()) {
-            player.sendMessage(Text.literal("CIRCLE REJECTED • " + compilation.diagnostics().size()
-                            + " diagnostic(s)").formatted(Formatting.RED, Formatting.BOLD), false);
+            player.sendSystemMessage(Component.literal("CIRCLE REJECTED • " + compilation.diagnostics().size()
+                            + " diagnostic(s)").withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
             sendDiagnostics(player, compilation.diagnostics());
         } else {
-            player.sendMessage(Text.literal("CIRCLE COMPILED • clockwise/outside-in • "
+            player.sendSystemMessage(Component.literal("CIRCLE COMPILED • clockwise/outside-in • "
                             + compilation.executionOrder().size() + " instructions")
-                    .formatted(Formatting.GREEN, Formatting.BOLD), false);
+                    .withStyle(ChatFormatting.GREEN, ChatFormatting.BOLD));
         }
     }
 
     private static void sendVmCompilation(
-            ServerPlayerEntity player, Vm2CircleCompilation compilation) {
+            ServerPlayer player, Vm2CircleCompilation compilation) {
         if (compilation.hasErrors()) {
-            player.sendMessage(Text.literal("VM2 CIRCLE REJECTED • "
+            player.sendSystemMessage(Component.literal("VM2 CIRCLE REJECTED • "
                             + compilation.diagnostics().size() + " diagnostic(s)")
-                    .formatted(Formatting.RED, Formatting.BOLD), false);
+                    .withStyle(ChatFormatting.RED, ChatFormatting.BOLD));
             sendDiagnostics(player, compilation.diagnostics());
             return;
         }
         var cost = compilation.compiledProgram().orElseThrow().manaCost();
-        player.sendMessage(Text.literal(String.format(java.util.Locale.ROOT,
+        player.sendSystemMessage(Component.literal(String.format(java.util.Locale.ROOT,
                         "VM2 CIRCLE COMPILED • %d instructions • %.2f μ "
                                 + "[work %.2f, range %.2f, time %.2f, rarity %.2f, "
                                 + "memory %.2f, perception %.2f, control %.2f]",
                         compilation.executionOrder().size(), cost.total(), cost.physicalWork(),
                         cost.range(), cost.duration(), cost.rarity(), cost.memory(),
                         cost.perception(), cost.controlFlow()))
-                .formatted(Formatting.GREEN), false);
+                .withStyle(ChatFormatting.GREEN));
     }
 
-    private static void sendDiagnostics(ServerPlayerEntity player, List<CircleDiagnostic> diagnostics) {
+    private static void sendDiagnostics(ServerPlayer player, List<CircleDiagnostic> diagnostics) {
         for (CircleDiagnostic diagnostic : diagnostics) {
             String location = diagnostic.location().map(coordinate ->
                     " r" + coordinate.ring() + ":s" + coordinate.clockwiseSlot()).orElse("");
-            player.sendMessage(Text.literal(diagnostic.code() + location + " — " + diagnostic.message())
-                    .formatted(diagnostic.severity() == CircleDiagnostic.Severity.ERROR
-                            ? Formatting.RED : Formatting.YELLOW), false);
+            player.sendSystemMessage(Component.literal(
+                    diagnostic.code() + location + " — " + diagnostic.message())
+                    .withStyle(diagnostic.severity() == CircleDiagnostic.Severity.ERROR
+                            ? ChatFormatting.RED : ChatFormatting.YELLOW));
         }
     }
 
-    private static MagicCircle starterCircle() {
+    static MagicCircle starterCircle() {
         return new MagicCircle(MagicCircle.CURRENT_SCHEMA_VERSION,
                 "starter-fire-aura", "Starter Fire Aura", 3, 8, List.of(
                 new PlacedSigil(new CircleCoordinate(0, 0), "ORIGIN_SELF"),
@@ -493,35 +491,35 @@ public final class CircleAuthoringService {
         return new CircleValue.NumberValue(raw);
     }
 
-    private static Optional<CircleEditorAnchor> validEditorAnchor(ServerPlayerEntity player) {
-        CircleEditorAnchor anchor = EDITOR_ANCHORS.get(player.getUuid());
+    private static Optional<CircleEditorAnchor> validEditorAnchor(ServerPlayer player) {
+        CircleEditorAnchor anchor = EDITOR_ANCHORS.get(player.getUUID());
         if (anchor == null) {
             return Optional.empty();
         }
-        String currentDimension = player.getServerWorld().getRegistryKey().getValue().toString();
+        String currentDimension = player.serverLevel().dimension().location().toString();
         BlockPos position = new BlockPos(anchor.x(), anchor.y(), anchor.z());
         if (!anchor.dimension().equals(currentDimension)
-                || !player.getServerWorld().isChunkLoaded(position)
-                || player.getServerWorld().getBlockState(position).isAir()) {
-            EDITOR_ANCHORS.remove(player.getUuid(), anchor);
+                || !player.serverLevel().hasChunkAt(position)
+                || player.serverLevel().getBlockState(position).isAir()) {
+            EDITOR_ANCHORS.remove(player.getUUID(), anchor);
             return Optional.empty();
         }
         return Optional.of(anchor);
     }
 
-    private static Vec3d editorOrigin(ServerPlayerEntity player) {
+    private static Vec3 editorOrigin(ServerPlayer player) {
         return validEditorAnchor(player).map(CircleAuthoringService::anchorCenter)
-                .orElseGet(player::getEyePos);
+                .orElseGet(player::getEyePosition);
     }
 
-    private static Vec3d anchorCenter(CircleEditorAnchor anchor) {
-        return Vec3d.ofCenter(new BlockPos(anchor.x(), anchor.y(), anchor.z())).add(
+    private static Vec3 anchorCenter(CircleEditorAnchor anchor) {
+        return Vec3.atCenterOf(new BlockPos(anchor.x(), anchor.y(), anchor.z())).add(
                 anchor.face().offsetX() * 0.505,
                 anchor.face().offsetY() * 0.505,
                 anchor.face().offsetZ() * 0.505);
     }
 
-    private static void showEditorPreview(ServerPlayerEntity player, MagicCircle circle,
+    private static void showEditorPreview(ServerPlayer player, MagicCircle circle,
             List<CircleDiagnostic> diagnostics) {
         Optional<CircleEditorAnchor> anchor = validEditorAnchor(player);
         if (anchor.isEmpty()) {
@@ -533,9 +531,9 @@ public final class CircleAuthoringService {
                 anchorCenter(fixed), Direction.valueOf(fixed.face().name()));
     }
 
-    private static Vm2CircleCompiler.Context vmContext(ServerPlayerEntity player, Vec3d origin) {
-        Vec3d look = player.getRotationVec(1.0F).normalize();
-        return new Vm2CircleCompiler.Context(player.getUuidAsString(),
+    private static Vm2CircleCompiler.Context vmContext(ServerPlayer player, Vec3 origin) {
+        Vec3 look = player.getViewVector(1.0F).normalize();
+        return new Vm2CircleCompiler.Context(player.getStringUUID(),
                 new Vector3(origin.x, origin.y, origin.z), new Vector3(look.x, look.y, look.z));
     }
 

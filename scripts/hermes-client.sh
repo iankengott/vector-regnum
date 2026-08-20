@@ -1,17 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Priority 20 staging guard. The Fabric entrypoints are excluded from the build
-# and no NeoForge @Mod entrypoint exists yet, so runClient/runServer would start
-# Minecraft with no Vector-Regnum loaded and look like a working launch.
-# Remove this guard when a complete NeoForge slice provides an entrypoint.
-printf 'This launcher is disabled during the NeoForge port (roadmap priority 20).\n' >&2
-printf 'There is no NeoForge entrypoint yet, so a launch would run vanilla Minecraft\n' >&2
-printf 'and appear to succeed. For a playable Fabric alpha use the frozen legacy\n' >&2
-printf 'checkout at ../vector-regnum-fabric-legacy (commit c7371ca).\n' >&2
-exit 1
-
-
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 # shellcheck source=lib/hermes-common.sh
 source "$SCRIPT_DIR/lib/hermes-common.sh"
@@ -20,7 +9,7 @@ usage() {
     cat <<'USAGE'
 Usage: scripts/hermes-client.sh ACTION
 
-Control only Vector-Regnum's isolated Loom development server and client on
+Control only Vector-Regnum's isolated NeoForge development server and client on
 Hermes. The server is staged from dev/hermes, started on port 25575, and proven
 ready before the quick-play client starts.
 
@@ -193,7 +182,7 @@ start_server() {
         --collect \
         --service-type=exec \
         --working-directory="$remote_dir" \
-        --description='Vector-Regnum isolated Loom development server' \
+        --description='Vector-Regnum isolated NeoForge development server' \
         --setenv="JAVA_HOME=$verified_java_home" \
         --setenv="PATH=$verified_unit_path" \
         --setenv='VECTOR_REGNUM_VISUAL_CHECK=1' \
@@ -248,7 +237,7 @@ start_client() {
         --collect \
         --service-type=exec \
         --working-directory="$remote_dir" \
-        --description='Vector-Regnum Loom development client' \
+        --description='Vector-Regnum NeoForge development client' \
         --setenv="JAVA_HOME=$verified_java_home" \
         --setenv="PATH=$verified_unit_path" \
         "$remote_dir/gradlew" --no-daemon runClient

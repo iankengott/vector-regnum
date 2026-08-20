@@ -53,18 +53,21 @@
     "vector_regnum:authored_circle",
     "vector_regnum:received_tutorial_guide",
     "vector_regnum:tutorial_guide_version",
-    "vector_regnum:player_data_schema",
-    "vector_regnum:spell_claims"
+    "vector_regnum:player_data_schema"
   ],
-  "payloads": [
-    "vector_regnum:circle_editor_request",
-    "vector_regnum:circle_editor_snapshot",
-    "vector_regnum:progression_sync",
-    "vector_regnum:ponder_trace_request",
-    "vector_regnum:ponder_trace",
-    "vector_regnum:presentation_start",
-    "vector_regnum:presentation_signal"
-  ],
+  "payloads": {
+    "serverbound": [
+      "vector_regnum:circle_editor_request",
+      "vector_regnum:ponder_trace_request"
+    ],
+    "clientbound": [
+      "vector_regnum:circle_editor_snapshot",
+      "vector_regnum:progression_sync",
+      "vector_regnum:ponder_trace",
+      "vector_regnum:presentation_start",
+      "vector_regnum:presentation_signal"
+    ]
+  },
   "creative_tabs": {
     "minecraft:tools_and_utilities": [
       "vector_regnum:sigil_tome",

@@ -6,6 +6,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.UUID;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.StringTag;
 import org.junit.jupiter.api.Test;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
@@ -55,5 +58,45 @@ class ClaimLedgerTest {
         assertEquals(ClaimLedger.CURRENT_SCHEMA, migrated.schemaVersion());
         assertEquals(OWNER, migrated.claims().getFirst().owner());
         assertEquals(ClaimLedger.Access.OWNER_ONLY, migrated.claims().getFirst().access());
+    }
+
+    @Test
+    void savedDataRoundTripsClaimsAndOwnsDirtyState() {
+        ClaimLedger ledger = ClaimLedger.EMPTY.claim(
+                new ClaimLedger.ClaimKey("minecraft:overworld", 4, -2), OWNER, "red",
+                ClaimLedger.Access.TEAM).ledger();
+        ClaimSavedData saved = new ClaimSavedData(ledger);
+        assertFalse(saved.isDirty());
+
+        CompoundTag encoded = saved.save(new CompoundTag(), null);
+        ClaimSavedData loaded = ClaimSavedData.load(encoded, null);
+        assertEquals(ledger, loaded.ledger());
+        assertFalse(loaded.isDirty());
+
+        assertFalse(loaded.replace(ledger), "equal retries must not dirty the save");
+        ClaimLedger released = ledger.release(
+                new ClaimLedger.ClaimKey("minecraft:overworld", 4, -2), OWNER, false).ledger();
+        assertTrue(loaded.replace(released));
+        assertTrue(loaded.isDirty());
+    }
+
+    @Test
+    void savedDataMigratesSchemaOneAndResetsCorruptPayload() {
+        CompoundTag schemaOne = new CompoundTag();
+        ListTag claims = new ListTag();
+        claims.add(StringTag.valueOf("minecraft:overworld|-3|8|" + OWNER));
+        schemaOne.put("claims", claims);
+
+        ClaimSavedData migrated = ClaimSavedData.load(schemaOne, null);
+        assertEquals(ClaimLedger.CURRENT_SCHEMA, migrated.ledger().schemaVersion());
+        assertEquals(ClaimLedger.Access.OWNER_ONLY,
+                migrated.ledger().claims().getFirst().access());
+        assertTrue(migrated.isDirty(), "schema migration must be persisted");
+
+        CompoundTag corrupt = new CompoundTag();
+        corrupt.putString("claims", "not a list");
+        ClaimSavedData fallback = ClaimSavedData.load(corrupt, null);
+        assertEquals(ClaimLedger.EMPTY, fallback.ledger());
+        assertTrue(fallback.isDirty(), "corrupt data should converge to the fallback");
     }
 }
