@@ -3,6 +3,12 @@
 Status: proposed, not started. This plan implements canonical roadmap priority
 20. It does not change what priority 20 requires; it sequences it.
 
+Revision 2 incorporates an adversarial review. Two blockers, four high findings,
+and two medium findings were confirmed against the tree and fixed below. The
+changes that mattered most: world claims cannot be an attachment, the phase 5
+save gate contradicted a canonical decision, and phase 6 had NeoForge threading
+backwards.
+
 ## Measured baseline
 
 Direct counts from the tree, not estimates:
@@ -11,7 +17,10 @@ Direct counts from the tree, not estimates:
 |---|---|---|---|
 | `vectorregnum/core` | 85 | 5,391 | zero `net.minecraft`, zero `net.fabricmc` |
 | `vectorregnum/fabric` | 110 | 12,905 | 63 files use `net.minecraft`, 29 use Fabric API |
-| `src/test` | 47 | 3,342 | 1 file imports Minecraft |
+| `src/test` | 47 | 3,342 | 1 file imports Minecraft, 32 use `vectorregnum.fabric` |
+
+The suite is 47 test classes and 162 `@Test` methods. Only 15 test files compile
+without the `vectorregnum.fabric` package, which constrains phases 1 and 2.
 
 There are no mixins. `fabric.mod.json` declares three entrypoints and no mixin
 config. The loader-neutral split the roadmap claims is real: `core` compiles
@@ -28,15 +37,15 @@ state or silently does nothing.
 
 ## Verification gates, and why they carry the plan
 
-Subagent D established that the existing suite cannot detect a bad port. All 39
-pure-JUnit tests pass with zero blocks, items, block entities, networking, or
+Subagent D established that the existing suite cannot detect a bad port. The
+loader-free tests pass with zero blocks, items, block entities, networking, or
 commands registered. `ManaProgressionGameTestHarnessTest` passes with no
 GameTest registration at all. Registry-size contracts such as
 `LibrarySpellIntegrationContractTest:23` assert `size() == 15` against library
 metadata, not against anything the loader registered.
 
 After a bad port the only automatic red flags are compile errors in
-`PlayerManaBridgeTest` and the 16 `@GameTest` classes.
+`PlayerManaBridgeTest` and the 16 `@GameTest` methods, which live in 3 classes.
 
 Every phase below therefore states a gate that fails loudly on a broken port.
 Green tests are not a gate.
@@ -47,7 +56,7 @@ Each phase lists an estimate, the subagent tier from the AGENTS.md ladder, and
 its gate. Phases 1 through 3 are strictly ordered. Phases 5 through 9 can
 overlap once phase 4 lands, provided no two agents share files.
 
-### Phase 0 — Freeze verification and unknowns (2-3 h, parent)
+### Phase 0 — Freeze verification and unknowns (2-4 h, parent)
 
 Priority 20 requires verifying the published legacy snapshot before porting.
 `vector-regnum-fabric-legacy` exists, is pushed, and its head is `c7371ca docs:
@@ -64,29 +73,46 @@ Resolve three unknowns that change later phases:
 3. Whether `ServerChunkEvents.CHUNK_GENERATE` has any NeoForge counterpart, or
    whether phase 8 must become a placed feature.
 
-Gate: legacy repo tagged and its build reproduced; all three unknowns answered
-in writing with a source, not from memory.
+The legacy repository is clean and synchronized at `c7371ca` but currently has
+zero tags, so "frozen" is not yet true in any checkable sense.
 
-### Phase 1 — Build system and toolchain (3-5 h, deepseekflash then parent)
+Gate: an annotated tag created on the legacy repository, pushed, and verified to
+exist on the remote; its build reproduced; all three unknowns answered in
+writing with a cited source, not from memory.
+
+### Phase 1 — Build system, toolchain, GameTest infrastructure (5-8 h, deepseekflash then parent)
 
 Replace `fabric-loom` with the NeoForge Gradle plugin, switch to official
 mappings, replace `fabric.mod.json` with `neoforge.mods.toml`, and re-point the
 `client`/`server` run configs including the loopback 25575 dev port.
 
-Gate: `./gradlew build` succeeds with only `core` and the pure tests on the
-source path. The `fabric` package is temporarily excluded. A build that
-succeeds because nothing compiles does not pass.
+Stand up the GameTest infrastructure now rather than at phase 10, because
+phase 10 cannot verify anything without it: an empty structure template, the
+registration namespace, and a `gameTestServer` run configuration.
+`runGameTestServer` supplies the process exit code the ladder needs.
+
+Write a checked-in source manifest naming exactly which sources compile at each
+intermediate gate. Without it the phase 1 through 3 gates are unfalsifiable.
+
+Gate: `./gradlew build` succeeds against the manifest's core-only source set,
+which is `core` plus the 15 test files that do not reference
+`vectorregnum.fabric`. The other 32 test files are excluded by the manifest, not
+by accident. A build that succeeds because nothing compiles does not pass.
 
 ### Phase 2 — Core and pure tests (1-2 h, parent)
 
-`core` has zero loader coupling, so it should compile unchanged. Restore the 39
-pure-JUnit tests.
+`core` has zero loader coupling, so it should compile unchanged. Restore the 15
+test files that need no `vectorregnum.fabric` class.
 
-Gate: 39 tests green on the NeoForge toolchain, and `core` compiles with no
-edits. Any edit needed here means the loader-neutral claim was wrong and the
-plan needs revisiting.
+The other 32 test files, including `ManaStorageTest` which tests
+`vectorregnum.fabric.progression.ManaStorage`, come back during the vertical
+slices in phase 3, not here.
 
-### Phase 3 — Mapping sweep (8-12 h, deepseekflash fan-out)
+Gate: the 15 loader-free test files green on the NeoForge toolchain, and `core`
+compiles with no edits. Any edit needed here means the loader-neutral claim was
+wrong and the plan needs revisiting.
+
+### Phase 3 — Mapping sweep, vertical slices, package rename (10-16 h, deepseekflash fan-out)
 
 Rename 94 imports across 63 files using subagent B's table, batched by area so
 no two agents share a file. B separates pure find-replace renames from
@@ -102,37 +128,81 @@ Two traps B identified:
   becomes `loadAdditional` and `writeNbt` becomes `saveAdditional` with
   different parameters. A missed override compiles and never runs.
 
-Gate: full compile, plus a grep proving no `net.fabricmc` import survives
-outside files the later phases own, plus manual review of every `@Override` on
-a persistence method.
+Port in vertical slices that compile completely, rather than sweeping all 63
+files and hoping for a full compile. A "full compile" is impossible while 29
+files still import Fabric APIs owned by phases 4 through 9, so each slice
+carries its own Fabric API replacements or it is not a slice.
 
-### Phase 4 — Registration (6-10 h, deepseekflash with parent review)
+Also rename the package. The tree has 140 `vectorregnum.fabric` package
+declarations and 250 references. Leaving them shipped means the NeoForge
+implementation lives under `vectorregnum.fabric` and the VM service is called
+`FabricVmService`. Rename to `vectorregnum.neoforge` across main sources, tests,
+entrypoints, and class names.
 
-Move every static-init `Registry.register` to `DeferredRegister`. NeoForge
-freezes registries before mod load completes, so the current pattern throws.
-This covers 8 blocks plus 3 conduits and 3 reservoirs, 11 items, 4 block entity
-types, 5 creative tab insertions, 3 keybindings, and the `/vectorregnum`
-command tree registered from two sites.
+Gate: every slice compiles on its own with its tests restored, and a search
+returns zero active references to `vectorregnum.fabric`, `net.fabricmc`,
+`FabricVmService`, or `fabric.mod.json`. Plus manual review of every `@Override`
+on a persistence method.
+
+### Phase 4 — Registration (7-11 h, deepseekflash with parent review)
+
+Two different mechanisms, kept separate.
+
+Static registries move to `DeferredRegister`, because NeoForge freezes
+registries before mod load completes and the current static-init pattern
+throws. The tracked resources prove **17 block IDs and 13 item IDs**, not the
+14 and 11 an earlier revision claimed, plus 4 block entity types.
+
+Everything else is event-driven and does not touch `DeferredRegister`:
+key mappings via `RegisterKeyMappingsEvent`, creative tab additions via
+`BuildCreativeModeTabContentsEvent`, and commands via `RegisterCommandsEvent`.
+The `/vectorregnum` root is registered from two sites and Brigadier merges the
+children, so both must move together.
+
+Produce a checked-in parity manifest listing every expected registry ID,
+attachment ID, payload ID, creative-tab membership, and command root. It is the
+input to the phase 10 registration test.
 
 Gate: the game launches, `/vectorregnum` tab-completes its full tree, every
 item appears in its intended creative tab, and all four block entities place
-and persist. Not a test run. Launch it.
+and persist. The live registry matches the parity manifest exactly, with no
+missing and no extra IDs. Not a test run. Launch it.
 
-### Phase 5 — Persistence and attachments (5-8 h, Luna max)
+### Phase 5 — Persistence, attachments, SavedData (8-12 h, Luna max)
 
-12 attachments and 4 block entity NBT shapes. Player data carries
-`PlayerDataMigration.CURRENT_SCHEMA = 2` and `ClaimLedger` carries its own
-schema 2 with a schema-1 decode default of `OWNER_ONLY`. No block entity has a
-version field; all four sanitize defensively.
+11 of the 12 attachments are player data and port to NeoForge `AttachmentType`.
+The twelfth does not.
+
+`WORLD_CLAIMS` is attached to the world, not to a player, via
+`world.setAttached(WORLD_CLAIMS, ...)` at `MultiplayerLifecycleService.java:52`,
+`:99`, and `:111`. NeoForge 1.21.1 attachments support entities, block entities,
+chunks, and item stacks, but not levels; level data belongs in `SavedData`.
+Porting `ClaimLedger` as an ordinary attachment is not possible.
+
+Move `ClaimLedger` to versioned `SavedData` with explicit dirty marking and
+per-dimension ownership. It carries schema 2 with a schema-1 decode default of
+`OWNER_ONLY`, and that migration must survive the move.
+
+Player data carries `PlayerDataMigration.CURRENT_SCHEMA = 2`. No block entity
+has a version field; all four sanitize defensively.
 
 Luna max, not deepseekflash: getting `copyOnDeath` or a decode fallback subtly
 wrong corrupts saves without failing a build.
 
-Gate: a world saved by the Fabric alpha loads on NeoForge with mana, capacity,
-affinity, attuned source and dimension, channel lock, authored circle,
-progression unlocks, guide version, and claims intact. Death copy preserves
-mana and clears the transient lock. Schema-1 claims still default to
-`OWNER_ONLY`.
+There is deliberately no Fabric-world gate here. `SMP_INTEGRATION_DECISIONS.md`
+line 21 records the canonical decision that no save-compatibility requirement
+exists between the unreleased Fabric alpha and NeoForge. An earlier revision of
+this plan required loading a Fabric-alpha world, which contradicted that
+decision. If Fabric world importing is ever wanted it needs its own roadmap
+entry and a migration reader, not a smuggled-in gate.
+
+Gate, all NeoForge-native: a NeoForge world saves and reloads with mana,
+capacity, affinity, attuned source and dimension, channel lock, authored
+circle, progression unlocks, guide version, and claims intact. Death copy
+preserves mana and clears the transient lock. A hand-built schema-1 claim
+fixture still migrates to `OWNER_ONLY`. Corrupt payloads still hit their
+defensive fallbacks. All 4 block entities round-trip. Claims survive a full
+server restart.
 
 ### Phase 6 — Networking (5-8 h, Luna max)
 
@@ -140,14 +210,24 @@ mana and clears the transient lock. Schema-1 claims still default to
 `PayloadRegistrar`, convert `PacketCodec` to `StreamCodec`, and split
 registration by side. Fabric's `canSend` has no exact per-player equivalent.
 
-Every current handler hops to the main thread via `context.server().execute()`
-or `context.client().execute()`. NeoForge handlers also arrive on Netty
-threads, so every hop must survive the port. Dropping one lets editor sessions,
-Ponder `LATEST`, screens, and presentation state mutate off-thread.
+The threading direction here is the opposite of what an earlier revision said.
+NeoForge 1.21.1 invokes payload handlers on the main thread by default; running
+on the network thread is opt-in through `executesOn(HandlerThread.NETWORK)`.
 
-Gate: each of the 7 payloads exercised in a live two-client session, with the
-main-thread hop confirmed present at every handler by reading the code, not by
-observing that it happened to work once.
+So the Fabric `context.server().execute()` and `context.client().execute()`
+hops are not something to preserve. They become redundant. All 7 payloads
+mutate state, so all 7 take the default main-thread handler and the hops are
+removed rather than translated. Only decode-only work would justify the network
+thread, and then it must return through `context.enqueueWork` with the future's
+exceptions handled.
+
+Check the `canSend` claim rather than inheriting it: verify whether
+`player.connection.hasChannel(...)` covers it in the pinned NeoForge version
+before writing a replacement.
+
+Gate: each of the 7 payloads exercised in a live two-client session, plus a
+read of every handler confirming it runs on the main thread and carries no
+leftover redundant hop.
 
 ### Phase 7 — Events, lifecycle, entrypoints (6-10 h, Luna max then deepseekflash)
 
@@ -200,21 +280,25 @@ race.
 
 ### Phase 10 — Test port and the coverage gap (6-10 h, deepseekflash then parent)
 
-Port the 16 `@GameTest` classes from `FabricGameTest` to `@GameTestHolder`.
-`TestContext` becomes `GameTestHelper` with renamed methods, annotation
-attributes change, and `FabricGameTest.EMPTY_STRUCTURE` has no counterpart.
+Port the 16 `@GameTest` methods, which live in 3 classes and not 16, from
+`FabricGameTest` to `@GameTestHolder`. `TestContext` becomes `GameTestHelper`
+with renamed methods, and annotation attributes change. The structure template,
+namespace, and `gameTestServer` run configuration were built in phase 1, so
+this phase ports tests rather than standing up infrastructure.
+
 Port `PlayerManaBridgeTest`, the one directly coupled unit test.
 
-Then close the gap D found. Add at minimum a registration-presence test that
-fails when a block, item, block entity type, payload, or command is absent from
-the live registry. The current suite cannot tell a working port from an empty
-one.
+Then close the gap D found. Add a registration-presence test that reads the
+phase 4 parity manifest and fails when any expected registry ID, attachment ID,
+payload ID, creative-tab membership, or command root is missing from the live
+game. The current suite cannot tell a working port from an empty one.
 
-Gate: all 16 GameTests pass on NeoForge, and the new registration test fails
-when a registration is deliberately commented out. Verify that failure; a gate
-that has never failed is not a gate.
+Gate: all 16 GameTest methods pass on NeoForge through `runGameTestServer` with
+a real process exit code, and the new registration test fails when a
+registration is deliberately commented out. Verify that failure; a gate that has
+never failed is not a gate.
 
-### Phase 11 — Ladder, launcher, mirror (4-6 h, parent)
+### Phase 11 — Ladder, launcher, mirror, handoff (6-9 h, parent)
 
 Rewrite the AGENTS.md verification ladder so every Fabric-specific step has a
 NeoForge equivalent, update the NixOS launcher and desktop entry, and re-point
@@ -222,30 +306,46 @@ the guarded Hermes workflow. Hermes owns only
 `vector-regnum-dev-server.service` and `vector-regnum-dev-client.service`, and
 the identity and ownership marker must verify before any sync.
 
-Gate: the full new ladder runs clean from a fresh clone.
+The "keeping the handoff current" rules at `AGENTS.md:189` require more than
+that, and all of it lands here: update `ROADMAP.md` and the confirmed and
+unfinished sections of `README.md`, update `scripts/README.md` because test and
+launch behavior changes, update the Vector-Regnum project memory and project hub
+in the Obsidian vault on the main PC, and record the new automated test counts
+and latest inspected visual evidence.
+
+Then sweep for stale claims. The docs currently assert Fabric-specific facts in
+many places, and a port that leaves them reads as a lie to the next agent.
+
+Gate: the full new ladder runs clean from a fresh clone, and a search for
+"Fabric", "loom", and "yarn" across the docs returns only deliberate historical
+references.
 
 ## Estimate
 
 | Phase | Estimate |
 |---|---|
-| 0 Freeze and unknowns | 2-3 h |
-| 1 Build system | 3-5 h |
-| 2 Core and pure tests | 1-2 h |
-| 3 Mapping sweep | 8-12 h |
-| 4 Registration | 6-10 h |
-| 5 Persistence | 5-8 h |
+| 0 Freeze and unknowns | 2-4 h |
+| 1 Build system and GameTest infrastructure | 5-8 h |
+| 2 Core and loader-free tests | 1-2 h |
+| 3 Mapping, slices, package rename | 10-16 h |
+| 4 Registration | 7-11 h |
+| 5 Persistence and SavedData | 8-12 h |
 | 6 Networking | 5-8 h |
 | 7 Events and lifecycle | 6-10 h |
 | 8 Worldgen | 4-6 h |
 | 9 Client and guide | 5-8 h |
 | 10 Tests | 6-10 h |
-| 11 Ladder and launcher | 4-6 h |
-| **Total** | **55-88 h** |
+| 11 Ladder, launcher, handoff | 6-9 h |
+| **Total** | **65-104 h** |
 
-This is higher than the 30-50 h estimated before the inventory. The mapping
-work turned out easier than expected because `core` needs no changes at all.
-The loader semantics turned out harder, and the test suite cannot verify the
-result, so phases 4 through 10 each carry a manual gate that costs real time.
+The estimate has moved twice. It was 30-50 h before the inventory, 55-88 h
+after it, and 65-104 h after the adversarial review. Each revision found work
+that was real rather than speculative: the package rename, `ClaimLedger` moving
+to `SavedData`, the parity manifest, and the GameTest infrastructure.
+
+`core` still needs no changes at all, so the mapping work remains the easy half.
+The loader semantics are the hard half, and the existing suite cannot verify
+them, so phases 4 through 10 each carry a manual gate that costs real time.
 
 ## Ordering constraint
 
