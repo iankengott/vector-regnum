@@ -1,8 +1,8 @@
 package vectorregnum.neoforge.automation;
 
 import java.util.Map;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.core.BlockPos;
 
 /**
  * Server-tick-only, read-only adapter for bounded external automation data.
@@ -10,5 +10,5 @@ import net.minecraft.util.math.BlockPos;
  */
 @FunctionalInterface
 public interface AutomationDataBridge {
-    Map<String, Long> snapshot(ServerWorld world, BlockPos relayPosition);
+    Map<String, Long> snapshot(ServerLevel world, BlockPos relayPosition);
 }
