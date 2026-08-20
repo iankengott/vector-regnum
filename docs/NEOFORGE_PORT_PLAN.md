@@ -117,13 +117,14 @@ verification. It could not be pushed: the GitHub repository is **archived and
 read-only**, and the push returned 403. Archiving is a stronger freeze than a
 tag, so the intent of this gate is met, but the remote carries no tag.
 
-Outstanding decision: either unarchive, push the tag, and re-archive, or accept
-the archived state as the freeze and keep the tag local. Until that is settled,
-the tag exists only in the local checkout.
+Decision, 2026-08-20: the archived read-only state is accepted as the
+authoritative freeze. The repository cannot receive commits or tags, which is a
+stronger guarantee than a tag anyone with push access could move. The annotated
+tag stays in the local checkout as a record of the verification run. The
+authoritative reference to the frozen alpha is the commit hash `c7371ca`.
 
-Gate: build reproduced (done), all three unknowns answered from cited sources
-(done), freeze established on the remote (archived, tag pending the decision
-above).
+Gate: passed. Build reproduced, all three unknowns answered from cited sources,
+freeze established by GitHub archival at `c7371ca`.
 
 ### Phase 1 — Build system, toolchain, GameTest infrastructure (5-8 h, deepseekflash then parent)
 
