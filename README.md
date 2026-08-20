@@ -25,7 +25,9 @@ client presentation.
 
 Roadmap priority 20's implementation, automated coverage, and Hermes gates are
 complete. Its final Main-PC desktop-launch visual rerun remains after fixing
-the quick-play endpoint to explicit IPv4. The execution record lives in
+the quick-play endpoint to explicit IPv4; the user-controlled
+`scripts/priority20-local-visual-wizard.sh` records that final gate without
+window automation. The execution record lives in
 `docs/NEOFORGE_PORT_PLAN.md`.
 
 | | |
@@ -136,7 +138,8 @@ exposed and drove a fix for `localhost` resolving to IPv6 while the server
 listens on IPv4. The explicit `127.0.0.1` endpoint passes local build and
 Hermes client verification. The post-audit Hermes run again joined through the
 explicit IPv4 endpoint and displayed the amethyst/copper showcase with
-Vector-Regnum items in the hotbar; its final Main-PC visual rerun remains.
+Vector-Regnum items in the hotbar; its final Main-PC visual rerun remains and is
+prepared as a human-controlled wizard in `scripts/priority20-local-visual-wizard.sh`.
 
 ## Build and test
 

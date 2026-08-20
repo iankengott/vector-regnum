@@ -115,7 +115,8 @@ acceptance scope.
 20. [ ] **NeoForge 1.21.1 migration and repository split.** *Implementation,
     automated coverage, and Hermes verification are complete; the final
     Main-PC desktop-launch visual rerun remains after fixing explicit IPv4
-    quick-play.* The archived Fabric
+    quick-play. Run `scripts/priority20-local-visual-wizard.sh` to perform and
+    record that human-controlled gate without desktop automation.* The archived Fabric
     alpha is fixed at `c7371ca`; the active repository now uses NeoForge
     21.1.248 and ModDevGradle with Mojang/Parchment mappings. Registrations,
     attachments and claim SavedData, seven payloads, lifecycle/events,

@@ -5,6 +5,8 @@ passes 172 JUnit tests, 18 production GameTests, live registration parity, and
 the guarded Hermes ladder. The first real Main-PC shortcut run found an IPv6
 `localhost` mismatch; explicit `127.0.0.1` is fixed and verified remotely, but
 the real shortcut still needs its final visual rerun before priority 20 closes.
+`scripts/priority20-local-visual-wizard.sh` now makes that gate entirely
+human-controlled and verifies the endpoint and cleanup afterward.
 
 Revision 2 incorporates an adversarial review. Two blockers, four high findings,
 and two medium findings were confirmed against the tree and fixed below. The

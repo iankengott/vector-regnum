@@ -26,6 +26,19 @@ listeners; the verifier exercises those negative fixtures too. The desktop entry
 not a versioned `/nix/store` system path, so weekly Nix garbage collection
 cannot break it.
 
+For a release or roadmap visual gate that must be performed by a person on the
+Main PC, run:
+
+```bash
+scripts/priority20-local-visual-wizard.sh
+```
+
+The wizard does not open, focus, type into, or close Minecraft. It preflights
+the isolated launcher, gives the human an explicit in-game checklist, and then
+verifies the IPv4 endpoint, owned-unit cleanup, and free port after the human
+closes Minecraft normally. A passed run writes the ignored evidence record
+`visual-evidence/main-pc-priority20-visual-attestation.txt`.
+
 ## Hermes development workflow
 
 These scripts synchronize Vector-Regnum to a dedicated development worktree on
