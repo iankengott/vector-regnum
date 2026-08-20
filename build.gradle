@@ -26,7 +26,7 @@ neoForge {
         client {
             client()
             gameDirectory = file("run/client")
-            programArguments.addAll("--quickPlayMultiplayer", "localhost:25575")
+            programArguments.addAll("--quickPlayMultiplayer", "127.0.0.1:25575")
         }
         server {
             server()

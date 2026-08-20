@@ -112,13 +112,16 @@ acceptance scope.
     signature depth-aware shaders, including the planned Veil-backed
     compositor, and final bespoke art remain optional release-quality
     enhancement rather than a gameplay dependency.
-20. [x] **NeoForge 1.21.1 migration and repository split.** The archived Fabric
+20. [ ] **NeoForge 1.21.1 migration and repository split.** *Implementation,
+    automated coverage, and Hermes verification are complete; the final
+    Main-PC desktop-launch visual rerun remains after fixing explicit IPv4
+    quick-play.* The archived Fabric
     alpha is fixed at `c7371ca`; the active repository now uses NeoForge
     21.1.248 and ModDevGradle with Mojang/Parchment mappings. Registrations,
     attachments and claim SavedData, seven payloads, lifecycle/events,
     custom-feature worldgen, client rendering/guide, commands, guarded NixOS
-    and Hermes launchers, 172 JUnit tests, and 17 live NeoForge GameTests all
-    pass the full ladder. The manifest-driven parity test queries the running
+    and Hermes launchers, 172 JUnit tests, and 17 live NeoForge GameTests pass
+    their gates. The manifest-driven parity test queries the running
     registries, payload directions, attachments, creative tab, and command
     dispatcher and was proved by an intentional negative control. Behavioral
     parity, hard safety limits, the loader-neutral presentation IR, and the

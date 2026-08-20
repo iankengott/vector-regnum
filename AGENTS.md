@@ -23,17 +23,19 @@ end-to-end alpha passes, but still need balance and hardening.
 
 ## Current handoff checkpoint
 
-As of 2026-08-20, priorities 1–20 are checked. The first unfinished canonical
-item is **20a, the optional Veil-backed modular presentation overhaul and
-compatibility gate**. Priority 20 established the NeoForge 1.21.1 build,
+As of 2026-08-20, priority 20's implementation, automated suite, and Hermes
+verification are complete, but its final Main-PC desktop-launch visual rerun
+remains after the quick-play endpoint was corrected to explicit IPv4. Priority
+20 is therefore still the first unfinished canonical item. It establishes the NeoForge 1.21.1 build,
 registrations, persistence, networking, lifecycle, world generation, client
 runtime, guarded launchers, 172-test JUnit suite, and 17-test production
 NeoForge GameTest matrix while retaining the priorities 1–19 behavior.
 Always re-read `ROADMAP.md` before reporting or implementing work because it
 supersedes this dated checkpoint whenever the queue changes.
 
-Priority 20a establishes the optional Veil-backed modular renderer and
-compatibility gate before new gameplay development begins at priority 21.
+After that local gate checks priority 20, priority 20a establishes the optional
+Veil-backed modular renderer and compatibility gate before new gameplay
+development begins at priority 21.
 
 ## Subagent collaboration
 

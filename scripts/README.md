@@ -76,7 +76,7 @@ The launch controller copies `dev/hermes/eula.txt` and `server.properties` into
 the excluded remote `run/server/` directory, starts `runServer` as
 `vector-regnum-dev-server.service`, waits until its isolated port **25575** is
 listening, and only then starts the client. The client is already configured to
-quick-play `localhost:25575` and runs as `vector-regnum-dev-client.service`.
+quick-play `127.0.0.1:25575` and runs as `vector-regnum-dev-client.service`.
 Both transient user units survive the SSH command ending.
 
 The controller never addresses port 25565 or any tmux session. It refuses to
@@ -98,13 +98,14 @@ scripts/hermes-client.sh stop
 ## Visual evidence
 
 After `hermes-client.sh start` or `restart` reports that port 25575 is ready,
-the Loom client opens and quick-plays the dedicated Vector-Regnum server. The
+the NeoForge client opens and quick-plays the dedicated Vector-Regnum server. The
 two exact development units must remain running while the scene is inspected.
 
 On the very first Minecraft launch for this worktree, the game may stop at its
 accessibility welcome screen before honoring quick-play. Select **Continue**
 once through Hermes's desktop; the choice persists in the excluded
-`run/client/` state. A later portal screenshot can leave Minecraft's game menu
+`run/client/` state. Explicit IPv4 avoids NixOS resolving `localhost` to `::1`
+while the guarded server listens only on IPv4 loopback. A later portal screenshot can leave Minecraft's game menu
 open because the portal temporarily takes focus. Return to the game before the
 next capture if that happens.
 

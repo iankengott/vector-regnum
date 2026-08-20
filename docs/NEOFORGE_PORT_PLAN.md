@@ -1,8 +1,10 @@
 # Priority 20 execution plan: Fabric to NeoForge 1.21.1
 
-Status: complete, 2026-08-20. This plan implemented canonical roadmap priority
-20. The final NeoForge baseline passes 172 JUnit tests, 17 production
-GameTests, live registration parity, and the guarded local/Hermes ladder.
+Status: final local visual gate pending, 2026-08-20. The NeoForge baseline
+passes 172 JUnit tests, 17 production GameTests, live registration parity, and
+the guarded Hermes ladder. The first real Main-PC shortcut run found an IPv6
+`localhost` mismatch; explicit `127.0.0.1` is fixed and verified remotely, but
+the real shortcut still needs its final visual rerun before priority 20 closes.
 
 Revision 2 incorporates an adversarial review. Two blockers, four high findings,
 and two medium findings were confirmed against the tree and fixed below. The

@@ -2,7 +2,7 @@
 
 > **Platform status (2026-08-20):** this is the active Vector-Regnum NeoForge
 > 1.21.1 repository. The Fabric implementation is deprecated and frozen in its
-> own archived repository; active development begins with roadmap priority 20a.
+> own archived repository. Priority 20 awaits its final Main-PC visual rerun.
 > The frozen Fabric repository and all companion projects are listed in
 > [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
@@ -23,7 +23,9 @@ client presentation.
 
 ## NeoForge baseline
 
-Roadmap priority 20 is complete. Its execution record and gates live in
+Roadmap priority 20's implementation, automated coverage, and Hermes gates are
+complete. Its final Main-PC desktop-launch visual rerun remains after fixing
+the quick-play endpoint to explicit IPv4. The execution record lives in
 `docs/NEOFORGE_PORT_PLAN.md`.
 
 | | |
@@ -123,17 +125,15 @@ the parity GameTest before the source was restored.
 - The original Sigil Tome, Firebolt, Frost Nova, collision/damage/status
   effects, mana starvation, and context-sensitive Wild Magic remain available.
 
-The full workflow has been exercised on Hermes: remote Java 21 tests/build,
-loopback-only server, quick-joined Minecraft client, automated in-game
+The full NeoForge workflow has been exercised on Hermes: remote Java 21
+tests/build, loopback-only server, quick-joined client, automated in-game
 preflight, and direct inspection of the priorities 1–19 showcase in
-`visual-evidence/hermes-window-20260813T153728Z.png`. The real
-`/home/iank/Desktop/Vector-Regnum.desktop` was also launched on the main PC;
-its client joined the isolated server, entered gameplay, and opened the new
-`O`-key presentation/accessibility screen. The inspected captures are
-`visual-evidence/local-gameplay-priorities-17-19.png` and
-`visual-evidence/local-accessibility-priority-19.png`. Minecraft closed
-normally, both private server units became inactive, and port 25575 was free
-on both machines afterward.
+`visual-evidence/hermes-window-20260820T065136Z.png`. A second process restart
+logged `persistence_claim=restored`, `player_schema=2`, and `unlocks_added=0`;
+both guarded units were stopped afterward. The real Main-PC shortcut then
+exposed and drove a fix for `localhost` resolving to IPv6 while the server
+listens on IPv4. The explicit `127.0.0.1` endpoint passes local build and
+Hermes client verification; its final Main-PC visual rerun remains.
 
 ## Build and test
 
@@ -346,9 +346,8 @@ the machine boundaries, canonical priority queue, required NixOS and Hermes
 verification ladder, visual-inspection requirement, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
-[ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priorities 1–20
-are checked and the first unfinished canonical item is priority 20a: add the
-optional Veil-backed modular presentation layer and compatibility gate.
+[ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priority 20
+awaits its final local visual rerun; priority 20a follows it.
 `AGENTS.md` also records Ian's subagent ladder — opencode
 deepseekflash first, then Luna max, then Sol xhigh or Opus 5 medium — plus the
 delegation rules, so no earlier chat context is required.
