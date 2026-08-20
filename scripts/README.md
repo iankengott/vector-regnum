@@ -1,10 +1,8 @@
 # Development launch workflows
 
-> **Legacy workflow:** these scripts validate the deprecated Fabric 1.21.1
-> alpha in the current checkout. NeoForge 1.21.1 is the active development
-> target, but its separate repository and replacement launch/test scripts do
-> not exist until roadmap priority 20. Do not treat a successful Fabric run as
-> proof that the NeoForge port works.
+These scripts build and launch the active NeoForge 1.21.1 repository. The
+deprecated Fabric alpha remains reproducible in the separate
+`vector-regnum-fabric-legacy` checkout at `c7371ca`.
 
 ## Main PC one-click launcher
 
@@ -18,17 +16,36 @@ NixOS graphics-driver access.
 Closing Minecraft triggers the launcher's cleanup trap, which stops and
 collects the server unit. The launcher refuses unexpected JARs in either dev
 `mods/` directory, a second active launcher, and any pre-existing port-25575
-listener. The desktop entry calls `/run/current-system/sw/bin/bash`, not a
-versioned `/nix/store` system path, so weekly Nix garbage collection cannot
-break it.
+listener. It also runs `scripts/check-dev-server-config.sh` before starting and
+requires exactly `eula=true`, `server-port=25575`, and
+`server-ip=127.0.0.1`; `scripts/verify-port.sh` exercises both its positive and
+unsafe-fixture paths. Its readiness gate also inspects the live socket and
+uses `scripts/check-dev-listener.sh` to reject wildcard, IPv6, or duplicate
+listeners; the verifier exercises those negative fixtures too. The desktop entry calls
+`/run/current-system/sw/bin/bash`,
+not a versioned `/nix/store` system path, so weekly Nix garbage collection
+cannot break it.
+
+For a release or roadmap visual gate that must be performed by a person on the
+Main PC, run:
+
+```bash
+scripts/priority20-local-visual-wizard.sh
+```
+
+The wizard does not open, focus, type into, or close Minecraft. It preflights
+the isolated launcher, gives the human an explicit in-game checklist, and then
+verifies the IPv4 endpoint, owned-unit cleanup, and free port after the human
+closes Minecraft normally. A passed run writes the ignored evidence record
+`visual-evidence/main-pc-priority20-visual-attestation.txt`.
 
 ## Hermes development workflow
 
 These scripts synchronize Vector-Regnum to a dedicated development worktree on
-Hermes, verify it with JDK 21, launch an isolated Loom server and client, and
-bring visual evidence back to this repository. They do not install Fabric into
-Hermes's normal Minecraft launcher and do not control any production server,
-tmux session, or dashboard service.
+Hermes, verify it with JDK 21, launch an isolated NeoForge server and client,
+and bring visual evidence back to this repository. They do not install the mod
+into Hermes's normal Minecraft launcher and do not control any production
+server, tmux session, or dashboard service.
 
 The default destination is fixed:
 
@@ -47,21 +64,27 @@ scripts/hermes-client.sh restart
 scripts/hermes-client.sh logs
 ```
 
-## Production Fabric GameTests
+## Production NeoForge GameTests
 
-The ordinary Gradle `test` task runs loader-independent JUnit/contract tests.
-The sixteen production Fabric GameTests must additionally run inside a real isolated
-Minecraft server when their integration surface changes. Enable Fabric API's
-automatic GameTest server with the JVM properties
-`-Dfabric-api.gametest` and
-`-Dfabric-api.gametest.report-file=<absolute-xml-path>`, pass `runServer` an
-isolated `mktemp -d` universe, and use only the development port/configuration.
-The automatic runner exits after the matrix completes. Verify the XML has sixteen
-testcases and no failures, then confirm no server process or port 25575 listener
-remains. This covers real commands, players, attachments, media/tablet and
-crystal block entities, scheduled expiry, serialized tick-queue reload,
-claim/death migration, relay persistence, remote ownership, and redstone/data
-automation.
+The ordinary Gradle `test` task runs JUnit and contract tests. The 18 production
+NeoForge GameTests must additionally run inside the real isolated GameTest
+server when their integration surface changes:
+
+```bash
+task_jdk=$(nix eval --raw nixpkgs#jdk21.outPath)
+JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
+  ./gradlew --no-daemon runGameTestServer
+```
+
+The runner exits after the matrix completes and must report all 18 required
+tests passed. The tests cover live registration parity, commands, players,
+attachments, media/tablet and crystal block entities, scheduled expiry,
+serialized tick-queue reload, claim/death migration, relay persistence, remote
+ownership, redstone/data automation, and safe follow-up VM queueing from a real
+Vector Step cast. The parity test reads
+`data/vector_regnum/registration_parity.json` and queries the running registry,
+payload, attachment, creative-tab, and command state; update that manifest when
+an intentional registration changes.
 A true OS-process stop/start remains part of the Hermes and local launcher
 ladder below.
 
@@ -73,7 +96,7 @@ The launch controller copies `dev/hermes/eula.txt` and `server.properties` into
 the excluded remote `run/server/` directory, starts `runServer` as
 `vector-regnum-dev-server.service`, waits until its isolated port **25575** is
 listening, and only then starts the client. The client is already configured to
-quick-play `localhost:25575` and runs as `vector-regnum-dev-client.service`.
+quick-play `127.0.0.1:25575` and runs as `vector-regnum-dev-client.service`.
 Both transient user units survive the SSH command ending.
 
 The controller never addresses port 25565 or any tmux session. It refuses to
@@ -95,13 +118,14 @@ scripts/hermes-client.sh stop
 ## Visual evidence
 
 After `hermes-client.sh start` or `restart` reports that port 25575 is ready,
-the Loom client opens and quick-plays the dedicated Vector-Regnum server. The
+the NeoForge client opens and quick-plays the dedicated Vector-Regnum server. The
 two exact development units must remain running while the scene is inspected.
 
 On the very first Minecraft launch for this worktree, the game may stop at its
 accessibility welcome screen before honoring quick-play. Select **Continue**
 once through Hermes's desktop; the choice persists in the excluded
-`run/client/` state. A later portal screenshot can leave Minecraft's game menu
+`run/client/` state. Explicit IPv4 avoids NixOS resolving `localhost` to `::1`
+while the guarded server listens only on IPv4 loopback. A later portal screenshot can leave Minecraft's game menu
 open because the portal temporarily takes focus. Return to the game before the
 next capture if that happens.
 

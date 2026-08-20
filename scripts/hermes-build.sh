@@ -9,7 +9,7 @@ usage() {
     cat <<'USAGE'
 Usage: scripts/hermes-build.sh
 
-Verify Hermes is using JDK 21, then run the remote Gradle `test build` task
+Verify Hermes is using JDK 21, then run the remote clean NeoForge test/build task
 graph. Run hermes-sync.sh first when local sources have changed.
 USAGE
 }
@@ -44,7 +44,9 @@ java_major="$(sed -E 's/.*version "([0-9]+).*/\1/' <<< "$java_version")"
 }
 printf 'Using %s\n' "$java_version"
 
-./gradlew --no-daemon test build
+./gradlew --no-daemon clean test build
+find src -type f -name '*.json' -print0 | xargs -0 -n1 jq empty
+find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
 REMOTE
 
 vr_note "Hermes tests and build passed."

@@ -9,7 +9,7 @@ usage() {
     cat <<'USAGE'
 Usage: scripts/hermes-client.sh ACTION
 
-Control only Vector-Regnum's isolated Loom development server and client on
+Control only Vector-Regnum's isolated NeoForge development server and client on
 Hermes. The server is staged from dev/hermes, started on port 25575, and proven
 ready before the quick-play client starts.
 
@@ -131,26 +131,15 @@ port_is_listening() {
     ss -H -ltn "sport = :$server_port" | grep -q .
 }
 
+port_is_loopback_only() {
+    ss -H -ltn "sport = :$server_port" |
+        "$remote_dir/scripts/check-dev-listener.sh" "$server_port" >/dev/null
+}
+
 stage_server_config() {
     local source_dir="$remote_dir/dev/hermes"
     local run_dir="$remote_dir/run/server"
-    [[ -f "$source_dir/eula.txt" && ! -L "$source_dir/eula.txt" &&
-       -f "$source_dir/server.properties" && ! -L "$source_dir/server.properties" ]] || {
-        printf 'checked-in Hermes server configuration is missing\n' >&2
-        exit 1
-    }
-    grep -qx 'eula=true' "$source_dir/eula.txt" || {
-        printf 'Hermes development EULA file is invalid\n' >&2
-        exit 1
-    }
-    grep -qx "server-port=$server_port" "$source_dir/server.properties" || {
-        printf 'Hermes development server must use port %s\n' "$server_port" >&2
-        exit 1
-    }
-    if grep -Eq '^server-port=25565$' "$source_dir/server.properties"; then
-        printf 'refusing production Minecraft port 25565\n' >&2
-        exit 1
-    fi
+    "$remote_dir/scripts/check-dev-server-config.sh" "$source_dir" "$server_port"
     [[ ! -L "$remote_dir/run" && ! -L "$run_dir" ]] || {
         printf 'refusing symlinked development run directory\n' >&2
         exit 1
@@ -182,7 +171,7 @@ start_server() {
         --collect \
         --service-type=exec \
         --working-directory="$remote_dir" \
-        --description='Vector-Regnum isolated Loom development server' \
+        --description='Vector-Regnum isolated NeoForge development server' \
         --setenv="JAVA_HOME=$verified_java_home" \
         --setenv="PATH=$verified_unit_path" \
         --setenv='VECTOR_REGNUM_VISUAL_CHECK=1' \
@@ -192,7 +181,11 @@ start_server() {
 wait_for_server() {
     for _ in {1..180}; do
         if port_is_listening; then
-            printf 'development server is listening on %s\n' "$server_port"
+            port_is_loopback_only || {
+                printf 'development server opened port %s outside IPv4 loopback\n' "$server_port" >&2
+                exit 1
+            }
+            printf 'development server is listening only on 127.0.0.1:%s\n' "$server_port"
             return 0
         fi
         if ! systemctl --user is-active --quiet "$server_unit"; then
@@ -237,7 +230,7 @@ start_client() {
         --collect \
         --service-type=exec \
         --working-directory="$remote_dir" \
-        --description='Vector-Regnum Loom development client' \
+        --description='Vector-Regnum NeoForge development client' \
         --setenv="JAVA_HOME=$verified_java_home" \
         --setenv="PATH=$verified_unit_path" \
         "$remote_dir/gradlew" --no-daemon runClient

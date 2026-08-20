@@ -14,41 +14,6 @@ repositories {
     mavenCentral()
 }
 
-// Priority 20 port staging. See gradle/port-manifest.txt, which is the
-// authoritative list. A gate that compiles more or less than the manifest says
-// is not a gate, so the two must be edited together.
-def portStage = providers.gradleProperty("portStage").getOrElse("core")
-def manifest = file("gradle/port-manifest.txt")
-def stagePatterns = { String stage, String key ->
-    def out = []
-    def active = false
-    manifest.eachLine { line ->
-        def t = line.trim()
-        if (t.startsWith("[stage:")) {
-            active = (t == "[stage:${stage}]")
-        } else if (active && t.startsWith("${key} =")) {
-            out << t.substring(t.indexOf('=') + 1).trim()
-        }
-    }
-    if (out.isEmpty()) {
-        throw new GradleException("port-manifest.txt defines no ${key} for stage '${stage}'")
-    }
-    return out
-}
-
-sourceSets {
-    main {
-        java {
-            setIncludes(stagePatterns(portStage, "main.include"))
-        }
-    }
-    test {
-        java {
-            setIncludes(stagePatterns(portStage, "test.include"))
-        }
-    }
-}
-
 neoForge {
     version = project.neo_version
 
@@ -61,7 +26,7 @@ neoForge {
         client {
             client()
             gameDirectory = file("run/client")
-            programArguments.addAll("--quickPlayMultiplayer", "localhost:25575")
+            programArguments.addAll("--quickPlayMultiplayer", "127.0.0.1:25575")
         }
         server {
             server()
@@ -79,6 +44,14 @@ neoForge {
         "vector_regnum" {
             sourceSet sourceSets.main
         }
+    }
+
+    // Some loader-neutral classes use libraries that ship with Minecraft, such
+    // as DataFixerUpper codecs and gson. Without this the test compile classpath
+    // lacks them even though the main classpath has them.
+    unitTest {
+        enable()
+        testedMod = mods."vector_regnum"
     }
 }
 
@@ -126,15 +99,5 @@ publishing {
             artifactId = project.archives_base_name
             from components.java
         }
-    }
-}
-
-// Print what the manifest actually selected, so a green build cannot hide an
-// empty source set.
-tasks.register("portStageReport") {
-    doLast {
-        println "portStage       = ${portStage}"
-        println "main sources    = ${sourceSets.main.java.files.size()} files"
-        println "test sources    = ${sourceSets.test.java.files.size()} files"
     }
 }

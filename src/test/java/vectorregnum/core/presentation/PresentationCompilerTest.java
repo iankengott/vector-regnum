@@ -11,8 +11,8 @@ import org.junit.jupiter.api.Test;
 import vectorregnum.core.semantic.LoweringContext;
 import vectorregnum.core.semantic.SemanticOpcode;
 import vectorregnum.core.semantic.SemanticVmLowerer;
-import vectorregnum.fabric.LibrarySemanticAdapter;
-import vectorregnum.fabric.progression.ProgressionSpellLibrary;
+import vectorregnum.neoforge.LibrarySemanticAdapter;
+import vectorregnum.neoforge.progression.ProgressionSpellLibrary;
 
 class PresentationCompilerTest {
     @Test

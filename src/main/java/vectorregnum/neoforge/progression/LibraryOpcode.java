@@ -1,0 +1,35 @@
+package vectorregnum.neoforge.progression;
+
+/** Stable semantic opcodes intended to lower into the typed VM. */
+public enum LibraryOpcode {
+    ORIGIN_SELF,
+    ORIGIN_TARGET,
+    LOOK_VECTOR,
+    RAYCAST_BLOCK,
+    RAYCAST_ENTITY,
+    SELECT_NEARBY_ENTITIES,
+    FILTER_HOSTILE,
+    FILTER_LIVING,
+    FILTER_ORE,
+    ELEMENT_FIRE,
+    ELEMENT_FROST,
+    ELEMENT_ARCANE,
+    SHAPE_PROJECTILE,
+    SHAPE_AURA,
+    SHAPE_BARRIER,
+    SET_RADIUS,
+    SET_MAGNITUDE,
+    SET_DURATION,
+    APPLY_DAMAGE,
+    APPLY_IMPULSE,
+    APPLY_SLOW,
+    APPLY_FEATHERFALL,
+    PLACE_LIGHT,
+    BREAK_BLOCKS,
+    TRANSMUTE_BLOCK,
+    EMIT_PARTICLES,
+    EMIT_REDSTONE,
+    REPEAT_BOUNDED,
+    WAIT_TICKS,
+    EXECUTE
+}

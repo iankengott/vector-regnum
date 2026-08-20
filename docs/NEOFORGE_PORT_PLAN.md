@@ -1,13 +1,18 @@
 # Priority 20 execution plan: Fabric to NeoForge 1.21.1
 
-Status: proposed, not started. This plan implements canonical roadmap priority
-20. It does not change what priority 20 requires; it sequences it.
+Status: complete, 2026-08-20. The NeoForge baseline passes 172 JUnit tests,
+18 production GameTests, live registration parity, and the guarded Hermes
+ladder. The first real Main-PC shortcut run found an IPv6 `localhost` mismatch;
+explicit `127.0.0.1` fixed it. Ian then passed the human-controlled local
+visual gate with `scripts/priority20-local-visual-wizard.sh`, confirming
+in-world Vector-Regnum content and rendered items, normal shutdown, an
+inactive owned server unit, and a free development port.
 
 Revision 2 incorporates an adversarial review. Two blockers, four high findings,
 and two medium findings were confirmed against the tree and fixed below. The
-changes that mattered most: world claims cannot be an attachment, the phase 5
-save gate contradicted a canonical decision, and phase 6 had NeoForge threading
-backwards.
+changes that mattered most: world claims needed an explicit persistence-owner
+decision, the phase 5 save gate contradicted a canonical decision, and phase 6
+had NeoForge threading backwards.
 
 ## Measured baseline
 
@@ -74,11 +79,11 @@ and `copyOnDeath` is a real builder flag available once a serializer is
 configured. Subagent A was right and subagent C was wrong to claim no
 equivalent exists.
 
-Holders are entities, block entities, and chunks. Levels are not supported and
-the documentation directs level data to `SavedData`, which independently
-confirms the `WORLD_CLAIMS` blocker. Item stacks are also unsupported, having
-been superseded by vanilla data components; this project attaches nothing to
-item stacks, so that costs nothing here.
+The pinned NeoForge API also supports level attachments. Claims nevertheless
+use explicit per-dimension `SavedData`: immutable ledger replacement, dirty-bit
+ownership, malformed-file recovery, and restart reconciliation remain visible
+in one adapter. Player state uses serialized, copy-on-death attachments. Item
+stacks use vanilla data components; this project attaches nothing to them.
 Source: https://docs.neoforged.net/docs/1.21.1/datastorage/attachments/
 
 **2. Pinned versions.** NeoForge `21.1.248`, which is both the latest 21.1
@@ -201,6 +206,36 @@ Two traps B identified:
 - `BlockEntity` override names change shape, not just spelling: `readNbt`
   becomes `loadAdditional` and `writeNbt` becomes `saveAdditional` with
   different parameters. A missed override compiles and never runs.
+
+**Status: in progress, 4 of about 9 slices done. This is where to resume.**
+
+| Slice | Commit | Scope | Result |
+|---|---|---|---|
+| 1 | `e07a57c` | Package rename to `vectorregnum.neoforge`, 42 transitively clean classes | 144 tests |
+| 2 | `2314d69` | `ManaAffinity`, `ManaCrystalGeology`, `AutomationDataBridge` | 149 tests |
+| 3 | `4cbac5e` | 7 payload records to `StreamCodec` | 149 tests |
+| 4 | `9bb16c7` | 3 temporary-effect blocks | 149 tests |
+
+Remaining, 26 classes and 3,747 lines, grouped as they should be sliced:
+progression 9 classes / 923 lines (the only group that still recovers tests,
+gating 5 of the 9 excluded test classes behind `ManaReservoir`,
+`ManaTransportRules` and `ManaDrawRules`), root 7 / 843 including the block
+entities, guide 2 / 559, editor 1 / 465, ponder 3 / 422, automation 3 / 388,
+presentation 1 / 147.
+
+**Next action: slice 5, the progression cluster.**
+
+Two lessons from slices 1-4, both earned the hard way:
+
+- Give the subagent explicit method *signatures*, not just name pairs. Slice 3
+  used a name table and needed hand fixes; slice 4 used full signatures and
+  returned correct.
+- A rename table cannot express an argument-order change. `StreamCodec.of`
+  takes `(buffer, value)` where Yarn's `PacketCodec.of` took `(value, buffer)`,
+  so a method reference binds backwards and fails type inference. Slice 3 also
+  proved the agent will confidently assert a wrong rename: it reported
+  `readUuid`/`writeUuid` as unchanged when Mojang uses `readUUID`/`writeUUID`.
+  Compile every slice; never trust the summary.
 
 Port in vertical slices that compile completely, rather than sweeping all 63
 files and hoping for a full compile. A "full compile" is impossible while 29
@@ -359,7 +394,7 @@ race.
 
 ### Phase 10 — Test port and the coverage gap (6-10 h, deepseekflash then parent)
 
-Port the 16 `@GameTest` methods, which live in 3 classes and not 16, from
+Port the 16 legacy `@GameTest` methods, which live in 3 classes and not 16, from
 `FabricGameTest` to `@GameTestHolder`. `TestContext` becomes `GameTestHelper`
 with renamed methods, and annotation attributes change. The structure template,
 namespace, and `gameTestServer` run configuration were built in phase 1, so
@@ -372,10 +407,15 @@ phase 4 parity manifest and fails when any expected registry ID, attachment ID,
 payload ID, creative-tab membership, or command root is missing from the live
 game. The current suite cannot tell a working port from an empty one.
 
-Gate: all 16 GameTest methods pass on NeoForge through `runGameTestServer` with
-a real process exit code, and the new registration test fails when a
-registration is deliberately commented out. Verify that failure; a gate that has
-never failed is not a gate.
+Gate: all 18 GameTest methods (the 16 ports, live registration parity, and the
+semantic follow-up-VM regression) pass
+on NeoForge through `runGameTestServer` with a real process exit code, and the
+new registration test fails when a registration is deliberately broken. This
+was proved by temporarily renaming the live `sigil_tome` ID: parity was the
+sole required failure, the mutation was restored, and two consecutive
+persisted-world runs then passed all 17 tests. A final audit then found that a
+semantic impulse could append a follow-up VM during active iteration; deferred
+queueing and a real Vector Step GameTest raised the matrix to 18 tests.
 
 ### Phase 11 — Ladder, launcher, mirror, handoff (6-9 h, parent)
 
@@ -428,5 +468,6 @@ them, so phases 4 through 10 each carry a manual gate that costs real time.
 
 ## Ordering constraint
 
-Priority 20a and priority 21 do not begin until this plan completes and the
-full NeoForge ladder passes. No new gameplay lands on Fabric.
+This constraint is satisfied: the plan and full NeoForge ladder passed.
+Priority 20a is next; priority 21 still waits for its compatibility gate. No
+new gameplay lands on Fabric.

@@ -11,13 +11,13 @@ art, UX, or production hardening is complete.
 
 ## Working foundations
 
-- [x] Fabric 1.21.1 build, dedicated server, guarded Hermes workflow, and
-  one-click local launch.
+- [x] NeoForge 1.21.1 build, dedicated server, guarded Hermes workflow, and
+  one-click local launch; the Fabric alpha remains frozen separately.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Frost Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 170 pure/contract tests, 16 production Fabric GameTests, plus real
-  local/Hermes server boots and Hermes visual inspection.
+- [x] 172 JUnit/contract tests, 18 production NeoForge GameTests, plus real
+  local/Hermes server boots and direct visual inspection.
 
 ## Priorities 1–10 milestone
 
@@ -112,15 +112,22 @@ acceptance scope.
     signature depth-aware shaders, including the planned Veil-backed
     compositor, and final bespoke art remain optional release-quality
     enhancement rather than a gameplay dependency.
-20. [ ] **NeoForge 1.21.1 migration and repository split.** Freeze the current
-    verified Fabric alpha in the published legacy repository, then convert the
-    active `vector-regnum` repository by porting the loader-neutral core,
-    registrations, persistence, networking, events, rendering, commands,
-    integration tests, NixOS launcher, and guarded Hermes workflow. No new
-    gameplay lands on Fabric. The port must retain behavioral parity and hard
-    safety limits, not merely reach a title screen. Preserve the loader-neutral
-    presentation IR and a built-in client renderer so neither dedicated-server
-    startup nor baseline telegraphs depend on Veil.
+20. [x] **NeoForge 1.21.1 migration and repository split.** The archived Fabric
+    alpha is fixed at `c7371ca`; the active repository now uses NeoForge
+    21.1.248 and ModDevGradle with Mojang/Parchment mappings. Registrations,
+    attachments and claim SavedData, seven payloads, lifecycle/events,
+    custom-feature worldgen, client rendering/guide, commands, guarded NixOS
+    and Hermes launchers, 172 JUnit tests, and 18 live NeoForge GameTests pass
+    their gates. The manifest-driven parity test queries the running
+    registries, payload directions, attachments, creative tab, and command
+    dispatcher and was proved by an intentional negative control. Behavioral
+    parity, hard safety limits, the loader-neutral presentation IR, and the
+    built-in client renderer remain intact, so dedicated-server startup and
+    baseline telegraphs do not depend on Veil.
+    The final human-controlled Main-PC desktop-launch gate passed on
+    2026-08-20: the client joined `127.0.0.1:25575`, rendered Vector-Regnum
+    content and items in-world, closed normally, and left the owned server
+    inactive with the development port free.
 20a. [ ] **Veil-backed modular presentation overhaul and compatibility gate.**
     After priority 20 establishes the NeoForge baseline—and before priority 21
     gameplay work—add [FoundryMC Veil](https://github.com/FoundryMC/Veil) as an
@@ -252,13 +259,13 @@ acceptance scope.
 - [ ] Original Vector-Regnum block/item texture pass plus the priority-20a
   Veil-backed modular renderer, with a built-in truth-telegraph fallback, for
   release-quality presentation.
-- [x] Sixteen production Fabric GameTests cover commands, attachments,
+- [x] Sixteen production Fabric GameTests in the frozen legacy repository cover commands, attachments,
   media/block-entity round trips, crystal interactions, timers, serialized
   restart contracts, two-player isolation, claims/death migration, relay
   persistence, remote ownership, and redstone/data behavior.
-- [ ] Replace legacy Fabric integration coverage with equivalent or stronger
-  NeoForge integration tests during priority 20; preserve the loader-neutral
-  JUnit suite throughout the port.
+- [x] Eighteen production NeoForge GameTests replace and extend the legacy integration
+  coverage and add live registration parity while preserving and expanding the
+  loader-neutral JUnit suite.
 - [ ] Configuration, balancing, profiling, localization beyond English,
   accessibility, and broader abuse protection.
 - [ ] Survival playtest, death/copy/restart/upgrade tests, mod compatibility,

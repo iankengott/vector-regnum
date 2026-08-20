@@ -1,9 +1,8 @@
 # Vector-Regnum
 
-> **Platform status (2026-08-13):** this is the active Vector-Regnum repository,
-> currently carrying the verified Fabric 1.21.1 alpha as its migration baseline.
-> The Fabric implementation is deprecated and frozen for new gameplay work;
-> **active development targets NeoForge 1.21.1** through roadmap priority 20.
+> **Platform status (2026-08-20):** this is the active Vector-Regnum NeoForge
+> 1.21.1 repository. The Fabric implementation is deprecated and frozen in its
+> own archived repository. Priority 20 is checked; priority 20a is next.
 > The frozen Fabric repository and all companion projects are listed in
 > [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
@@ -22,15 +21,39 @@ server-backed circle editor, natural crystal progression, GameTests,
 multiplayer/security policy, programmable automation, and compiler-driven
 client presentation.
 
-## Confirmed working in the Fabric legacy alpha
+## NeoForge baseline
 
-- Fabric Loader 0.18.3, Fabric API 0.116.7+1.21.1, Yarn
-  1.21.1+build.3, Loom 1.14.8, Gradle 9.2.1, and Java 21.
-- **170 passing JUnit tests** covering the compatibility engine, typed VM,
+Roadmap priority 20 is complete. Its implementation, automated coverage,
+Hermes gates, and human-controlled Main-PC desktop-launch visual gate all
+passed. The final local run joined the explicit IPv4 endpoint, rendered
+Vector-Regnum content and items in-world, closed normally, and left the
+development unit inactive and port free. The repeatable visual workflow is
+`scripts/priority20-local-visual-wizard.sh`; the execution record lives in
+`docs/NEOFORGE_PORT_PLAN.md`.
+
+| | |
+|---|---|
+| Build | NeoForge 21.1.248, ModDevGradle 2.0.141, Mojang official mappings |
+| Loader surface | NeoForge `@Mod`, deferred registries, attachments, SavedData, payloads, events, custom-feature worldgen, client subscribers |
+| Automated suite | 172 JUnit tests and 18 production NeoForge GameTests |
+| Live parity | Registries, payload directions, attachments, creative tab, and command root checked against a manifest |
+| Launch workflow | Guarded NixOS launcher and guarded Hermes server/client mirror on loopback port 25575 |
+
+The production matrix queries the running game rather than inferring loader
+health from compilation. A deliberate broken registry ID was confirmed to fail
+the parity GameTest before the source was restored.
+
+## Confirmed working in the NeoForge alpha
+
+- NeoForge 21.1.248, ModDevGradle 2.0.141, official/Parchment mappings,
+  Gradle 9.2.1, and Java 21.
+- **172 passing JUnit tests** covering the compatibility engine, typed VM,
   static stack analysis, semantics/presentation, circle authoring, media,
   guide/Ponder models, geology, transport, multiplayer policy, automation
-  ownership, progression, and spell-library contracts, plus **16 passing
-  production Fabric GameTests** on an isolated headless server.
+  ownership, progression, and spell-library contracts, plus **18 passing
+  production NeoForge GameTests** on an isolated headless server, including a
+  real Vector Step follow-up-VM regression. The separate
+  frozen Fabric alpha at `c7371ca` retains its 170-test/16-GameTest record.
 - A Minecraft-independent `vm2` with numbers, booleans, points, vectors,
   entity references, immutable lists, Push/Pop/Dup memory, arithmetic, logic,
   branches, bounded loops, delays, durations, and exact source locations.
@@ -39,7 +62,7 @@ client presentation.
   yields instead of freezing the server.
 - Selection and block-occluded entity raycasts through a read-only world
   adapter. The VM emits validated impulse, acceleration, damping, ordered path,
-  move-toward, and keep-distance commands; only the Fabric adapter mutates the
+  move-toward, and keep-distance commands; only the NeoForge adapter mutates the
   world.
 - A named mana quote covering physical work, quadratic range/inverse-square
   falloff, duration, rarity/material difficulty, memory, perception, and
@@ -90,7 +113,7 @@ client presentation.
 - Formal multiplayer lifecycle and security: running spells cancel on owner
   disconnect/death/dimension change or an unloaded owner chunk; PvP and team
   friendly-fire policy is enforced; private/team chunk spell claims compose
-  with vanilla/Fabric protection callbacks; per-player casting is rate- and
+  with vanilla/NeoForge protection callbacks; per-player casting is rate- and
   concurrency-bounded; and versioned player/claim state migrates safely.
 - A persistent programmable Automation Relay can bind the current circle to
   rising, falling, changing, or sustained redstone, accept owner-only remote
@@ -106,25 +129,28 @@ client presentation.
 - The original Sigil Tome, Firebolt, Frost Nova, collision/damage/status
   effects, mana starvation, and context-sensitive Wild Magic remain available.
 
-The full workflow has been exercised on Hermes: remote Java 21 tests/build,
-loopback-only server, quick-joined Minecraft client, automated in-game
+The full NeoForge workflow has been exercised on Hermes: remote Java 21
+tests/build, loopback-only server, quick-joined client, automated in-game
 preflight, and direct inspection of the priorities 1–19 showcase in
-`visual-evidence/hermes-window-20260813T153728Z.png`. The real
-`/home/iank/Desktop/Vector-Regnum.desktop` was also launched on the main PC;
-its client joined the isolated server, entered gameplay, and opened the new
-`O`-key presentation/accessibility screen. The inspected captures are
-`visual-evidence/local-gameplay-priorities-17-19.png` and
-`visual-evidence/local-accessibility-priority-19.png`. Minecraft closed
-normally, both private server units became inactive, and port 25575 was free
-on both machines afterward.
+`visual-evidence/hermes-window-20260820T071914Z.png`. The latest process restart
+logged `persistence_claim=restored`, `player_schema=2`, and `unlocks_added=0`;
+both guarded units were stopped afterward. The real Main-PC shortcut then
+exposed and drove a fix for `localhost` resolving to IPv6 while the server
+listens on IPv4. The explicit `127.0.0.1` endpoint passes local build and
+Hermes client verification. The post-audit Hermes run again joined through the
+explicit IPv4 endpoint and displayed the amethyst/copper showcase with
+Vector-Regnum items in the hotbar. Ian then passed the human-controlled
+Main-PC visual gate through `scripts/priority20-local-visual-wizard.sh`,
+confirming in-world content, rendered items, normal shutdown, and clean
+development-unit and port state.
 
 ## Build and test
 
-These commands verify the deprecated Fabric reference during the port. Java 21
-is required:
+Java 21 is required. Run the full build and the real NeoForge GameTest server:
 
 ```bash
-./gradlew --no-daemon test build
+./gradlew --no-daemon clean test build
+./gradlew --no-daemon runGameTestServer
 ```
 
 On the main NixOS PC, use the declared JDK without installing an imperative
@@ -132,23 +158,28 @@ profile:
 
 ```bash
 task_jdk=$(nix eval --raw nixpkgs#jdk21.outPath)
-JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" ./gradlew --no-daemon test build
+JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
+  ./gradlew --no-daemon clean test build
+JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
+  ./gradlew --no-daemon runGameTestServer
 ```
+
+`scripts/verify-port.sh` runs the clean build plus JSON, shell-syntax, and diff
+checks. The GameTest task must separately report all 18 required tests passed.
 
 ## Play on the main PC
 
-This launcher runs the deprecated Fabric reference until priority 20 replaces
-it with a clearly named NeoForge launcher. Double-click **Play Vector-Regnum**
-on the desktop. The shortcut runs
-`scripts/local-play.sh`, which resolves Java 21, stages only this mod in an
-isolated flat world on `127.0.0.1:25575`, launches Minecraft through
-`steam-run`, and stops the private server when the client closes. It does not
-touch the normal Minecraft launcher, saves, modpacks, or port 25565.
+The executable `/home/iank/Desktop/Vector-Regnum.desktop` runs
+`scripts/local-play.sh`, which resolves Java 21,
+stages only this mod in an isolated flat world on `127.0.0.1:25575`, launches
+Minecraft through `steam-run`, and stops the private server when the client
+closes. It does not touch the normal Minecraft launcher, saves, modpacks, or
+port 25565. Before starting anything, the launcher validates that the checked-in
+EULA, server port, and IPv4 loopback bind are unique and exact.
 
 ## Hermes development workflow
 
-The current scripts exercise the deprecated Fabric reference. Priority 20 must
-create equivalent guarded NeoForge workflows before the port is accepted.
+The scripts exercise the active NeoForge repository through guarded services.
 
 ```bash
 scripts/hermes-sync.sh
@@ -260,8 +291,7 @@ Every spell combines many restrained, coordinated
 layers: readable form and telegraphing, particles and procedural geometry,
 illumination and dynamic/shadow response, darkness/fog and air movement,
 spatial sound, camera/screen response, material interaction, and lingering aftermath. Those
-examples are a floor rather than a closed list. After the NeoForge migration,
-roadmap priority 20a adds
+examples are a floor rather than a closed list. Roadmap priority 20a adds
 [FoundryMC Veil](https://github.com/FoundryMC/Veil) as an optional modular
 rendering backend for reusable particles, beams, ribbons, meshes, lights,
 framebuffers, and post effects. Veil will consume the existing bounded
@@ -307,9 +337,9 @@ small versioned API. See [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
 ## Still not finished
 
-The immediate work is the repository-preserving NeoForge port, followed by the
-Veil-backed modular presentation overhaul and compatibility gate before new
-gameplay work. The elemental identity model, reagent economy, persistent upkeep
+The immediate work is the Veil-backed modular presentation overhaul and
+compatibility gate before new gameplay work. The elemental identity model,
+reagent economy, persistent upkeep
 and conclusions, shared-memory branching, explicitly approved cooperative
 rituals, security and accessibility hardening, and the optional SMP integration
 API follow. Configuration, balancing, profiling, full playtests,
@@ -326,11 +356,9 @@ the machine boundaries, canonical priority queue, required NixOS and Hermes
 verification ladder, visual-inspection requirement, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
-[ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priorities 1–19
-are checked as the Fabric legacy alpha and the first unfinished canonical item
-is priority 20: finish freezing the published Fabric legacy repository, then
-port this active repository's complete verified behavior and testing workflow
-to NeoForge. `AGENTS.md` also records Ian's subagent ladder — opencode
+[ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priority 20
+is checked and priority 20a is the first unfinished item.
+`AGENTS.md` also records Ian's subagent ladder — opencode
 deepseekflash first, then Luna max, then Sol xhigh or Opus 5 medium — plus the
 delegation rules, so no earlier chat context is required.
 
