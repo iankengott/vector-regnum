@@ -19,8 +19,9 @@ Direct counts from the tree, not estimates:
 | `vectorregnum/fabric` | 110 | 12,905 | 63 files use `net.minecraft`, 29 use Fabric API |
 | `src/test` | 47 | 3,342 | 1 file imports Minecraft, 32 use `vectorregnum.fabric` |
 
-The suite is 47 test classes and 162 `@Test` methods. Only 15 test files compile
-without the `vectorregnum.fabric` package, which constrains phases 1 and 2.
+The suite is 47 test classes and 170 tests, confirmed by a real Gradle run
+rather than by grepping for `@Test`. Only 15 test files compile without the
+`vectorregnum.fabric` package, which constrains phases 1 and 2.
 
 There are no mixins. `fabric.mod.json` declares three entrypoints and no mixin
 config. The loader-neutral split the roadmap claims is real: `core` compiles
@@ -64,27 +65,72 @@ mark Fabric repository deprecated`. Confirm it builds and passes the full
 Fabric ladder, then tag it, so the frozen alpha is reproducible rather than
 merely present.
 
-Resolve three unknowns that change later phases:
+Three unknowns blocked later phases. All three are now answered against
+official NeoForged sources rather than from memory.
 
-1. Whether NeoForge 1.21.1 `AttachmentType` supports `copyOnDeath` and codec
-   serialization. Subagent A says yes and mechanical; subagent C says no
-   equivalent exists. They cannot both be right and phase 5 depends on it.
-2. The exact NeoForge and NeoGradle/ModDevGradle versions for 1.21.1.
-3. Whether `ServerChunkEvents.CHUNK_GENERATE` has any NeoForge counterpart, or
-   whether phase 8 must become a placed feature.
+**1. `AttachmentType` supports both `copyOnDeath` and codec serialization.**
+The builder is `AttachmentType.builder(() -> 0).serialize(Codec.INT).build()`,
+and `copyOnDeath` is a real builder flag available once a serializer is
+configured. Subagent A was right and subagent C was wrong to claim no
+equivalent exists.
 
-The legacy repository is clean and synchronized at `c7371ca` but currently has
-zero tags, so "frozen" is not yet true in any checkable sense.
+Holders are entities, block entities, and chunks. Levels are not supported and
+the documentation directs level data to `SavedData`, which independently
+confirms the `WORLD_CLAIMS` blocker. Item stacks are also unsupported, having
+been superseded by vanilla data components; this project attaches nothing to
+item stacks, so that costs nothing here.
+Source: https://docs.neoforged.net/docs/1.21.1/datastorage/attachments/
 
-Gate: an annotated tag created on the legacy repository, pushed, and verified to
-exist on the remote; its build reproduced; all three unknowns answered in
-writing with a cited source, not from memory.
+**2. Pinned versions.** NeoForge `21.1.248`, which is both the latest 21.1
+release on the NeoForged Maven and the version in the official 1.21.1 MDK.
+Build plugin is ModDevGradle, `net.neoforged.moddev` version `2.0.141`, chosen
+over NeoGradle because this project targets a single Minecraft version and
+ModDevGradle is the simpler buildscript. Both are fully endorsed upstream.
+Optional Parchment mappings `2024.11.17` for `1.21.1`.
+Sources: https://github.com/NeoForgeMDKs/MDK-1.21.1-ModDevGradle,
+https://neoforged.net/news/moddevgradle2/
+
+**3. `ServerChunkEvents.CHUNK_GENERATE` has no NeoForge counterpart.** There is
+no per-chunk generation event. The supported mechanism is a `PlacedFeature`
+injected through a biome modifier JSON at
+`data/vector_regnum/neoforge/biome_modifier/<name>.json`, targeting a biome id
+or tag at a `GenerationStep.Decoration` step, with ores and veins using the
+ores step. Phase 8 is therefore a rewrite of the placement path, not a hook
+swap, and its seed determinism must be re-proved rather than assumed.
+Source: https://docs.neoforged.net/docs/1.21.1/worldgen/biomemodifier/
+
+**Status: complete except one item, 2026-08-20.**
+
+The legacy repository is clean and synchronized with `origin/main` at `c7371ca`.
+Its build was reproduced on this machine with Java 21:
+`./gradlew --no-daemon clean test build` succeeded, running 47 test classes and
+170 tests with zero failures, errors, or skips. All resource JSON parses, all
+shell scripts parse, and `git diff --check` is clean.
+
+Ladder steps 2 and 3, Hermes integration and a real client launch, were
+deliberately not run. They are gates for gameplay and visual work; rerunning
+them against an already-verified deprecated repository would touch guarded
+Hermes services without producing new information.
+
+An annotated tag `v0.1.0-fabric-alpha` was created at `c7371ca` recording that
+verification. It could not be pushed: the GitHub repository is **archived and
+read-only**, and the push returned 403. Archiving is a stronger freeze than a
+tag, so the intent of this gate is met, but the remote carries no tag.
+
+Outstanding decision: either unarchive, push the tag, and re-archive, or accept
+the archived state as the freeze and keep the tag local. Until that is settled,
+the tag exists only in the local checkout.
+
+Gate: build reproduced (done), all three unknowns answered from cited sources
+(done), freeze established on the remote (archived, tag pending the decision
+above).
 
 ### Phase 1 — Build system, toolchain, GameTest infrastructure (5-8 h, deepseekflash then parent)
 
-Replace `fabric-loom` with the NeoForge Gradle plugin, switch to official
-mappings, replace `fabric.mod.json` with `neoforge.mods.toml`, and re-point the
-`client`/`server` run configs including the loopback 25575 dev port.
+Replace `fabric-loom` with ModDevGradle `net.neoforged.moddev` `2.0.141`
+targeting NeoForge `21.1.248`, switch to official mappings, replace
+`fabric.mod.json` with `neoforge.mods.toml`, and re-point the `client` and
+`server` run configs including the loopback 25575 dev port.
 
 Stand up the GameTest infrastructure now rather than at phase 10, because
 phase 10 cannot verify anything without it: an empty structure template, the
@@ -170,8 +216,9 @@ missing and no extra IDs. Not a test run. Launch it.
 
 ### Phase 5 — Persistence, attachments, SavedData (8-12 h, Luna max)
 
-11 of the 12 attachments are player data and port to NeoForge `AttachmentType`.
-The twelfth does not.
+11 of the 12 attachments are player data and port to NeoForge `AttachmentType`,
+which phase 0 confirmed supports both `serialize(Codec)` and `copyOnDeath`. That
+part is mechanical. The twelfth is not.
 
 `WORLD_CLAIMS` is attached to the world, not to a player, via
 `world.setAttached(WORLD_CLAIMS, ...)` at `MultiplayerLifecycleService.java:52`,
@@ -254,10 +301,14 @@ cancels a running VM before the next tick.
 ### Phase 8 — Worldgen (4-6 h, Luna max)
 
 `ServerChunkEvents.CHUNK_GENERATE` injects buried crystal veins during
-generation. NeoForge has no raw per-chunk generate event, so this becomes a
-placed feature or a chunk-generator hook. That changes the placement pipeline
-and seed determinism, and the current code deliberately never requests
-neighbor chunks.
+generation. Phase 0 confirmed NeoForge has no per-chunk generate event at all,
+so this becomes a custom `Feature` plus a `PlacedFeature`, injected by a biome
+modifier JSON at `data/vector_regnum/neoforge/biome_modifier/<name>.json` at the
+ores decoration step.
+
+That moves placement from mod code into the worldgen pipeline, which changes
+when it runs and how it is seeded. The current code deliberately never requests
+neighbor chunks, and a feature must keep that property.
 
 Gate: same seed produces the same crystal placement as the Fabric alpha, or a
 documented and deliberate difference. Neighbor chunks still never requested.
