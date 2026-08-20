@@ -144,6 +144,9 @@ java {
 
 tasks.withType(JavaCompile).configureEach {
     options.release = 21
+    // The priority-20 full gate is also the migration work queue. Do not let
+    // javac's default 100-error cap hide later Fabric/Yarn ownership clusters.
+    options.compilerArgs.addAll(["-Xmaxerrs", "1000"])
 }
 
 jar {

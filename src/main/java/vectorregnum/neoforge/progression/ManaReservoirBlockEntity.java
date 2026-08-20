@@ -5,17 +5,17 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.entity.BlockEntity;
 
 /** Persistent cell state plus its bounded, server-authoritative pull tick. */
 public final class ManaReservoirBlockEntity extends BlockEntity {
@@ -36,9 +36,9 @@ public final class ManaReservoirBlockEntity extends BlockEntity {
     private int pendingDistance;
 
     public ManaReservoirBlockEntity(BlockPos pos, BlockState state) {
-        super(ProgressionContent.MANA_RESERVOIR_ENTITY, pos, state);
+        super(ProgressionContent.MANA_RESERVOIR_ENTITY.get(), pos, state);
         reservoir = new ManaReservoir(blockTier(state),
-                state.get(ManaReservoirBlock.AFFINITY), 0);
+                state.getValue(ManaReservoirBlock.AFFINITY), 0);
     }
 
     public int stored() {
@@ -63,27 +63,27 @@ public final class ManaReservoirBlockEntity extends BlockEntity {
 
     public void setAffinity(ManaAffinity affinity) {
         reservoir = new ManaReservoir(reservoir.tier(), affinity, reservoir.stored());
-        markDirty();
+        setChanged();
     }
 
-    public static void tick(World world, BlockPos pos, BlockState state,
+    public static void tick(Level level, BlockPos pos, BlockState state,
             ManaReservoirBlockEntity cell) {
-        if (!(world instanceof ServerWorld serverWorld)) {
+        if (!(level instanceof ServerLevel serverLevel)) {
             return;
         }
         ManaTransportRules.ConduitTier conduit = cell.conduitTier(state);
         if (cell.pendingInput == 0) {
-            Optional<ManaNetworkSearch.Found<BlockPos>> found = findSource(serverWorld, pos, conduit);
+            Optional<ManaNetworkSearch.Found<BlockPos>> found = findSource(serverLevel, pos, conduit);
             if (found.isEmpty()) {
                 return;
             }
             BlockPos sourcePos = found.get().position();
-            BlockState sourceState = serverWorld.getBlockState(sourcePos);
-            if (!sourceState.isOf(ProgressionContent.MANA_CRYSTAL_NODE)
-                    || sourceState.get(ManaCrystalNodeBlock.CHARGE) <= 0) {
+            BlockState sourceState = serverLevel.getBlockState(sourcePos);
+            if (!sourceState.is(ProgressionContent.MANA_CRYSTAL_NODE.get())
+                    || sourceState.getValue(ManaCrystalNodeBlock.CHARGE) <= 0) {
                 return;
             }
-            ManaAffinity sourceAffinity = sourceState.get(ManaCrystalNodeBlock.AFFINITY);
+            ManaAffinity sourceAffinity = sourceState.getValue(ManaCrystalNodeBlock.AFFINITY);
             int eventualDelivery = expectedDelivery(INPUT_PER_PULL, sourceAffinity,
                     cell.affinity(), found.get().conduitDistance(), conduit);
             if (eventualDelivery <= 0 || cell.reservoir.space() < eventualDelivery) {
@@ -92,9 +92,10 @@ public final class ManaReservoirBlockEntity extends BlockEntity {
             cell.pendingInput = INPUT_PER_PULL;
             cell.pendingAffinity = sourceAffinity;
             cell.pendingDistance = found.get().conduitDistance();
-            serverWorld.setBlockState(sourcePos, sourceState.with(ManaCrystalNodeBlock.CHARGE,
-                    sourceState.get(ManaCrystalNodeBlock.CHARGE) - 1), Block.NOTIFY_ALL);
-            serverWorld.updateComparators(sourcePos, ProgressionContent.MANA_CRYSTAL_NODE);
+            serverLevel.setBlock(sourcePos, sourceState.setValue(ManaCrystalNodeBlock.CHARGE,
+                    sourceState.getValue(ManaCrystalNodeBlock.CHARGE) - 1), Block.UPDATE_ALL);
+            serverLevel.updateNeighbourForOutputSignal(sourcePos,
+                    ProgressionContent.MANA_CRYSTAL_NODE.get());
         }
         ManaReservoir source = new ManaReservoir(ManaReservoir.Tier.CRYSTAL_VIAL,
                 cell.pendingAffinity, cell.pendingInput);
@@ -105,87 +106,87 @@ public final class ManaReservoirBlockEntity extends BlockEntity {
         }
         cell.reservoir = result.destination();
         cell.pendingInput = result.source().stored();
-        serverWorld.updateComparators(pos, state.getBlock());
-        cell.markDirty();
+        serverLevel.updateNeighbourForOutputSignal(pos, state.getBlock());
+        cell.setChanged();
     }
 
-    static Optional<ManaNetworkSearch.Found<BlockPos>> findSource(ServerWorld world,
+    static Optional<ManaNetworkSearch.Found<BlockPos>> findSource(ServerLevel level,
             BlockPos origin, ManaTransportRules.ConduitTier conduitTier) {
         return ManaNetworkSearch.find(origin,
                 conduitTier.maximumDistance(), MAX_VISITED_BLOCKS,
-                current -> loadedNeighbors(world, current),
-                candidate -> isConduit(world.getBlockState(candidate), conduitTier),
-                candidate -> world.getBlockState(candidate).isOf(ProgressionContent.MANA_CRYSTAL_NODE));
+                current -> loadedNeighbors(level, current),
+                candidate -> isConduit(level.getBlockState(candidate), conduitTier),
+                candidate -> level.getBlockState(candidate).is(ProgressionContent.MANA_CRYSTAL_NODE.get()));
     }
 
     private static boolean isConduit(BlockState state, ManaTransportRules.ConduitTier tier) {
         return state.getBlock() instanceof ManaConduitBlock conduit && conduit.tier() == tier;
     }
 
-    private static Iterable<BlockPos> loadedNeighbors(ServerWorld world, BlockPos pos) {
+    private static Iterable<BlockPos> loadedNeighbors(ServerLevel level, BlockPos pos) {
         List<BlockPos> result = new ArrayList<>(Direction.values().length);
         for (Direction direction : Direction.values()) {
-            BlockPos candidate = pos.offset(direction);
-            if (world.isChunkLoaded(candidate)) {
+            BlockPos candidate = pos.relative(direction);
+            if (level.hasChunkAt(candidate)) {
                 result.add(candidate);
             }
         }
         return result;
     }
 
-    public void reportStatus(ServerPlayerEntity player) {
-        Optional<ManaNetworkSearch.Found<BlockPos>> source = findSource(player.getServerWorld(), pos,
-                conduitTier(getCachedState()));
-        player.sendMessage(Text.translatable("message.vector_regnum.cell_status", stored(), capacity(),
-                affinity().asString(), source.isPresent()
+    public void reportStatus(ServerPlayer player) {
+        Optional<ManaNetworkSearch.Found<BlockPos>> source = findSource(
+                player.serverLevel(), worldPosition, conduitTier(getBlockState()));
+        player.sendSystemMessage(Component.translatable("message.vector_regnum.cell_status", stored(), capacity(),
+                affinity().getSerializedName(), source.isPresent()
                         ? Integer.toString(source.get().conduitDistance())
-                        : Text.translatable("message.vector_regnum.cell_no_source")), true);
+                        : Component.translatable("message.vector_regnum.cell_no_source")), true);
     }
 
-    public boolean drawTo(ServerPlayerEntity player) {
+    public boolean drawTo(ServerPlayer player) {
         int offered = Math.min(stored(), ManaDrawRules.offeredMana(INPUT_PER_PULL, 1.0,
                 affinity(), ProgressionContent.manaBridge().requestedAffinity(player)));
         if (offered <= 0 || !ProgressionContent.manaBridge().tryAcceptStoredExact(
-                player, offered, affinity(), pos)) {
-            player.sendMessage(Text.translatable("message.vector_regnum.no_mana_space"), true);
+                player, offered, affinity(), worldPosition)) {
+            player.sendSystemMessage(Component.translatable("message.vector_regnum.no_mana_space"), true);
             return false;
         }
         reservoir = reservoir.withStored(stored() - offered);
-        markDirty();
-        if (world != null) {
-            world.updateComparators(pos, getCachedState().getBlock());
+        setChanged();
+        if (level != null) {
+            level.updateNeighbourForOutputSignal(worldPosition, getBlockState().getBlock());
         }
         ProgressionData.unlock(player, ProgressionUnlock.MANA_STORAGE);
-        player.sendMessage(Text.translatable("message.vector_regnum.cell_drew", offered), true);
+        player.sendSystemMessage(Component.translatable("message.vector_regnum.cell_drew", offered), true);
         return true;
     }
 
     @Override
-    protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
-        super.readNbt(nbt, registries);
-        ManaAffinity affinity = parseAffinity(nbt.getString(AFFINITY_KEY));
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        ManaAffinity affinity = parseAffinity(tag.getString(AFFINITY_KEY));
         int stored = Math.max(0, Math.min(ManaReservoir.Tier.RESONANT_VAULT.capacity(),
-                nbt.getInt(STORED_KEY)));
-        ManaReservoir.Tier tier = blockTier(getCachedState());
+                tag.getInt(STORED_KEY)));
+        ManaReservoir.Tier tier = blockTier(getBlockState());
         stored = Math.min(tier.capacity(), stored);
         reservoir = new ManaReservoir(tier, affinity, stored);
-        PendingTransfer pending = restorePending(nbt.getInt(PENDING_KEY),
-                nbt.getString(PENDING_AFFINITY_KEY), nbt.getInt(PENDING_DISTANCE_KEY),
-                conduitTier(getCachedState()));
+        PendingTransfer pending = restorePending(tag.getInt(PENDING_KEY),
+                tag.getString(PENDING_AFFINITY_KEY), tag.getInt(PENDING_DISTANCE_KEY),
+                conduitTier(getBlockState()));
         pendingInput = pending.input();
         pendingAffinity = pending.affinity();
         pendingDistance = pending.distance();
     }
 
     @Override
-    protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
-        super.writeNbt(nbt, registries);
-        nbt.putInt(STORED_KEY, reservoir.stored());
-        nbt.putString(AFFINITY_KEY, reservoir.affinity().asString());
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
+        tag.putInt(STORED_KEY, reservoir.stored());
+        tag.putString(AFFINITY_KEY, reservoir.affinity().getSerializedName());
         if (pendingInput > 0) {
-            nbt.putInt(PENDING_KEY, pendingInput);
-            nbt.putString(PENDING_AFFINITY_KEY, pendingAffinity.asString());
-            nbt.putInt(PENDING_DISTANCE_KEY, pendingDistance);
+            tag.putInt(PENDING_KEY, pendingInput);
+            tag.putString(PENDING_AFFINITY_KEY, pendingAffinity.getSerializedName());
+            tag.putInt(PENDING_DISTANCE_KEY, pendingDistance);
         }
     }
 

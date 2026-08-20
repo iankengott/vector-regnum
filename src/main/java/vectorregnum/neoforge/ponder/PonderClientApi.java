@@ -2,7 +2,7 @@ package vectorregnum.neoforge.ponder;
 
 import java.util.List;
 import java.util.Objects;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 import vectorregnum.core.circle.Vm2CircleCompilation;
 import vectorregnum.core.vm2.TickResult;
 
@@ -24,7 +24,7 @@ public final class PonderClientApi {
     /** Ready-to-call native client path once a client entrypoint forwards a trace. */
     public static void openMinecraftVmTrace(String id, String title,
             Vm2CircleCompilation compilation, List<TickResult> actualTicks) {
-        openVmTrace(controller -> MinecraftClient.getInstance().setScreen(new PonderScreen(controller)),
+        openVmTrace(controller -> Minecraft.getInstance().setScreen(new PonderScreen(controller)),
                 id, title, compilation, actualTicks);
     }
 }

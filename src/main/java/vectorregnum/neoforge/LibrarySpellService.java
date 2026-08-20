@@ -1,8 +1,8 @@
 package vectorregnum.neoforge;
 
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import vectorregnum.neoforge.progression.ProgressionData;
 import vectorregnum.neoforge.progression.ProgressionSpellLibrary;
 import vectorregnum.neoforge.progression.ProgressionState;
@@ -37,90 +37,90 @@ public final class LibrarySpellService {
         return IMPLEMENTED_SPELL_IDS;
     }
 
-    public static boolean cast(ServerPlayerEntity player, String id) {
+    public static boolean cast(ServerPlayer player, String id) {
         return cast(player, id, true, false);
     }
 
-    static boolean castForShowcase(ServerPlayerEntity player, String id) {
+    static boolean castForShowcase(ServerPlayer player, String id) {
         return cast(player, id, false, true);
     }
 
     private static boolean cast(
-            ServerPlayerEntity player, String id, boolean chargeMana, boolean ignoreUnlock) {
+            ServerPlayer player, String id, boolean chargeMana, boolean ignoreUnlock) {
         SpellDefinition spell = ProgressionSpellLibrary.BY_ID.get(id);
         if (spell == null || !IMPLEMENTED_SPELL_IDS.contains(id)) {
-            player.sendMessage(Text.literal("Unknown library spell: " + id)
-                    .formatted(Formatting.RED), false);
+            player.sendSystemMessage(Component.literal("Unknown library spell: " + id)
+                    .withStyle(ChatFormatting.RED), false);
             return false;
         }
         if (chargeMana && ManaData.isChannelLocked(player)) {
-            player.sendMessage(Text.literal("Mana channel locked for "
+            player.sendSystemMessage(Component.literal("Mana channel locked for "
                             + ManaData.remainingLockTicks(player) + " more ticks")
-                    .formatted(Formatting.RED), true);
+                    .withStyle(ChatFormatting.RED), true);
             return false;
         }
         ProgressionState progression = ProgressionData.get(player);
         if (!ignoreUnlock && !spell.isUnlocked(progression)) {
-            player.sendMessage(Text.literal("Locked: research " + spell.requiredUnlocks().stream()
+            player.sendSystemMessage(Component.literal("Locked: research " + spell.requiredUnlocks().stream()
                             .map(ProgressionUnlock::id).sorted().toList())
-                    .formatted(Formatting.RED), false);
+                    .withStyle(ChatFormatting.RED), false);
             return false;
         }
         var semantic = LibrarySemanticAdapter.adapt(spell);
         if (!SemanticSpellExecutor.preflight(player, semantic.instructions())) return false;
         var program = SemanticVmLowerer.lowerChecked(semantic,
-                new LoweringContext(id, player.getUuid().getLeastSignificantBits(), java.util.Map.of()));
+                new LoweringContext(id, player.getUUID().getLeastSignificantBits(), java.util.Map.of()));
         double quotedMana = program.manaCost().total();
         if (chargeMana && !ManaData.ensureAvailable(player, quotedMana)) {
-            player.sendMessage(Text.literal(String.format(Locale.ROOT,
+            player.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
                             "%s requires %.0f μ; you have %.1f / %.1f μ",
                             spell.title(), quotedMana, ManaData.available(player),
-                            ManaData.capacity(player))).formatted(Formatting.RED), true);
+                            ManaData.capacity(player))).withStyle(ChatFormatting.RED), true);
             return false;
         }
 
         boolean applied = NeoForgeVmService.startSemantic(player, program, chargeMana, spell.title(),
                 (owner, steps) -> SemanticSpellExecutor.execute(owner, steps, ignoreUnlock));
         if (!applied) return false;
-        player.sendMessage(Text.literal(String.format(Locale.ROOT,
+        player.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
                         "%s woven • %.0f μ • %.1f μ remaining",
                         spell.title(), chargeMana ? quotedMana : 0.0,
-                        ManaData.available(player))).formatted(Formatting.AQUA), true);
+                        ManaData.available(player))).withStyle(ChatFormatting.AQUA), true);
         return true;
     }
 
-    public static void list(ServerPlayerEntity player) {
+    public static void list(ServerPlayer player) {
         ProgressionState state = ProgressionData.get(player);
-        player.sendMessage(Text.literal("VECTOR-REGNUM SPELL LIBRARY • 15 bounded programs")
-                .formatted(Formatting.GOLD, Formatting.BOLD), false);
+        player.sendSystemMessage(Component.literal("VECTOR-REGNUM SPELL LIBRARY • 15 bounded programs")
+                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
         for (SpellDefinition spell : ProgressionSpellLibrary.ALL) {
             boolean unlocked = spell.isUnlocked(state);
             double quoted = SemanticVmLowerer.lowerChecked(LibrarySemanticAdapter.adapt(spell),
                     new LoweringContext(spell.id(), 0L, java.util.Map.of())).manaCost().total();
-            player.sendMessage(Text.literal(String.format(Locale.ROOT,
+            player.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
                             "%s %-18s  T%d  %.0f μ  [%s]",
                             unlocked ? "✓" : "◇", spell.id(), spell.tier(), quoted,
                             spell.category().name().toLowerCase(Locale.ROOT)))
-                    .formatted(unlocked ? Formatting.GREEN : Formatting.DARK_GRAY), false);
+                    .withStyle(unlocked ? ChatFormatting.GREEN : ChatFormatting.DARK_GRAY), false);
         }
     }
 
-    public static boolean research(ServerPlayerEntity player, ProgressionUnlock unlock) {
+    public static boolean research(ServerPlayer player, ProgressionUnlock unlock) {
         if (ProgressionData.get(player).has(unlock)) {
-            player.sendMessage(Text.literal("Already researched: " + unlock.id())
-                    .formatted(Formatting.GRAY), false);
+            player.sendSystemMessage(Component.literal("Already researched: " + unlock.id())
+                    .withStyle(ChatFormatting.GRAY), false);
             return true;
         }
         if (unlock != ProgressionUnlock.CRYSTAL_HARVEST
                 && !ProgressionData.get(player).has(ProgressionUnlock.MANA_STORAGE)) {
-            player.sendMessage(Text.literal("Draw from a crystal source before researching spell schools")
-                    .formatted(Formatting.RED), false);
+            player.sendSystemMessage(Component.literal("Draw from a crystal source before researching spell schools")
+                    .withStyle(ChatFormatting.RED), false);
             return false;
         }
         double cost = unlock == ProgressionUnlock.CRYSTAL_HARVEST ? 0.0 : 25.0;
         if (!ManaData.ensureAvailable(player, cost) || !ManaData.trySpend(player, cost)) {
-            player.sendMessage(Text.literal("Research needs " + cost + " μ")
-                    .formatted(Formatting.RED), false);
+            player.sendSystemMessage(Component.literal("Research needs " + cost + " μ")
+                    .withStyle(ChatFormatting.RED), false);
             return false;
         }
         ProgressionData.unlock(player, unlock);

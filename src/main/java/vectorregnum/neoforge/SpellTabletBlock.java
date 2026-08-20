@@ -1,52 +1,52 @@
 package vectorregnum.neoforge;
 
 import com.mojang.serialization.MapCodec;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.BlockWithEntity;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 /** An authored tablet becomes a permanent, reusable world-anchored spell. */
-public final class SpellTabletBlock extends BlockWithEntity {
-    public static final MapCodec<SpellTabletBlock> CODEC = createCodec(SpellTabletBlock::new);
+public final class SpellTabletBlock extends BaseEntityBlock {
+    public static final MapCodec<SpellTabletBlock> CODEC = simpleCodec(SpellTabletBlock::new);
 
-    public SpellTabletBlock(Settings settings) {
+    public SpellTabletBlock(Properties settings) {
         super(settings);
     }
 
     @Override
-    protected MapCodec<? extends BlockWithEntity> getCodec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
 
     @Override
-    protected BlockRenderType getRenderType(BlockState state) {
-        return BlockRenderType.MODEL;
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new SpellTabletBlockEntity(pos, state);
     }
 
     @Override
-    protected ActionResult onUse(BlockState state, World world, BlockPos pos,
-            PlayerEntity player, BlockHitResult hit) {
-        if (world.isClient()) {
-            return ActionResult.SUCCESS;
+    protected InteractionResult useWithoutItem(BlockState state, Level world, BlockPos pos,
+            Player player, BlockHitResult hit) {
+        if (world.isClientSide()) {
+            return InteractionResult.SUCCESS;
         }
         BlockEntity blockEntity = world.getBlockEntity(pos);
-        if (player instanceof ServerPlayerEntity serverPlayer
+        if (player instanceof ServerPlayer serverPlayer
                 && blockEntity instanceof SpellTabletBlockEntity tablet) {
             tablet.activate(serverPlayer);
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
-        return ActionResult.FAIL;
+        return InteractionResult.FAIL;
     }
 }

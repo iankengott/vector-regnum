@@ -2,12 +2,12 @@ package vectorregnum.neoforge.editor;
 
 import java.util.List;
 import java.util.stream.Collectors;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import org.lwjgl.glfw.GLFW;
 import vectorregnum.core.circle.CircleCoordinate;
 import vectorregnum.core.circle.CirclePersistence;
@@ -30,11 +30,11 @@ public final class CircleEditorScreen extends Screen {
     private CircleCoordinate selectedCoordinate;
     private CircleCoordinate draggedCoordinate;
     private String draggedPalette;
-    private TextFieldWidget search;
-    private TextFieldWidget parameterValues;
+    private EditBox search;
+    private EditBox parameterValues;
 
     private CircleEditorScreen(CircleEditorSnapshotPayload payload) {
-        super(Text.literal("Vector-Regnum Circle Editor"));
+        super(Component.literal("Vector-Regnum Circle Editor"));
         reset(payload);
     }
 
@@ -72,72 +72,72 @@ public final class CircleEditorScreen extends Screen {
         CircleEditorLayout.Rect palette = ui.palette();
         CircleEditorLayout.Rect canvas = ui.canvas();
         CircleEditorLayout.Rect inspector = ui.inspector();
-        search = new TextFieldWidget(textRenderer, palette.x(), 28, palette.width(), 20,
-                Text.literal("Search sigils"));
-        search.setText(paletteQuery);
-        search.setChangedListener(value -> {
+        search = new EditBox(font, palette.x(), 28, palette.width(), 20,
+                Component.literal("Search sigils"));
+        search.setValue(paletteQuery);
+        search.setResponder(value -> {
             paletteQuery = value;
             controller.handle(new CircleEditorRequest.SearchPalette(value),
                     Math.max(480, width), Math.max(270, height));
             CircleEditorClientNetworking.send(new CircleEditorRequest.SearchPalette(value));
         });
-        addDrawableChild(search);
+        addRenderableWidget(search);
         int footerFirstRow = ui.footerTop() + 4;
         int footerSecondRow = ui.footerTop() + 28;
         int applyWidth = Math.min(56, Math.max(44, inspector.width() / 3));
         int parameterWidth = inspector.width() - applyWidth - 4;
-        parameterValues = new TextFieldWidget(textRenderer, inspector.x(), footerFirstRow,
+        parameterValues = new EditBox(font, inspector.x(), footerFirstRow,
                 parameterWidth, 20,
-                Text.literal("Sigil parameters"));
-        parameterValues.setPlaceholder(Text.literal("parameters…").formatted(Formatting.DARK_GRAY));
-        addDrawableChild(parameterValues);
-        addDrawableChild(ButtonWidget.builder(Text.literal("Apply"), button -> applyParameters())
-                .dimensions(inspector.x() + parameterWidth + 4, footerFirstRow,
+                Component.literal("Sigil parameters"));
+        parameterValues.setHint(Component.literal("parameters…").withStyle(ChatFormatting.DARK_GRAY));
+        addRenderableWidget(parameterValues);
+        addRenderableWidget(Button.builder(Component.literal("Apply"), button -> applyParameters())
+                .bounds(inspector.x() + parameterWidth + 4, footerFirstRow,
                         applyWidth, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Preview"), button -> dispatch(
-                new CircleEditorRequest.Compile())).dimensions(canvas.x(), 28, 64, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Undo"), button -> dispatch(
-                new CircleEditorRequest.Undo())).dimensions(canvas.x() + 68, 28, 52, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Close"), button -> close())
-                .dimensions(inspector.right() - 58, 28, 58, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Preview"), button -> dispatch(
+                new CircleEditorRequest.Compile())).bounds(canvas.x(), 28, 64, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Undo"), button -> dispatch(
+                new CircleEditorRequest.Undo())).bounds(canvas.x() + 68, 28, 52, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Close"), button -> onClose())
+                .bounds(inspector.right() - 58, 28, 58, 20).build());
         int clearWidth = ui.compact() ? 64 : 94;
         int anchorWidth = Math.min(120, canvas.width() - clearWidth - 4);
-        addDrawableChild(ButtonWidget.builder(Text.literal("Anchor aimed face"), button -> dispatch(
+        addRenderableWidget(Button.builder(Component.literal("Anchor aimed face"), button -> dispatch(
                 new CircleEditorRequest.CaptureFaceAnchor()))
-                .dimensions(canvas.x(), footerFirstRow, anchorWidth, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Clear anchor"), button -> dispatch(
+                .bounds(canvas.x(), footerFirstRow, anchorWidth, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Clear anchor"), button -> dispatch(
                 new CircleEditorRequest.ClearAnchor()))
-                .dimensions(canvas.x() + anchorWidth + 4, footerFirstRow,
+                .bounds(canvas.x() + anchorWidth + 4, footerFirstRow,
                         Math.min(clearWidth, canvas.right() - canvas.x() - anchorWidth - 4), 20).build());
         int mediaGap = 3;
         int mediaWidth = (inspector.width() - mediaGap * 2) / 3;
-        addDrawableChild(ButtonWidget.builder(Text.literal("Scroll"), button -> dispatch(
+        addRenderableWidget(Button.builder(Component.literal("Scroll"), button -> dispatch(
                 new CircleEditorRequest.Bind(SpellMedium.SCROLL)))
-                .dimensions(inspector.x(), footerSecondRow, mediaWidth, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Book"), button -> dispatch(
+                .bounds(inspector.x(), footerSecondRow, mediaWidth, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Book"), button -> dispatch(
                 new CircleEditorRequest.Bind(SpellMedium.BOOK)))
-                .dimensions(inspector.x() + mediaWidth + mediaGap, footerSecondRow,
+                .bounds(inspector.x() + mediaWidth + mediaGap, footerSecondRow,
                         mediaWidth, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Tablet"), button -> dispatch(
+        addRenderableWidget(Button.builder(Component.literal("Tablet"), button -> dispatch(
                 new CircleEditorRequest.Bind(SpellMedium.TABLET)))
-                .dimensions(inspector.x() + (mediaWidth + mediaGap) * 2, footerSecondRow,
+                .bounds(inspector.x() + (mediaWidth + mediaGap) * 2, footerSecondRow,
                         inspector.right() - (inspector.x() + (mediaWidth + mediaGap) * 2),
                         20).build());
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, 0xff100d16);
         CircleEditorLayout ui = editorLayout();
         CircleEditorScreenModel model = controller.snapshot(Math.max(480, width), Math.max(270, height));
         syncParameterField(model);
-        String title = textRenderer.trimToWidth(model.circle().name(), ui.palette().width());
-        context.drawTextWithShadow(textRenderer, Text.literal(title).formatted(Formatting.BOLD),
+        String title = font.plainSubstrByWidth(model.circle().name(), ui.palette().width());
+        context.drawString(font, Component.literal(title).withStyle(ChatFormatting.BOLD),
                 ui.palette().x(), 9, GOLD);
         int statusWidth = Math.max(40, ui.inspector().right() - ui.canvas().x());
-        String boundedStatus = textRenderer.trimToWidth(
+        String boundedStatus = font.plainSubstrByWidth(
                 status + (bindable ? " • bindable" : ""), statusWidth);
-        context.drawText(textRenderer, Text.literal(boundedStatus), ui.canvas().x(), 10,
+        context.drawString(font, Component.literal(boundedStatus), ui.canvas().x(), 10,
                 MUTED, false);
         fill(context, ui.palette(), PANEL);
         fill(context, ui.canvas(), 0xaa211a29);
@@ -145,31 +145,31 @@ public final class CircleEditorScreen extends Screen {
         renderPalette(context, model, ui);
         renderCircle(context, model, ui, mouseX, mouseY);
         renderInspector(context, model, ui);
-        context.drawText(textRenderer, Text.literal(textRenderer.trimToWidth(
+        context.drawString(font, Component.literal(font.plainSubstrByWidth(
                         "Drag → empty slots", ui.palette().width())),
                 ui.palette().x(), ui.footerTop() + 8, MUTED, false);
-        context.drawText(textRenderer, Text.literal(textRenderer.trimToWidth(
+        context.drawString(font, Component.literal(font.plainSubstrByWidth(
                         "Right-click/Delete removes", ui.palette().width())),
                 ui.palette().x(), ui.footerTop() + 32, MUTED, false);
         String anchor = anchorDescription.isBlank() ? "No fixed face anchor"
                 : "Fixed: " + anchorDescription;
-        context.drawCenteredTextWithShadow(textRenderer,
-                Text.literal(textRenderer.trimToWidth(anchor, ui.canvas().width())),
+        context.drawCenteredString(font,
+                Component.literal(font.plainSubstrByWidth(anchor, ui.canvas().width())),
                 ui.circleCenterX(), ui.footerTop() + 31, anchorDescription.isBlank() ? MUTED : GOLD);
         super.render(context, mouseX, mouseY, delta);
         if (draggedPalette != null || draggedCoordinate != null) {
             String label = draggedPalette != null ? shortId(draggedPalette) : "move sigil";
-            context.drawTextWithShadow(textRenderer, Text.literal(label), mouseX + 10, mouseY + 8,
+            context.drawString(font, Component.literal(label), mouseX + 10, mouseY + 8,
                     GOLD);
         }
     }
 
     /** The editor paints an opaque work surface; superclass blur would obscure it. */
     @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void renderBackground(GuiGraphics context, int mouseX, int mouseY, float delta) {
     }
 
-    private void renderPalette(DrawContext context, CircleEditorScreenModel model,
+    private void renderPalette(GuiGraphics context, CircleEditorScreenModel model,
             CircleEditorLayout ui) {
         CircleEditorLayout.Rect panel = ui.palette();
         context.enableScissor(panel.x(), panel.y(), panel.right(), panel.bottom());
@@ -180,8 +180,8 @@ public final class CircleEditorScreen extends Screen {
                     y + PALETTE_ROW_HEIGHT - 1, 0xff765936);
             String label = ui.compact() ? entry.label() : entry.label() + "  ["
                     + entry.category().name().toLowerCase() + "]";
-            label = textRenderer.trimToWidth(label, panel.width() - 10);
-            context.drawText(textRenderer, Text.literal(label), panel.x() + 5, y,
+            label = font.plainSubstrByWidth(label, panel.width() - 10);
+            context.drawString(font, Component.literal(label), panel.x() + 5, y,
                     selected ? INK : MUTED, false);
             y += PALETTE_ROW_HEIGHT;
             if (y > panel.bottom() - 9) break;
@@ -189,7 +189,7 @@ public final class CircleEditorScreen extends Screen {
         context.disableScissor();
     }
 
-    private void renderCircle(DrawContext context, CircleEditorScreenModel model,
+    private void renderCircle(GuiGraphics context, CircleEditorScreenModel model,
             CircleEditorLayout ui, int mouseX, int mouseY) {
         CircleEditorLayout.Rect panel = ui.canvas();
         int centerX = ui.circleCenterX();
@@ -198,7 +198,7 @@ public final class CircleEditorScreen extends Screen {
         context.enableScissor(panel.x(), panel.y(), panel.right(), panel.bottom());
         for (int ring = model.circle().ringCount() - 1; ring >= 0; ring--) {
             int ringRadius = ringRadius(model, ui, ring);
-            context.drawBorder(centerX - ringRadius, centerY - ringRadius,
+            context.renderOutline(centerX - ringRadius, centerY - ringRadius,
                     ringRadius * 2, ringRadius * 2, 0xff594766);
         }
         CircleEditorScreenModel.Slot hovered = null;
@@ -219,23 +219,23 @@ public final class CircleEditorScreen extends Screen {
                         : "empty r" + slot.coordinate().ring() + ":s"
                                 + slot.coordinate().clockwiseSlot())
                 .orElse("clockwise → inward");
-        context.drawCenteredTextWithShadow(textRenderer,
-                Text.literal(textRenderer.trimToWidth(centerLabel, Math.max(30, radius * 2 - 8))),
+        context.drawCenteredString(font,
+                Component.literal(font.plainSubstrByWidth(centerLabel, Math.max(30, radius * 2 - 8))),
                 centerX, centerY - 4, INK);
-        context.drawCenteredTextWithShadow(textRenderer, Text.literal("outer → inner"),
+        context.drawCenteredString(font, Component.literal("outer → inner"),
                 centerX, panel.bottom() - 11, MUTED);
         if (hovered != null) {
             String hover = hovered.occupied() ? hovered.sigilId()
                     : "empty r" + hovered.coordinate().ring() + ":s"
                             + hovered.coordinate().clockwiseSlot();
-            context.drawCenteredTextWithShadow(textRenderer,
-                    Text.literal(textRenderer.trimToWidth(hover, panel.width() - 8)),
+            context.drawCenteredString(font,
+                    Component.literal(font.plainSubstrByWidth(hover, panel.width() - 8)),
                     centerX, panel.y() + 5, GOLD);
         }
         context.disableScissor();
     }
 
-    private void renderInspector(DrawContext context, CircleEditorScreenModel model,
+    private void renderInspector(GuiGraphics context, CircleEditorScreenModel model,
             CircleEditorLayout ui) {
         CircleEditorLayout.Rect panel = ui.inspector();
         int x = panel.x() + 4;
@@ -246,32 +246,32 @@ public final class CircleEditorScreen extends Screen {
                 : model.palette().stream().filter(entry -> entry.id().equals(selectedPalette))
                         .findFirst().orElse(model.selectedSigil());
         if (inspected != null) {
-            context.drawTextWithShadow(textRenderer,
-                    Text.literal(textRenderer.trimToWidth(inspected.label(), textWidth)), x, y, GOLD);
+            context.drawString(font,
+                    Component.literal(font.plainSubstrByWidth(inspected.label(), textWidth)), x, y, GOLD);
             y += 14;
             int descriptionLines = ui.compact() ? 3 : 6;
-            for (var line : textRenderer.wrapLines(Text.literal(inspected.description()), textWidth)
+            for (var line : font.split(Component.literal(inspected.description()), textWidth)
                     .stream().limit(descriptionLines).toList()) {
-                context.drawText(textRenderer, line, x, y, INK, false);
+                context.drawString(font, line, x, y, INK, false);
                 y += 11;
             }
             if (!inspected.parameters().isEmpty()) {
                 String schema = inspected.parameters().stream()
                         .map(parameter -> parameter.name() + ":" + parameter.kind().name().toLowerCase())
                         .collect(Collectors.joining(inspected.repeatingParameters() ? " … " : "  "));
-                context.drawText(textRenderer,
-                        Text.literal(textRenderer.trimToWidth(schema, textWidth)), x, y + 2,
+                context.drawString(font,
+                        Component.literal(font.plainSubstrByWidth(schema, textWidth)), x, y + 2,
                         MUTED, false);
                 y += 16;
             }
             y += 4;
         }
-        context.drawTextWithShadow(textRenderer, Text.literal("Diagnostics"), x, y, GOLD);
+        context.drawString(font, Component.literal("Diagnostics"), x, y, GOLD);
         y += 16;
         for (var diagnostic : model.diagnostics().stream().limit(ui.compact() ? 3 : 10).toList()) {
-            for (var line : textRenderer.wrapLines(Text.literal(diagnostic.code() + ": "
+            for (var line : font.split(Component.literal(diagnostic.code() + ": "
                     + diagnostic.message()), textWidth)) {
-                context.drawText(textRenderer, line, x, y, diagnostic.severity()
+                context.drawString(font, line, x, y, diagnostic.severity()
                         == vectorregnum.core.circle.CircleDiagnostic.Severity.ERROR
                         ? 0xffdc6673 : MUTED, false);
                 y += 11;
@@ -284,8 +284,8 @@ public final class CircleEditorScreen extends Screen {
         if (model.selected() != null) {
             String selected = "r" + model.selected().ring() + ":s"
                     + model.selected().clockwiseSlot() + " • right-click/Delete";
-            context.drawText(textRenderer,
-                    Text.literal(textRenderer.trimToWidth(selected, textWidth)), x,
+            context.drawString(font,
+                    Component.literal(font.plainSubstrByWidth(selected, textWidth)), x,
                     panel.bottom() - 13, INK, false);
         }
         context.disableScissor();
@@ -398,7 +398,7 @@ public final class CircleEditorScreen extends Screen {
             return;
         }
         try {
-            List<String> values = CircleEditorInteraction.parseParameterInput(parameterValues.getText());
+            List<String> values = CircleEditorInteraction.parseParameterInput(parameterValues.getValue());
             dispatch(new CircleEditorRequest.UpdateParameters(model.selected(), values));
         } catch (IllegalArgumentException exception) {
             status = "Invalid parameters: " + exception.getMessage();
@@ -435,8 +435,8 @@ public final class CircleEditorScreen extends Screen {
                 .map(slot -> slot.parameters().stream().map(CircleEditorInteraction::formatParameter)
                         .collect(Collectors.joining(" ")))
                 .orElse("");
-        if (!parameterValues.getText().equals(value)) {
-            parameterValues.setText(value);
+        if (!parameterValues.getValue().equals(value)) {
+            parameterValues.setValue(value);
         }
     }
 
@@ -459,7 +459,7 @@ public final class CircleEditorScreen extends Screen {
         return Math.max(10, ui.circleRadius() - ring * step);
     }
 
-    private static void fill(DrawContext context, CircleEditorLayout.Rect rectangle, int color) {
+    private static void fill(GuiGraphics context, CircleEditorLayout.Rect rectangle, int color) {
         context.fill(rectangle.x(), rectangle.y(), rectangle.right(), rectangle.bottom(), color);
     }
 }

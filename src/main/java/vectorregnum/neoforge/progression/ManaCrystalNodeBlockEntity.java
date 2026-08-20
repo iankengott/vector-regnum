@@ -1,10 +1,10 @@
 package vectorregnum.neoforge.progression;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 
 /** Persistent tick progress for a natural mana-crystal source. */
 public final class ManaCrystalNodeBlockEntity extends BlockEntity {
@@ -15,40 +15,40 @@ public final class ManaCrystalNodeBlockEntity extends BlockEntity {
     private int growthProgressTicks;
 
     public ManaCrystalNodeBlockEntity(BlockPos pos, BlockState state) {
-        super(ProgressionContent.MANA_CRYSTAL_NODE_ENTITY, pos, state);
+        super(ProgressionContent.MANA_CRYSTAL_NODE_ENTITY.get(), pos, state);
     }
 
     public ManaSourceGrowthRules.SourceState sourceState(BlockState state) {
         return new ManaSourceGrowthRules.SourceState(
-                state.get(ManaCrystalNodeBlock.NATURAL)
+                state.getValue(ManaCrystalNodeBlock.NATURAL)
                         ? ManaSourceGrowthRules.SourceOrigin.NATURAL
                         : ManaSourceGrowthRules.SourceOrigin.CONSTRUCTED,
-                state.get(ManaCrystalNodeBlock.GROWTH_STAGE),
-                state.get(ManaCrystalNodeBlock.CHARGE),
+                state.getValue(ManaCrystalNodeBlock.GROWTH_STAGE),
+                state.getValue(ManaCrystalNodeBlock.CHARGE),
                 rechargeProgressTicks, growthProgressTicks);
     }
 
     public void setProgress(ManaSourceGrowthRules.SourceState state) {
         rechargeProgressTicks = state.rechargeProgressTicks();
         growthProgressTicks = state.growthProgressTicks();
-        markDirty();
+        setChanged();
     }
 
     @Override
-    protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
-        super.readNbt(nbt, registries);
-        rechargeProgressTicks = clampProgress(nbt.getInt(RECHARGE_PROGRESS));
-        growthProgressTicks = clampProgress(nbt.getInt(GROWTH_PROGRESS));
+    protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.loadAdditional(tag, registries);
+        rechargeProgressTicks = clampProgress(tag.getInt(RECHARGE_PROGRESS));
+        growthProgressTicks = clampProgress(tag.getInt(GROWTH_PROGRESS));
     }
 
     @Override
-    protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
-        super.writeNbt(nbt, registries);
+    protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
+        super.saveAdditional(tag, registries);
         if (rechargeProgressTicks > 0) {
-            nbt.putInt(RECHARGE_PROGRESS, rechargeProgressTicks);
+            tag.putInt(RECHARGE_PROGRESS, rechargeProgressTicks);
         }
         if (growthProgressTicks > 0) {
-            nbt.putInt(GROWTH_PROGRESS, growthProgressTicks);
+            tag.putInt(GROWTH_PROGRESS, growthProgressTicks);
         }
     }
 

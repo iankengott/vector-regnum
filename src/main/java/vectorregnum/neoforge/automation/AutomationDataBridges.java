@@ -4,8 +4,8 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CopyOnWriteArrayList;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import vectorregnum.core.automation.AutomationDataFrame;
 import vectorregnum.neoforge.VectorRegnumMod;
 
@@ -28,7 +28,7 @@ public final class AutomationDataBridges {
         return true;
     }
 
-    static AutomationDataFrame snapshot(ServerWorld world, BlockPos position, int redstonePower) {
+    static AutomationDataFrame snapshot(ServerLevel world, BlockPos position, int redstonePower) {
         LinkedHashMap<String, Long> channels = new LinkedHashMap<>();
         channels.put("redstone.power", (long) redstonePower);
         outer:
@@ -47,7 +47,7 @@ public final class AutomationDataBridges {
                         named.namespace(), exception);
             }
         }
-        return new AutomationDataFrame(redstonePower, world.getTime(), channels);
+        return new AutomationDataFrame(redstonePower, world.getGameTime(), channels);
     }
 
     static void clearForTesting() {

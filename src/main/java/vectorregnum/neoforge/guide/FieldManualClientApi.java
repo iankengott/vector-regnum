@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /**
  * Client integration seam. A Fabric client initializer should create one
@@ -46,7 +46,7 @@ public final class FieldManualClientApi {
                 ClassLoader loader = FieldManualClientApi.class.getClassLoader();
                 GuideBook book = GuideDataLoader.loadDefault(loader);
                 GuideRecipeCatalog recipes = GuideRecipeCatalog.load(book, loader);
-                MinecraftClient.getInstance().setScreen(new FieldManualScreen(
+                Minecraft.getInstance().setScreen(new FieldManualScreen(
                         new GuideScreenController(book, progression.get()), ponderOpener, recipes));
             } catch (IOException exception) {
                 throw new IllegalStateException("Unable to open the Vector-Regnum Field Manual", exception);

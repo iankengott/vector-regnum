@@ -5,17 +5,17 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.registry.RegistryWrapper;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.World;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import vectorregnum.core.automation.AutomationDataFrame;
 import vectorregnum.core.automation.AutomationInvocation;
 import vectorregnum.core.automation.AutomationRule;
@@ -38,71 +38,71 @@ public final class AutomationRelayBlockEntity extends BlockEntity {
     private Map<String, Long> lastData = Map.of();
 
     public AutomationRelayBlockEntity(BlockPos pos, BlockState state) {
-        super(AutomationContent.AUTOMATION_RELAY_ENTITY, pos, state);
+        super(AutomationContent.automationRelayEntity(), pos, state);
     }
 
-    public static void tick(World world, BlockPos pos, BlockState state,
+    public static void tick(Level level, BlockPos pos, BlockState state,
             AutomationRelayBlockEntity relay) {
-        if (!(world instanceof ServerWorld serverWorld)) return;
-        int current = serverWorld.getReceivedRedstonePower(pos);
+        if (!(level instanceof ServerLevel serverLevel)) return;
+        int current = serverLevel.getBestNeighborSignal(pos);
         int previous = relay.observedPower;
         relay.observedPower = current;
         if (relay.configured() && relay.rule.shouldTrigger(previous, current,
-                serverWorld.getTime(), relay.lastAcceptedTick)) {
-            AutomationDataFrame frame = AutomationDataBridges.snapshot(serverWorld, pos, current);
-            if (AutomationService.submit(relay.owner, serverWorld, pos,
+                serverLevel.getGameTime(), relay.lastAcceptedTick)) {
+            AutomationDataFrame frame = AutomationDataBridges.snapshot(serverLevel, pos, current);
+            if (AutomationService.submit(relay.owner, serverLevel, pos,
                     AutomationInvocation.TriggerCause.REDSTONE, frame)) {
-                relay.lastAcceptedTick = serverWorld.getTime();
+                relay.lastAcceptedTick = serverLevel.getGameTime();
                 relay.acceptedActivations++;
-                relay.markDirty();
+                relay.setChanged();
             }
         } else if (previous != current) {
-            relay.markDirty();
+            relay.setChanged();
         }
     }
 
-    public boolean configure(ServerPlayerEntity player, MagicCircle circle, AutomationRule newRule) {
-        if (owner != null && !owner.equals(player.getUuid()) && !player.hasPermissionLevel(2)) {
+    public boolean configure(ServerPlayer player, MagicCircle circle, AutomationRule newRule) {
+        if (owner != null && !owner.equals(player.getUUID()) && !player.hasPermissions(2)) {
             return false;
         }
-        owner = player.getUuid();
+        owner = player.getUUID();
         program = CirclePersistence.encode(circle);
         rule = newRule;
         lastOutcome = "programmed; awaiting signal";
-        markDirty();
+        setChanged();
         return true;
     }
 
-    public boolean reconfigureRule(ServerPlayerEntity player, AutomationRule newRule) {
+    public boolean reconfigureRule(ServerPlayer player, AutomationRule newRule) {
         if (!owns(player) || !configured()) return false;
         rule = newRule;
-        markDirty();
+        setChanged();
         return true;
     }
 
-    public boolean requestRemote(ServerPlayerEntity player) {
-        if (owner == null || !owner.equals(player.getUuid()) || !configured()
-                || !(world instanceof ServerWorld serverWorld)) return false;
+    public boolean requestRemote(ServerPlayer player) {
+        if (owner == null || !owner.equals(player.getUUID()) || !configured()
+                || !(level instanceof ServerLevel serverLevel)) return false;
         if (lastAcceptedTick >= 0
-                && serverWorld.getTime() - lastAcceptedTick < rule.cooldownTicks()) return false;
-        int power = serverWorld.getReceivedRedstonePower(pos);
-        AutomationDataFrame base = AutomationDataBridges.snapshot(serverWorld, pos, power);
+                && serverLevel.getGameTime() - lastAcceptedTick < rule.cooldownTicks()) return false;
+        int power = serverLevel.getBestNeighborSignal(worldPosition);
+        AutomationDataFrame base = AutomationDataBridges.snapshot(serverLevel, worldPosition, power);
         LinkedHashMap<String, Long> channels = new LinkedHashMap<>(base.channels());
         if (channels.size() < AutomationDataFrame.MAX_CHANNELS) {
             channels.put("remote.request", 1L);
         }
         AutomationDataFrame frame = new AutomationDataFrame(power, base.worldTick(), channels);
-        boolean accepted = AutomationService.submit(owner, serverWorld, pos,
+        boolean accepted = AutomationService.submit(owner, serverLevel, worldPosition,
                 AutomationInvocation.TriggerCause.REMOTE, frame);
         if (accepted) {
-            lastAcceptedTick = serverWorld.getTime();
+            lastAcceptedTick = serverLevel.getGameTime();
             acceptedActivations++;
-            markDirty();
+            setChanged();
         }
         return accepted;
     }
 
-    void execute(ServerPlayerEntity player, AutomationInvocation invocation) {
+    void execute(ServerPlayer player, AutomationInvocation invocation) {
         if (!owns(player) || !configured()) {
             recordOutcome(false, "owner or program changed before dispatch", invocation.data());
             return;
@@ -110,11 +110,11 @@ public final class AutomationRelayBlockEntity extends BlockEntity {
         try {
             MagicCircle circle = CirclePersistence.decode(program);
             boolean succeeded = CircleAuthoringService.activateCircleAt(player, circle, true,
-                    Vec3d.ofCenter(pos).add(0.0, 0.55, 0.0));
+                    Vec3.atCenterOf(worldPosition).add(0.0, 0.55, 0.0));
             recordOutcome(succeeded, succeeded ? "cast accepted" : "cast rejected",
                     invocation.data());
         } catch (RuntimeException exception) {
-            VectorRegnumMod.LOGGER.warn("Rejected corrupt automation relay at {}", pos, exception);
+            VectorRegnumMod.LOGGER.warn("Rejected corrupt automation relay at {}", worldPosition, exception);
             recordOutcome(false, "stored program is corrupt", invocation.data());
         }
     }
@@ -128,7 +128,7 @@ public final class AutomationRelayBlockEntity extends BlockEntity {
         }
         lastAcceptedTick = serverTick;
         acceptedActivations++;
-        markDirty();
+        setChanged();
         return true;
     }
 
@@ -141,26 +141,26 @@ public final class AutomationRelayBlockEntity extends BlockEntity {
         lastBridgePower = frame.redstonePower();
         lastData = frame.channels();
         lastOutcome = outcome;
-        markDirty();
-        if (world != null) world.updateComparators(pos, getCachedState().getBlock());
+        setChanged();
+        if (level != null) level.updateNeighbourForOutputSignal(worldPosition, getBlockState().getBlock());
     }
 
-    public void reportStatus(ServerPlayerEntity player) {
+    public void reportStatus(ServerPlayer player) {
         String status = configured()
                 ? String.format(Locale.ROOT, "%s • %s threshold %d • cooldown %dt • input %d • %d/%d successful",
                         lastOutcome, rule.mode().name().toLowerCase(Locale.ROOT), rule.threshold(),
                         rule.cooldownTicks(), lastBridgePower, successfulActivations, acceptedActivations)
                 : "unprogrammed — use /vectorregnum automation program <x> <y> <z>";
-        player.sendMessage(Text.literal("Automation relay: " + status)
-                .formatted(Formatting.AQUA), false);
+        player.sendSystemMessage(Component.literal("Automation relay: " + status)
+                .withStyle(ChatFormatting.AQUA), false);
         if (!lastData.isEmpty()) {
-            player.sendMessage(Text.literal("Last bridge frame: " + lastData)
-                    .formatted(Formatting.GRAY), false);
+            player.sendSystemMessage(Component.literal("Last bridge frame: " + lastData)
+                    .withStyle(ChatFormatting.GRAY), false);
         }
     }
 
-    public boolean owns(ServerPlayerEntity player) {
-        return owner != null && (owner.equals(player.getUuid()) || player.hasPermissionLevel(2));
+    public boolean owns(ServerPlayer player) {
+        return owner != null && (owner.equals(player.getUUID()) || player.hasPermissions(2));
     }
 
     public boolean configured() {
@@ -188,8 +188,8 @@ public final class AutomationRelayBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void readNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
-        super.readNbt(nbt, registries);
+    protected void loadAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.loadAdditional(nbt, registries);
         program = nbt.getString("program");
         owner = parseUuid(nbt.getString("owner"));
         observedPower = Math.clamp(nbt.getInt("observed_power"), 0, 15);
@@ -200,9 +200,9 @@ public final class AutomationRelayBlockEntity extends BlockEntity {
                 Math.max(0, nbt.getLong("successful_activations")));
         lastOutcome = nbt.getString("last_outcome");
         if (lastOutcome.isBlank()) lastOutcome = "restored";
-        NbtCompound data = nbt.getCompound("last_data");
+        CompoundTag data = nbt.getCompound("last_data");
         LinkedHashMap<String, Long> restoredData = new LinkedHashMap<>();
-        data.getKeys().stream().sorted().limit(AutomationDataFrame.MAX_CHANNELS)
+        data.getAllKeys().stream().sorted().limit(AutomationDataFrame.MAX_CHANNELS)
                 .forEach(key -> {
                     if (key.matches("[a-z][a-z0-9_.-]{0,31}")) {
                         restoredData.put(key, data.getLong(key));
@@ -221,8 +221,8 @@ public final class AutomationRelayBlockEntity extends BlockEntity {
     }
 
     @Override
-    protected void writeNbt(NbtCompound nbt, RegistryWrapper.WrapperLookup registries) {
-        super.writeNbt(nbt, registries);
+    protected void saveAdditional(CompoundTag nbt, HolderLookup.Provider registries) {
+        super.saveAdditional(nbt, registries);
         if (!program.isBlank()) nbt.putString("program", program);
         if (owner != null) nbt.putString("owner", owner.toString());
         nbt.putString("mode", rule.mode().name());
@@ -235,7 +235,7 @@ public final class AutomationRelayBlockEntity extends BlockEntity {
         nbt.putLong("successful_activations", successfulActivations);
         nbt.putString("last_outcome", lastOutcome);
         if (!lastData.isEmpty()) {
-            NbtCompound data = new NbtCompound();
+            CompoundTag data = new CompoundTag();
             lastData.forEach(data::putLong);
             nbt.put("last_data", data);
         }
@@ -249,7 +249,7 @@ public final class AutomationRelayBlockEntity extends BlockEntity {
         }
     }
 
-    private static AutomationRule restoreRule(NbtCompound nbt) {
+    private static AutomationRule restoreRule(CompoundTag nbt) {
         try {
             return new AutomationRule(AutomationRule.TriggerMode.valueOf(nbt.getString("mode")),
                     nbt.getInt("threshold"), nbt.getInt("cooldown"));

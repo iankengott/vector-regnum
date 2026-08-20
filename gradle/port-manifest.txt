@@ -424,6 +424,15 @@ test.include = vectorregnum/neoforge/progression/ManaNetworkSearchTest.java
 test.include = vectorregnum/neoforge/progression/ManaTransportRulesTest.java
 test.include = vectorregnum/neoforge/progression/PlayerManaBridgeTest.java
 
+[stage:slice6]
+# Phase 3 slice 6. Loader-free client screens and API facades mapped to Mojang
+# names. The editor, Ponder trace, and accessibility screens depend directly on
+# networking, registrations, or the Fabric-backed runtime, so they return with
+# those real NeoForge integrations rather than compiling against stubs.
+extends = slice5
+main.include = vectorregnum/neoforge/guide/FieldManualClientApi.java
+main.include = vectorregnum/neoforge/guide/FieldManualScreen.java
+
 [stage:full]
 # Phase 3 onward, once every slice has NeoForge replacements.
 main.include = **

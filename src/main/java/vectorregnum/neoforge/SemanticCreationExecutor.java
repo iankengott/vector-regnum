@@ -3,15 +3,15 @@ package vectorregnum.neoforge;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.Blocks;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.Vec3;
 import vectorregnum.core.semantic.CreationForm;
 import vectorregnum.core.semantic.CreationMaterial;
 import vectorregnum.core.semantic.CreationSpec;
@@ -26,7 +26,7 @@ public final class SemanticCreationExecutor {
 
     private SemanticCreationExecutor() { }
 
-    public static void execute(ServerPlayerEntity player, List<SemanticInstruction> steps) {
+    public static void execute(ServerPlayer player, List<SemanticInstruction> steps) {
         for (SemanticInstruction instruction : steps) {
             if (instruction.opcode() == SemanticOpcode.CREATE_FORM) {
                 create(player, instruction.creationSpec());
@@ -34,39 +34,39 @@ public final class SemanticCreationExecutor {
         }
     }
 
-    static int create(ServerPlayerEntity player, CreationSpec spec) {
-        ServerWorld world = player.getServerWorld();
+    static int create(ServerPlayer player, CreationSpec spec) {
+        ServerLevel world = player.serverLevel();
         BlockPos anchor = anchor(player);
         int requested = Math.min((int) Math.ceil(spec.volume()),
                 (int) Math.floor(spec.material().maximumVolume()));
-        List<BlockPos> positions = positions(anchor, player.getRotationVec(1.0F), spec.form(), requested);
+        List<BlockPos> positions = positions(anchor, player.getViewVector(1.0F), spec.form(), requested);
         BlockState state = (spec.permanent() ? Blocks.STONE
-                : TemporarySpellContent.createdForm(spec.material())).getDefaultState();
+                : TemporarySpellContent.createdForm(spec.material())).defaultBlockState();
         int placed = 0;
         for (BlockPos pos : positions) {
-            if (pos.getSquaredDistance(player.getPos()) > MAX_CAST_RANGE * MAX_CAST_RANGE) continue;
+            if (pos.distToCenterSqr(player.position()) > MAX_CAST_RANGE * MAX_CAST_RANGE) continue;
             BlockState old = world.getBlockState(pos);
-            if (!old.isReplaceable() || !SpellSecurityPolicy.canModifyBlock(player, pos, old)) continue;
-            if (world.setBlockState(pos, state, Block.NOTIFY_ALL)) {
+            if (!old.canBeReplaced() || !SpellSecurityPolicy.canModifyBlock(player, pos, old)) continue;
+            if (world.setBlock(pos, state, Block.UPDATE_ALL)) {
                 placed++;
                 if (!spec.permanent()) {
-                    world.scheduleBlockTick(pos, state.getBlock(), spec.durationTicks());
+                    world.scheduleTick(pos, state.getBlock(), spec.durationTicks());
                 }
             }
         }
         return placed;
     }
 
-    private static BlockPos anchor(ServerPlayerEntity player) {
-        HitResult hit = player.raycast(MAX_CAST_RANGE, 1.0F, false);
+    private static BlockPos anchor(ServerPlayer player) {
+        HitResult hit = player.pick(MAX_CAST_RANGE, 1.0F, false);
         if (hit instanceof BlockHitResult blockHit && hit.getType() == HitResult.Type.BLOCK) {
-            return blockHit.getBlockPos().offset(blockHit.getSide());
+            return blockHit.getBlockPos().relative(blockHit.getDirection());
         }
-        Vec3d forward = player.getRotationVec(1.0F).normalize().multiply(3.0);
-        return BlockPos.ofFloored(player.getEyePos().add(forward));
+        Vec3 forward = player.getViewVector(1.0F).normalize().scale(3.0);
+        return BlockPos.containing(player.getEyePosition().add(forward));
     }
 
-    static List<BlockPos> positions(BlockPos anchor, Vec3d look,
+    static List<BlockPos> positions(BlockPos anchor, Vec3 look,
             CreationForm form, int count) {
         List<BlockPos> candidates = new ArrayList<>();
         int radius = Math.min(MAX_AXIS, Math.max(1, (int) Math.ceil(Math.cbrt(count)) + 1));

@@ -1,43 +1,31 @@
 package vectorregnum.neoforge;
 
-import net.fabricmc.fabric.api.event.player.UseItemCallback;
-import net.fabricmc.fabric.api.itemgroup.v1.ItemGroupEvents;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemGroups;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.Registry;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Rarity;
-import net.minecraft.util.TypedActionResult;
+import net.minecraft.world.item.CreativeModeTabs;
+import net.minecraft.world.item.Item;
+import net.neoforged.bus.api.IEventBus;
+import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
+import net.neoforged.neoforge.registries.DeferredItem;
+import net.neoforged.neoforge.registries.DeferredRegister;
 
+/** The small set of standalone Vector-Regnum items. */
 public final class VectorRegnumContent {
-    public static final Item SIGIL_TOME = Registry.register(
-            Registries.ITEM,
-            Identifier.of(VectorRegnumMod.MOD_ID, "sigil_tome"),
-            new Item(new Item.Settings().maxCount(1).rarity(Rarity.RARE)));
+    public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(VectorRegnumMod.MOD_ID);
+
+    public static final DeferredItem<Item> SIGIL_TOME = ITEMS.register("sigil_tome",
+            () -> new Item(new Item.Properties().stacksTo(1).rarity(net.minecraft.world.item.Rarity.RARE)));
 
     private VectorRegnumContent() {
     }
 
-    public static void initialize() {
-        ItemGroupEvents.modifyEntriesEvent(ItemGroups.TOOLS)
-                .register(entries -> entries.add(SIGIL_TOME));
+    /** Registers this content and its creative-tab contribution on the mod bus. */
+    public static void register(IEventBus modBus) {
+        ITEMS.register(modBus);
+        modBus.addListener(VectorRegnumContent::addCreativeTabItems);
+    }
 
-        UseItemCallback.EVENT.register((player, world, hand) -> {
-            ItemStack stack = player.getStackInHand(hand);
-            if (!stack.isOf(SIGIL_TOME)) {
-                return TypedActionResult.pass(stack);
-            }
-            if (player.getItemCooldownManager().isCoolingDown(SIGIL_TOME)) {
-                return TypedActionResult.fail(stack);
-            }
-            if (!world.isClient() && player instanceof ServerPlayerEntity serverPlayer) {
-                CastService.cast(serverPlayer, SpellPresets.FIREBOLT, true);
-                serverPlayer.getItemCooldownManager().set(SIGIL_TOME, 20);
-            }
-            return TypedActionResult.success(stack, world.isClient());
-        });
+    private static void addCreativeTabItems(BuildCreativeModeTabContentsEvent event) {
+        if (event.getTabKey().equals(CreativeModeTabs.TOOLS_AND_UTILITIES)) {
+            event.accept(SIGIL_TOME);
+        }
     }
 }

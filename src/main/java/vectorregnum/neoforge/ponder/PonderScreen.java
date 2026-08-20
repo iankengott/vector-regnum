@@ -5,13 +5,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import vectorregnum.neoforge.SpellMediaContent;
 import vectorregnum.neoforge.progression.ProgressionContent;
 
@@ -28,7 +28,7 @@ public final class PonderScreen extends Screen {
     private boolean primerPinned;
 
     public PonderScreen(PonderController controller) {
-        super(Text.literal(controller.timeline().title()));
+        super(Component.literal(controller.timeline().title()));
         this.controller = controller;
         if (!controller.timeline().id().equals("workshop-primer")) {
             retainedServerTrace = controller.timeline();
@@ -45,17 +45,17 @@ public final class PonderScreen extends Screen {
     @Override
     protected void init() {
         int y = height - 30;
-        addDrawableChild(ButtonWidget.builder(Text.literal("↻"), button -> controller.replay())
-                .dimensions(width / 2 - 100, y, 28, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("|◀"), button -> controller.stepBack())
-                .dimensions(width / 2 - 68, y, 34, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("▶/Ⅱ"), button -> {
+        addRenderableWidget(Button.builder(Component.literal("↻"), button -> controller.replay())
+                .bounds(width / 2 - 100, y, 28, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("|◀"), button -> controller.stepBack())
+                .bounds(width / 2 - 68, y, 34, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("▶/Ⅱ"), button -> {
             if (controller.playing()) controller.pause(); else controller.play();
-        }).dimensions(width / 2 - 30, y, 60, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("▶|"), button -> controller.stepForward())
-                .dimensions(width / 2 + 34, y, 34, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("Primer/Trace"), button -> togglePrimer())
-                .dimensions(width - 104, 8, 92, 20).build());
+        }).bounds(width / 2 - 30, y, 60, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("▶|"), button -> controller.stepForward())
+                .bounds(width / 2 + 34, y, 34, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("Primer/Trace"), button -> togglePrimer())
+                .bounds(width - 104, 8, 92, 20).build());
     }
 
     @Override
@@ -64,9 +64,9 @@ public final class PonderScreen extends Screen {
     }
 
     @Override
-    public void close() {
+    public void onClose() {
         PonderTraceClientNetworking.stopWatching();
-        super.close();
+        super.onClose();
     }
 
     private void togglePrimer() {
@@ -84,13 +84,13 @@ public final class PonderScreen extends Screen {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, VOID);
         PonderTimeline.Step step = controller.currentStep();
-        context.drawCenteredTextWithShadow(textRenderer,
-                Text.literal(controller.timeline().title()), width / 2, 10, GOLD);
-        context.drawCenteredTextWithShadow(textRenderer,
-                Text.literal(step.phase().name()).formatted(Formatting.BOLD), width / 2, 25,
+        context.drawCenteredString(font,
+                Component.literal(controller.timeline().title()), width / 2, 10, GOLD);
+        context.drawCenteredString(font,
+                Component.literal(step.phase().name()).withStyle(ChatFormatting.BOLD), width / 2, 25,
                 phaseColor(step.phase()));
         renderWorkshop(context, step);
         renderCallout(context, step);
@@ -100,10 +100,10 @@ public final class PonderScreen extends Screen {
 
     /** This screen paints an opaque workshop; superclass blur would obscure it. */
     @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void renderBackground(GuiGraphics context, int mouseX, int mouseY, float delta) {
     }
 
-    private void renderWorkshop(DrawContext context, PonderTimeline.Step step) {
+    private void renderWorkshop(GuiGraphics context, PonderTimeline.Step step) {
         int panelWidth = Math.min(244, Math.max(150, width / 3));
         int left = panelWidth + 28;
         int right = width - 16;
@@ -115,7 +115,7 @@ public final class PonderScreen extends Screen {
         int halfHeight = Math.max(22, Math.min(54, (bottom - top) / 5));
 
         context.fill(left, top, right, bottom, 0xff17131d);
-        context.drawBorder(left, top, right - left, bottom - top, 0xff352c3c);
+        context.renderOutline(left, top, right - left, bottom - top, 0xff352c3c);
         drawDiamond(context, centerX, centerY, halfWidth, halfHeight, STONE, STONE_LIGHT);
 
         int circleX = centerX;
@@ -126,11 +126,11 @@ public final class PonderScreen extends Screen {
         drawManaCrystal(context, left + 30, centerY - 22, step);
         drawTrainingDummy(context, right - 32, centerY - 27, step);
         drawCueEffects(context, step, left + 30, centerX, right - 32, centerY - 23, radius);
-        context.drawCenteredTextWithShadow(textRenderer, "WARDED SCRIBE WORKSHOP",
+        context.drawCenteredString(font, "WARDED SCRIBE WORKSHOP",
                 centerX, top + 8, MUTED);
     }
 
-    private void drawCircleAndTrace(DrawContext context, PonderTimeline.Step step,
+    private void drawCircleAndTrace(GuiGraphics context, PonderTimeline.Step step,
             int centerX, int centerY, int radius) {
         drawEllipse(context, centerX, centerY, radius, Math.max(13, radius / 3), 0xff7d6a86);
         drawEllipse(context, centerX, centerY, Math.max(16, radius * 2 / 3),
@@ -158,13 +158,13 @@ public final class PonderScreen extends Screen {
                     : source.sourceIndex() < focusedIndex ? 0xffbfa8d4 : 0xff65596d;
             int size = source.sourceIndex() == focusedIndex ? 4 : 3;
             context.fill(x - size, y - size, x + size + 1, y + size + 1, color);
-            context.drawCenteredTextWithShadow(textRenderer,
+            context.drawCenteredString(font,
                     Integer.toString(source.sourceIndex() + 1), x, y - 4, 0xff17131d);
             previousX = x;
             previousY = y;
             havePrevious = true;
         }
-        focused.ifPresent(source -> context.drawCenteredTextWithShadow(textRenderer,
+        focused.ifPresent(source -> context.drawCenteredString(font,
                 source.sigilId(), centerX, centerY + radius / 3 + 8, INK));
     }
 
@@ -190,7 +190,7 @@ public final class PonderScreen extends Screen {
         return centerY + (int) Math.round(Math.sin(angle) * ringRadius / 3.0);
     }
 
-    private void drawPedestalAndScroll(DrawContext context, PonderTimeline.Step step,
+    private void drawPedestalAndScroll(GuiGraphics context, PonderTimeline.Step step,
             int x, int y) {
         context.fill(x - 20, y + 8, x + 21, y + 15, 0xff2c2730);
         context.fill(x - 15, y - 2, x + 16, y + 9, 0xff65576b);
@@ -201,23 +201,23 @@ public final class PonderScreen extends Screen {
             context.fill(x - 13, y - 9, x - 9, y + 1, 0xff8d6843);
             context.fill(x + 9, y - 9, x + 13, y + 1, 0xff8d6843);
             context.fill(x - 5, y - 6, x + 6, y - 5, 0xff844f88);
-            context.drawItem(new ItemStack(SpellMediaContent.SPELL_SCROLL), x - 8, y - 17);
+            context.renderItem(new ItemStack(SpellMediaContent.spellScroll()), x - 8, y - 17);
         } else {
-            context.drawCenteredTextWithShadow(textRenderer, "ACCEPTED", x, y - 8, 0xff76c993);
+            context.drawCenteredString(font, "ACCEPTED", x, y - 8, 0xff76c993);
         }
     }
 
-    private void drawManaCrystal(DrawContext context, int x, int y, PonderTimeline.Step step) {
+    private void drawManaCrystal(GuiGraphics context, int x, int y, PonderTimeline.Step step) {
         context.fill(x - 7, y + 8, x + 8, y + 12, 0xff342c39);
         int pulse = step.phase() == PonderTimeline.Phase.MANA
                 ? 2 + controller.tickInStep() % 3 : 1;
         context.fill(x - pulse, y - 12, x + pulse + 1, y + 9, 0xff865ed1);
         context.fill(x - 5, y - 5, x + 6, y + 4, 0xffb28cff);
-        context.drawItem(new ItemStack(ProgressionContent.MANA_CRYSTAL_NODE_ITEM), x - 8, y - 8);
-        context.drawCenteredTextWithShadow(textRenderer, "MANA", x, y + 15, MUTED);
+        context.renderItem(new ItemStack(ProgressionContent.manaCrystalNodeItem()), x - 8, y - 8);
+        context.drawCenteredString(font, "MANA", x, y + 15, MUTED);
     }
 
-    private void drawTrainingDummy(DrawContext context, int x, int y, PonderTimeline.Step step) {
+    private void drawTrainingDummy(GuiGraphics context, int x, int y, PonderTimeline.Step step) {
         int shove = step.cues().stream().anyMatch(cue -> cue.type() == PonderTimeline.CueType.WORLD_EFFECT)
                 ? Math.min(7, controller.tickInStep() / 2) : 0;
         x += shove;
@@ -226,10 +226,10 @@ public final class PonderScreen extends Screen {
         context.fill(x - 10, y + 5, x + 11, y + 8, 0xff836348);
         context.fill(x - 7, y + 21, x - 2, y + 27, 0xff635044);
         context.fill(x + 2, y + 21, x + 7, y + 27, 0xff635044);
-        context.drawCenteredTextWithShadow(textRenderer, "TARGET", x, y + 31, MUTED);
+        context.drawCenteredString(font, "TARGET", x, y + 31, MUTED);
     }
 
-    private void drawCueEffects(DrawContext context, PonderTimeline.Step step, int crystalX,
+    private void drawCueEffects(GuiGraphics context, PonderTimeline.Step step, int crystalX,
             int scrollX, int targetX, int y, int radius) {
         if (hasCue(step, PonderTimeline.CueType.MANA_FLOW)) {
             int movingX = crystalX + Math.floorMod(controller.tickInStep() * 3,
@@ -253,12 +253,12 @@ public final class PonderScreen extends Screen {
                 default -> 0xffd85a9f;
             };
             scatter(context, scrollX, y + 10, color, 24, radius);
-            context.drawCenteredTextWithShadow(textRenderer,
+            context.drawCenteredString(font,
                     category.replace('_', ' '), scrollX, y - radius / 2 - 14, color);
         });
     }
 
-    private void scatter(DrawContext context, int x, int y, int color, int count, int radius) {
+    private void scatter(GuiGraphics context, int x, int y, int color, int count, int radius) {
         int progress = Math.max(1, controller.tickInStep() + 1);
         for (int index = 0; index < count; index++) {
             double angle = (index * 2.399963229728653) + progress * 0.08;
@@ -269,17 +269,17 @@ public final class PonderScreen extends Screen {
         }
     }
 
-    private void renderCallout(DrawContext context, PonderTimeline.Step step) {
+    private void renderCallout(GuiGraphics context, PonderTimeline.Step step) {
         int x = 12;
         int panelWidth = Math.min(244, Math.max(150, width / 3));
         int y = 48;
         context.fill(x, y, x + panelWidth, height - 46, 0xdd211a29);
         context.fill(x, y, x + 4, height - 46, phaseColor(step.phase()));
-        context.drawTextWithShadow(textRenderer, step.title(), x + 10, y + 10, INK);
+        context.drawString(font, step.title(), x + 10, y + 10, INK);
         int lineY = y + 28;
-        for (OrderedText line : textRenderer.wrapLines(Text.literal(step.narration()), panelWidth - 20)) {
+        for (FormattedCharSequence line : font.split(Component.literal(step.narration()), panelWidth - 20)) {
             if (lineY > height - 92) break;
-            context.drawText(textRenderer, line, x + 10, lineY, MUTED, false);
+            context.drawString(font, line, x + 10, lineY, MUTED, false);
             lineY += 11;
         }
         lineY += 7;
@@ -288,14 +288,14 @@ public final class PonderScreen extends Screen {
             String label = cue.type().name().toLowerCase().replace('_', ' ');
             String detail = cue.data().getOrDefault("dimension",
                     cue.data().getOrDefault("status", cue.data().getOrDefault("category", "")));
-            context.drawText(textRenderer, Text.literal("• " + label
+            context.drawString(font, Component.literal("• " + label
                     + (detail.isEmpty() ? "" : ": " + detail.toLowerCase().replace('_', ' '))),
                     x + 10, lineY, phaseColor(step.phase()), false);
             lineY += 11;
         }
     }
 
-    private void renderProgress(DrawContext context) {
+    private void renderProgress(GuiGraphics context) {
         int left = 16;
         int right = width - 16;
         int y = height - 42;
@@ -305,7 +305,7 @@ public final class PonderScreen extends Screen {
                 / controller.timeline().steps().size());
         context.fill(left, y, right, y + 3, 0xff44394d);
         context.fill(left, y, left + filled, y + 3, GOLD);
-        context.drawText(textRenderer, (controller.stepIndex() + 1) + "/"
+        context.drawString(font, (controller.stepIndex() + 1) + "/"
                 + controller.timeline().steps().size(), right - 36, y - 11, MUTED, false);
     }
 
@@ -319,7 +319,7 @@ public final class PonderScreen extends Screen {
                 .map(cue -> cue.data().get(key)).filter(value -> value != null).findFirst();
     }
 
-    private static void drawDiamond(DrawContext context, int centerX, int centerY,
+    private static void drawDiamond(GuiGraphics context, int centerX, int centerY,
             int halfWidth, int halfHeight, int color, int edge) {
         for (int row = -halfHeight; row <= halfHeight; row++) {
             int span = (int) Math.round(halfWidth * (1.0 - Math.abs(row) / (double) halfHeight));
@@ -332,7 +332,7 @@ public final class PonderScreen extends Screen {
         drawLine(context, centerX, centerY + halfHeight, centerX - halfWidth, centerY, 0xff2d2732);
     }
 
-    private static void drawEllipse(DrawContext context, int centerX, int centerY,
+    private static void drawEllipse(GuiGraphics context, int centerX, int centerY,
             int radiusX, int radiusY, int color) {
         int previousX = centerX + radiusX;
         int previousY = centerY;
@@ -346,7 +346,7 @@ public final class PonderScreen extends Screen {
         }
     }
 
-    private static void drawLine(DrawContext context, int x0, int y0, int x1, int y1, int color) {
+    private static void drawLine(GuiGraphics context, int x0, int y0, int x1, int y1, int color) {
         int dx = Math.abs(x1 - x0);
         int sx = x0 < x1 ? 1 : -1;
         int dy = -Math.abs(y1 - y0);

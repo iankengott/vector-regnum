@@ -1,6 +1,6 @@
 package vectorregnum.neoforge.ponder;
 
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 /** Deterministic offline teaching set used when no server trace can be requested. */
 public final class PonderDemo {
@@ -8,7 +8,7 @@ public final class PonderDemo {
     }
 
     public static void open() {
-        MinecraftClient.getInstance().setScreen(new PonderScreen(
+        Minecraft.getInstance().setScreen(new PonderScreen(
                 new PonderController(PonderLessonLibrary.primer())));
     }
 }

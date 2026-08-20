@@ -2,22 +2,22 @@ package vectorregnum.neoforge.guide;
 
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.block.Block;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.registry.Registries;
-import net.minecraft.registry.RegistryKeys;
-import net.minecraft.registry.entry.RegistryEntry;
-import net.minecraft.registry.tag.TagKey;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Identifier;
-import net.minecraft.util.Util;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.core.Holder;
+import net.minecraft.tags.TagKey;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.Util;
 import org.lwjgl.glfw.GLFW;
 
 /** Native, dependency-free rendering of the illustrated visual Field Manual. */
@@ -38,7 +38,7 @@ public final class FieldManualScreen extends Screen {
     private final GuideRecipeCatalog recipes;
     private final GuideScrollState scroll = new GuideScrollState();
     private final List<HoverRegion> hoverRegions = new ArrayList<>();
-    private TextFieldWidget search;
+    private EditBox search;
     private String renderedPageId;
 
     public FieldManualScreen(GuideScreenController controller) {
@@ -51,7 +51,7 @@ public final class FieldManualScreen extends Screen {
 
     public FieldManualScreen(GuideScreenController controller, Runnable ponderOpener,
             GuideRecipeCatalog recipes) {
-        super(Text.literal(controller.book().title()));
+        super(Component.literal(controller.book().title()));
         this.controller = controller;
         this.ponderOpener = ponderOpener;
         this.recipes = recipes;
@@ -63,27 +63,27 @@ public final class FieldManualScreen extends Screen {
         int searchY = compact ? 38 : 14;
         int searchX = compact ? 8 : Math.max(66, width - 186);
         int searchWidth = compact ? Math.max(80, width - 16) : 130;
-        search = new TextFieldWidget(textRenderer, searchX, searchY, searchWidth, 20,
-                Text.literal("Search Field Manual"));
-        search.setPlaceholder(Text.literal("Search…").formatted(Formatting.DARK_GRAY));
-        search.setChangedListener(controller::setSearchQuery);
-        addDrawableChild(search);
-        addDrawableChild(ButtonWidget.builder(Text.literal("←"), button -> controller.back())
-                .dimensions(8, 14, 24, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("★"), button -> controller.toggleBookmark())
-                .dimensions(36, 14, 24, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("−"), button -> {
+        search = new EditBox(font, searchX, searchY, searchWidth, 20,
+                Component.literal("Search Field Manual"));
+        search.setHint(Component.literal("Search…").withStyle(ChatFormatting.DARK_GRAY));
+        search.setResponder(controller::setSearchQuery);
+        addRenderableWidget(search);
+        addRenderableWidget(Button.builder(Component.literal("←"), button -> controller.back())
+                .bounds(8, 14, 24, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("★"), button -> controller.toggleBookmark())
+                .bounds(36, 14, 24, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("−"), button -> {
             controller.setScale(controller.scale() - 0.125);
-            clearAndInit();
-        }).dimensions(width - 50, 14, 20, 20).build());
-        addDrawableChild(ButtonWidget.builder(Text.literal("+"), button -> {
+            rebuildWidgets();
+        }).bounds(width - 50, 14, 20, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("+"), button -> {
             controller.setScale(controller.scale() + 0.125);
-            clearAndInit();
-        }).dimensions(width - 28, 14, 20, 20).build());
+            rebuildWidgets();
+        }).bounds(width - 28, 14, 20, 20).build());
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void render(GuiGraphics context, int mouseX, int mouseY, float delta) {
         context.fill(0, 0, width, height, 0xff17121a);
         GuideScreenModel model = controller.snapshot(width, height);
         syncPage(model.page().id());
@@ -91,32 +91,32 @@ public final class FieldManualScreen extends Screen {
         int top = contentTop();
         context.fill(6, top - 4, width - 6, height - 6, PAPER);
         String heading = compactToolbar() ? "Field Manual" : model.bookTitle();
-        context.drawCenteredTextWithShadow(textRenderer, heading, width / 2, 18, GOLD);
+        context.drawCenteredString(font, heading, width / 2, 18, GOLD);
         if (model.layout().navigationWidth() > 0) renderNavigation(context, model, top);
         renderPage(context, model, top, mouseX, mouseY);
         super.render(context, mouseX, mouseY, delta);
         hoverRegions.stream().filter(region -> region.contains(mouseX, mouseY)).findFirst()
-                .ifPresent(region -> context.drawTooltip(textRenderer, region.tooltip(), mouseX, mouseY));
+                .ifPresent(region -> context.renderComponentTooltip(font, region.tooltip(), mouseX, mouseY));
     }
 
     /** The manual renders opaque themed pages; superclass blur would obscure them. */
     @Override
-    public void renderBackground(DrawContext context, int mouseX, int mouseY, float delta) {
+    public void renderBackground(GuiGraphics context, int mouseX, int mouseY, float delta) {
     }
 
-    private void renderNavigation(DrawContext context, GuideScreenModel model, int top) {
+    private void renderNavigation(GuiGraphics context, GuideScreenModel model, int top) {
         int x = 12;
         int y = top + 4;
         int right = Math.min(width / 3, model.layout().navigationWidth());
         context.fill(8, top, right, height - 10, PANEL);
         for (GuideScreenModel.ChapterEntry chapter : model.navigation()) {
-            drawItem(context, itemStack(chapter.icon()), x, y);
-            context.drawTextWithShadow(textRenderer, Text.literal(chapter.title())
-                    .formatted(Formatting.BOLD), x + 20, y + 4, INK);
+            renderItem(context, itemStack(chapter.icon()), x, y);
+            context.drawString(font, Component.literal(chapter.title())
+                    .withStyle(ChatFormatting.BOLD), x + 20, y + 4, INK);
             y += 20;
             for (GuideScreenModel.PageEntry page : chapter.pages()) {
                 String prefix = page.bookmarked() ? "★ " : "  ";
-                context.drawText(textRenderer, Text.literal(prefix + page.title()), x, y,
+                context.drawString(font, Component.literal(prefix + page.title()), x, y,
                         page.locked() ? LOCKED : MUTED_INK, false);
                 y += 11;
                 if (y > height - 24) return;
@@ -125,22 +125,22 @@ public final class FieldManualScreen extends Screen {
         }
     }
 
-    private void renderPage(DrawContext context, GuideScreenModel model, int top,
+    private void renderPage(GuiGraphics context, GuideScreenModel model, int top,
             int mouseX, int mouseY) {
         int left = pageLeft(model);
         int available = width - left - 20;
         double scale = model.layout().scale();
-        List<OrderedText> bodyLines = wrap(model.page().body(), available, scale);
+        List<FormattedCharSequence> bodyLines = wrap(model.page().body(), available, scale);
         int contentHeight = measureContent(model.page(), bodyLines.size(), scale);
         int viewportHeight = Math.max(1, height - top - 18);
         scroll.setExtents(contentHeight, viewportHeight);
         int y = top + 8 - scroll.offset();
 
         context.enableScissor(left, top, left + available, height - 10);
-        drawScaled(context, Text.literal(model.page().title()).formatted(Formatting.BOLD),
+        drawScaled(context, Component.literal(model.page().title()).withStyle(ChatFormatting.BOLD),
                 left, y, INK, true, scale);
         y += scaled(18, scale);
-        for (OrderedText line : bodyLines) {
+        for (FormattedCharSequence line : bodyLines) {
             drawScaled(context, line, left, y, INK, false, scale);
             y += model.layout().lineHeightPixels();
         }
@@ -155,20 +155,20 @@ public final class FieldManualScreen extends Screen {
         }
         context.disableScissor();
         renderScrollbar(context, left + available - 3, top + 2, viewportHeight - 4);
-        if (!search.getText().isBlank()) renderSearch(context, model, left, available);
+        if (!search.getValue().isBlank()) renderSearch(context, model, left, available);
     }
 
-    private void renderElement(DrawContext context, GuideElement element, int left, int y,
+    private void renderElement(GuiGraphics context, GuideElement element, int left, int y,
             int available, int boxHeight, double scale, int mouseX, int mouseY) {
         context.fill(left, y, left + available, y + boxHeight, PANEL);
         context.fill(left, y, left + 3, y + boxHeight, GOLD);
-        drawScaled(context, Text.literal(symbol(element.type()) + " " + element.label()),
+        drawScaled(context, Component.literal(symbol(element.type()) + " " + element.label()),
                 left + 8, y + 5, INK, true, scale);
         int visualWidth = visualWidth(element);
-        List<OrderedText> alt = wrap(element.altText(),
+        List<FormattedCharSequence> alt = wrap(element.altText(),
                 Math.max(48, available - visualWidth - 18), scale);
         int altY = y + scaled(18, scale);
-        for (OrderedText line : alt.stream().limit(2).toList()) {
+        for (FormattedCharSequence line : alt.stream().limit(2).toList()) {
             drawScaled(context, line, left + 8, altY, MUTED_INK, false, scale);
             altY += scaled(11, scale);
         }
@@ -180,36 +180,36 @@ public final class FieldManualScreen extends Screen {
             default -> { }
         }
         addHover(left, y, left + available, y + boxHeight,
-                List.of(Text.literal(element.label()).formatted(Formatting.GOLD),
-                        Text.literal(element.altText()).formatted(Formatting.GRAY)), null);
+                List.of(Component.literal(element.label()).withStyle(ChatFormatting.GOLD),
+                        Component.literal(element.altText()).withStyle(ChatFormatting.GRAY)), null);
     }
 
-    private void renderSearch(DrawContext context, GuideScreenModel model, int left, int available) {
+    private void renderSearch(GuiGraphics context, GuideScreenModel model, int left, int available) {
         int count = Math.min(5, model.searchResults().size());
         int y = height - Math.min(74, 14 + count * 12);
         context.fill(left, y - 4, left + available, height - 8, 0xf4d8c8a4);
         for (GuideScreenModel.SearchResult result : model.searchResults().stream().limit(5).toList()) {
-            context.drawText(textRenderer, Text.literal((result.locked() ? "◇ " : "→ ")
+            context.drawString(font, Component.literal((result.locked() ? "◇ " : "→ ")
                     + result.chapterTitle() + " / " + result.pageTitle()), left + 6, y,
                     result.locked() ? LOCKED : INK, false);
             addHover(left, y, left + available, y + 12,
-                    List.of(Text.literal(result.pageTitle()).formatted(Formatting.GOLD),
-                            Text.literal(result.excerpt()).formatted(Formatting.GRAY)), null);
+                    List.of(Component.literal(result.pageTitle()).withStyle(ChatFormatting.GOLD),
+                            Component.literal(result.excerpt()).withStyle(ChatFormatting.GRAY)), null);
             y += 12;
         }
     }
 
-    private void renderDiagram(DrawContext context, int x, int y, int w, int h, String diagram) {
+    private void renderDiagram(GuiGraphics context, int x, int y, int w, int h, String diagram) {
         int color = diagram.contains("mana") ? 0xff6f3fa0 : 0xff3e6877;
         int centerX = x + w / 2;
         int centerY = y + h / 2;
-        context.drawBorder(x, y, w, h, color);
+        context.renderOutline(x, y, w, h, color);
         context.fill(centerX - 2, centerY - 2, centerX + 3, centerY + 3, GOLD);
-        context.drawHorizontalLine(x + 6, x + w - 7, centerY, color);
-        context.drawVerticalLine(centerX, y + 5, y + h - 6, color);
+        context.hLine(x + 6, x + w - 7, centerY, color);
+        context.vLine(centerX, y + 5, y + h - 6, color);
     }
 
-    private void renderScrollbar(DrawContext context, int x, int y, int viewportHeight) {
+    private void renderScrollbar(GuiGraphics context, int x, int y, int viewportHeight) {
         if (!scroll.canScroll()) return;
         context.fill(x, y, x + 2, y + viewportHeight, 0x5566536a);
         int thumbHeight = Math.max(12, viewportHeight * viewportHeight
@@ -232,14 +232,14 @@ public final class FieldManualScreen extends Screen {
         GuideScreenModel model = controller.snapshot(width, height);
         int left = pageLeft(model);
         int available = width - left - 20;
-        if (!search.getText().isBlank()) {
+        if (!search.getValue().isBlank()) {
             int count = Math.min(5, model.searchResults().size());
             int resultY = height - Math.min(74, 14 + count * 12);
             for (GuideScreenModel.SearchResult result : model.searchResults().stream().limit(5).toList()) {
                 if (mouseX >= left && mouseX < left + available
                         && mouseY >= resultY && mouseY < resultY + 12 && !result.locked()) {
                     controller.open(result.pageId());
-                    search.setText("");
+                    search.setValue("");
                     return true;
                 }
                 resultY += 12;
@@ -341,72 +341,72 @@ public final class FieldManualScreen extends Screen {
         };
     }
 
-    private void renderImage(DrawContext context, GuideElement element, int x, int y) {
-        Identifier texture = Identifier.tryParse(element.metadata("asset"));
+    private void renderImage(GuiGraphics context, GuideElement element, int x, int y) {
+        ResourceLocation texture = ResourceLocation.tryParse(element.metadata("asset"));
         if (texture == null) return;
         int width = metadataInt(element, "display_width", 48, 48, 160);
         int height = metadataInt(element, "display_height", 48, 48, 160);
         int sourceWidth = metadataInt(element, "source_width", 16, 16, 2048);
         int sourceHeight = metadataInt(element, "source_height", 16, 16, 2048);
-        context.drawTexture(texture, x, y, 0, 0, width, height, sourceWidth, sourceHeight);
+        context.blit(texture, x, y, 0, 0, width, height, sourceWidth, sourceHeight);
     }
 
-    private void renderRecipe(DrawContext context, GuideElement element, int x, int y) {
+    private void renderRecipe(GuiGraphics context, GuideElement element, int x, int y) {
         GuideRecipe recipe = recipes.recipe(element.metadata("recipe")).orElse(null);
         if (recipe == null) {
-            context.drawText(textRenderer, Text.literal("Recipe unavailable"), x, y + 22,
+            context.drawString(font, Component.literal("Recipe unavailable"), x, y + 22,
                     MUTED_INK, false);
             return;
         }
         int gridX = x;
         int gridY = y + 4;
-        long cycle = Util.getMeasuringTimeMs() / RECIPE_CYCLE_MILLIS;
+        long cycle = Util.getMillis() / RECIPE_CYCLE_MILLIS;
         context.fill(gridX - 2, gridY - 2, gridX + 52, gridY + 52, 0x553e2e3d);
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 3; column++) {
                 int slotX = gridX + column * 17;
                 int slotY = gridY + row * 17;
-                context.drawBorder(slotX, slotY, 17, 17, 0xff9b7f67);
+                context.renderOutline(slotX, slotY, 17, 17, 0xff9b7f67);
                 GuideIngredient ingredient = recipe.ingredient(row, column);
                 String itemId = ingredient.displayChoice(cycle + row * 3L + column,
                         this::resolveTag);
                 ItemStack stack = itemStack(itemId);
-                drawItem(context, stack, slotX, slotY);
+                renderItem(context, stack, slotX, slotY);
                 if (!stack.isEmpty()) {
-                    List<Text> tooltip = new ArrayList<>();
-                    tooltip.add(stack.getName());
-                    tooltip.add(Text.literal(ingredient.sourceDescription())
-                            .formatted(Formatting.GRAY));
+                    List<Component> tooltip = new ArrayList<>();
+                    tooltip.add(stack.getHoverName());
+                    tooltip.add(Component.literal(ingredient.sourceDescription())
+                            .withStyle(ChatFormatting.GRAY));
                     if (ingredient.displayChoices(this::resolveTag).size() > 1) {
-                        tooltip.add(Text.literal("Alternatives cycle automatically")
-                                .formatted(Formatting.DARK_PURPLE));
+                        tooltip.add(Component.literal("Alternatives cycle automatically")
+                                .withStyle(ChatFormatting.DARK_PURPLE));
                     }
                     addHover(slotX, slotY, slotX + 17, slotY + 17, tooltip, itemId);
                 }
             }
         }
-        context.drawText(textRenderer, Text.literal("→"), gridX + 56, gridY + 20, INK, false);
+        context.drawString(font, Component.literal("→"), gridX + 56, gridY + 20, INK, false);
         ItemStack result = itemStack(recipe.result());
-        drawItem(context, result, gridX + 70, gridY + 17);
+        renderItem(context, result, gridX + 70, gridY + 17);
         if (!result.isEmpty()) {
             addHover(gridX + 70, gridY + 17, gridX + 87, gridY + 34,
-                    List.of(result.getName(), Text.literal("Click to open its manual entry")
-                            .formatted(Formatting.DARK_PURPLE)), recipe.result());
+                    List.of(result.getHoverName(), Component.literal("Click to open its manual entry")
+                            .withStyle(ChatFormatting.DARK_PURPLE)), recipe.result());
         }
         if (recipe.resultCount() > 1) {
-            context.drawTextWithShadow(textRenderer, Text.literal(Integer.toString(recipe.resultCount())),
+            context.drawString(font, Component.literal(Integer.toString(recipe.resultCount())),
                     gridX + 80, gridY + 28, 0xffffffff);
         }
         String kind = recipe.kind() == GuideRecipe.Kind.SHAPED ? "SHAPED" : "SHAPELESS";
-        context.drawText(textRenderer, Text.literal(kind), gridX, gridY + 55, MUTED_INK, false);
+        context.drawString(font, Component.literal(kind), gridX, gridY + 55, MUTED_INK, false);
     }
 
     private List<String> resolveTag(String tagId) {
-        Identifier id = Identifier.tryParse(tagId);
+        ResourceLocation id = ResourceLocation.tryParse(tagId);
         if (id == null) return List.of();
         List<String> resolved = new ArrayList<>();
-        for (RegistryEntry<Item> entry : Registries.ITEM.iterateEntries(TagKey.of(RegistryKeys.ITEM, id))) {
-            Identifier itemId = Registries.ITEM.getId(entry.value());
+        for (Holder<Item> entry : BuiltInRegistries.ITEM.getTagOrEmpty(TagKey.create(Registries.ITEM, id))) {
+            ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(entry.value());
             if (itemId != null) resolved.add(itemId.toString());
             if (resolved.size() == GuideIngredient.MAX_DISPLAY_CHOICES) break;
         }
@@ -415,42 +415,42 @@ public final class FieldManualScreen extends Screen {
 
     private static ItemStack itemStack(String itemId) {
         if (itemId == null || itemId.isEmpty()) return ItemStack.EMPTY;
-        Identifier id = Identifier.tryParse(itemId);
+        ResourceLocation id = ResourceLocation.tryParse(itemId);
         if (id == null) return ItemStack.EMPTY;
-        Item item = Registries.ITEM.getOrEmpty(id).orElse(null);
+        Item item = BuiltInRegistries.ITEM.getOptional(id).orElse(null);
         if (item == null) {
-            Block block = Registries.BLOCK.getOrEmpty(id).orElse(null);
+            Block block = BuiltInRegistries.BLOCK.getOptional(id).orElse(null);
             item = block == null ? null : block.asItem();
         }
         return item == null ? ItemStack.EMPTY : new ItemStack(item);
     }
 
-    private static void drawItem(DrawContext context, ItemStack stack, int x, int y) {
-        if (!stack.isEmpty()) context.drawItem(stack, x, y);
+    private static void renderItem(GuiGraphics context, ItemStack stack, int x, int y) {
+        if (!stack.isEmpty()) context.renderItem(stack, x, y);
     }
 
-    private List<OrderedText> wrap(String text, int pixelWidth, double scale) {
+    private List<FormattedCharSequence> wrap(String text, int pixelWidth, double scale) {
         int logicalWidth = Math.max(32, (int) Math.floor(pixelWidth / scale));
-        return textRenderer.wrapLines(Text.literal(text), logicalWidth);
+        return font.split(Component.literal(text), logicalWidth);
     }
 
-    private void drawScaled(DrawContext context, Text text, int x, int y, int color,
+    private void drawScaled(GuiGraphics context, Component text, int x, int y, int color,
             boolean shadow, double scale) {
-        drawScaled(context, text.asOrderedText(), x, y, color, shadow, scale);
+        drawScaled(context, text.getVisualOrderText(), x, y, color, shadow, scale);
     }
 
-    private void drawScaled(DrawContext context, OrderedText text, int x, int y, int color,
+    private void drawScaled(GuiGraphics context, FormattedCharSequence text, int x, int y, int color,
             boolean shadow, double scale) {
-        context.getMatrices().push();
-        context.getMatrices().scale((float) scale, (float) scale, 1.0f);
+        context.pose().pushPose();
+        context.pose().scale((float) scale, (float) scale, 1.0f);
         int logicalX = (int) Math.floor(x / scale);
         int logicalY = (int) Math.floor(y / scale);
-        if (shadow) context.drawTextWithShadow(textRenderer, text, logicalX, logicalY, color);
-        else context.drawText(textRenderer, text, logicalX, logicalY, color, false);
-        context.getMatrices().pop();
+        if (shadow) context.drawString(font, text, logicalX, logicalY, color);
+        else context.drawString(font, text, logicalX, logicalY, color, false);
+        context.pose().popPose();
     }
 
-    private void addHover(int x1, int y1, int x2, int y2, List<Text> tooltip, String contextId) {
+    private void addHover(int x1, int y1, int x2, int y2, List<Component> tooltip, String contextId) {
         int clippedY1 = Math.max(contentTop(), y1);
         int clippedY2 = Math.min(height - 10, y2);
         if (clippedY2 > clippedY1) {
@@ -495,7 +495,7 @@ public final class FieldManualScreen extends Screen {
     }
 
     private record HoverRegion(int x1, int y1, int x2, int y2,
-            List<Text> tooltip, String contextId) {
+            List<Component> tooltip, String contextId) {
         private boolean contains(double x, double y) {
             return x >= x1 && x < x2 && y >= y1 && y < y2;
         }

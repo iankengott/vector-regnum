@@ -1,69 +1,69 @@
 package vectorregnum.neoforge.automation;
 
 import com.mojang.serialization.MapCodec;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.BlockWithEntity;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.BlockEntityTicker;
-import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 /** Redstone/data ingress and comparator egress for one persisted authored program. */
-public final class AutomationRelayBlock extends BlockWithEntity {
-    public static final MapCodec<AutomationRelayBlock> CODEC = createCodec(AutomationRelayBlock::new);
+public final class AutomationRelayBlock extends BaseEntityBlock {
+    public static final MapCodec<AutomationRelayBlock> CODEC = simpleCodec(AutomationRelayBlock::new);
 
-    public AutomationRelayBlock(Settings settings) {
-        super(settings);
+    public AutomationRelayBlock(Properties properties) {
+        super(properties);
     }
 
     @Override
-    protected MapCodec<? extends BlockWithEntity> getCodec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
 
     @Override
-    protected BlockRenderType getRenderType(BlockState state) {
-        return BlockRenderType.MODEL;
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new AutomationRelayBlockEntity(pos, state);
     }
 
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state,
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
             BlockEntityType<T> type) {
-        return world.isClient() ? null : validateTicker(type,
-                AutomationContent.AUTOMATION_RELAY_ENTITY, AutomationRelayBlockEntity::tick);
+        return level.isClientSide() ? null : createTickerHelper(type,
+                AutomationContent.automationRelayEntity(), AutomationRelayBlockEntity::tick);
     }
 
     @Override
-    protected ActionResult onUse(BlockState state, World world, BlockPos pos,
-            PlayerEntity player, BlockHitResult hit) {
-        if (world.isClient()) return ActionResult.SUCCESS;
-        if (player instanceof ServerPlayerEntity serverPlayer
-                && world.getBlockEntity(pos) instanceof AutomationRelayBlockEntity relay) {
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
+            Player player, BlockHitResult hit) {
+        if (level.isClientSide()) return InteractionResult.SUCCESS;
+        if (player instanceof ServerPlayer serverPlayer
+                && level.getBlockEntity(pos) instanceof AutomationRelayBlockEntity relay) {
             relay.reportStatus(serverPlayer);
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
-        return ActionResult.FAIL;
+        return InteractionResult.FAIL;
     }
 
     @Override
-    protected boolean hasComparatorOutput(BlockState state) {
+    protected boolean hasAnalogOutputSignal(BlockState state) {
         return true;
     }
 
     @Override
-    protected int getComparatorOutput(BlockState state, World world, BlockPos pos) {
-        return world.getBlockEntity(pos) instanceof AutomationRelayBlockEntity relay
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof AutomationRelayBlockEntity relay
                 ? relay.comparatorOutput() : 0;
     }
 }

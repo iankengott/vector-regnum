@@ -1,46 +1,46 @@
 package vectorregnum.neoforge.progression;
 
 import com.mojang.serialization.MapCodec;
-import net.minecraft.block.Block;
-import net.minecraft.block.BlockRenderType;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.BlockWithEntity;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.BlockEntityTicker;
-import net.minecraft.block.entity.BlockEntityType;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.state.StateManager;
-import net.minecraft.state.property.EnumProperty;
-import net.minecraft.text.Text;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.ItemActionResult;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.world.World;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RenderShape;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntityTicker;
+import net.minecraft.world.level.block.entity.BlockEntityType;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.level.block.state.properties.EnumProperty;
+import net.minecraft.world.phys.BlockHitResult;
 
 /** One of three persistent storage tiers which owns all server-side network transfer. */
-public final class ManaReservoirBlock extends BlockWithEntity {
-    public static final MapCodec<ManaReservoirBlock> CODEC = createCodec(ManaReservoirBlock::new);
+public final class ManaReservoirBlock extends BaseEntityBlock {
+    public static final MapCodec<ManaReservoirBlock> CODEC = simpleCodec(ManaReservoirBlock::new);
     public static final EnumProperty<ManaAffinity> AFFINITY =
-            EnumProperty.of("affinity", ManaAffinity.class);
+            EnumProperty.create("affinity", ManaAffinity.class);
     private final ManaReservoir.Tier tier;
     private final ManaTransportRules.ConduitTier conduitTier;
 
-    public ManaReservoirBlock(Settings settings) {
-        this(settings, ManaReservoir.Tier.CRYSTAL_VIAL,
+    public ManaReservoirBlock(Properties properties) {
+        this(properties, ManaReservoir.Tier.CRYSTAL_VIAL,
                 ManaTransportRules.ConduitTier.RAW_CRYSTAL);
     }
 
-    public ManaReservoirBlock(Settings settings, ManaReservoir.Tier tier,
+    public ManaReservoirBlock(Properties properties, ManaReservoir.Tier tier,
             ManaTransportRules.ConduitTier conduitTier) {
-        super(settings);
+        super(properties);
         this.tier = tier;
         this.conduitTier = conduitTier;
-        setDefaultState(getStateManager().getDefaultState().with(AFFINITY, ManaAffinity.ARCANE));
+        registerDefaultState(stateDefinition.any().setValue(AFFINITY, ManaAffinity.ARCANE));
     }
 
     public ManaReservoir.Tier tier() {
@@ -52,89 +52,90 @@ public final class ManaReservoirBlock extends BlockWithEntity {
     }
 
     @Override
-    protected MapCodec<? extends BlockWithEntity> getCodec() {
+    protected MapCodec<? extends BaseEntityBlock> codec() {
         return CODEC;
     }
 
     @Override
-    protected BlockRenderType getRenderType(BlockState state) {
-        return BlockRenderType.MODEL;
+    protected RenderShape getRenderShape(BlockState state) {
+        return RenderShape.MODEL;
     }
 
     @Override
-    public BlockEntity createBlockEntity(BlockPos pos, BlockState state) {
+    public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
         return new ManaReservoirBlockEntity(pos, state);
     }
 
     @Override
-    protected void appendProperties(StateManager.Builder<Block, BlockState> builder) {
+    protected void createBlockStateDefinition(StateDefinition.Builder<Block, BlockState> builder) {
         builder.add(AFFINITY);
     }
 
     @Override
-    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(World world, BlockState state,
+    public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state,
             BlockEntityType<T> type) {
-        return world.isClient() ? null : validateTicker(type,
-                ProgressionContent.MANA_RESERVOIR_ENTITY, ManaReservoirBlockEntity::tick);
+        return level.isClientSide() ? null : createTickerHelper(type,
+                ProgressionContent.MANA_RESERVOIR_ENTITY.get(), ManaReservoirBlockEntity::tick);
     }
 
     @Override
-    protected ItemActionResult onUseWithItem(ItemStack stack, BlockState state, World world,
-            BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit) {
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level,
+            BlockPos pos, Player player, InteractionHand hand, BlockHitResult hit) {
         ManaAffinity affinity = tuningAffinity(stack);
         if (affinity == null) {
-            return ItemActionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
-        if (world.isClient()) {
-            return ItemActionResult.SUCCESS;
+        if (level.isClientSide()) {
+            return ItemInteractionResult.SUCCESS;
         }
-        BlockEntity entity = world.getBlockEntity(pos);
+        BlockEntity entity = level.getBlockEntity(pos);
         if (!(entity instanceof ManaReservoirBlockEntity reservoir) || !reservoir.canRetune()) {
-            player.sendMessage(Text.translatable("message.vector_regnum.cell_tune_requires_empty"), true);
-            return ItemActionResult.FAIL;
+            player.displayClientMessage(Component.translatable("message.vector_regnum.cell_tune_requires_empty"), true);
+            return ItemInteractionResult.FAIL;
         }
-        world.setBlockState(pos, state.with(AFFINITY, affinity), Block.NOTIFY_ALL);
+        level.setBlock(pos, state.setValue(AFFINITY, affinity), Block.UPDATE_ALL);
         reservoir.setAffinity(affinity);
-        if (!player.getAbilities().creativeMode) {
-            stack.decrement(1);
+        if (!player.getAbilities().instabuild) {
+            stack.shrink(1);
         }
-        player.sendMessage(Text.translatable("message.vector_regnum.cell_tuned", affinity.asString()), true);
-        return ItemActionResult.SUCCESS;
+        player.displayClientMessage(Component.translatable("message.vector_regnum.cell_tuned",
+                affinity.getSerializedName()), true);
+        return ItemInteractionResult.SUCCESS;
     }
 
     @Override
-    protected ActionResult onUse(BlockState state, World world, BlockPos pos,
-            PlayerEntity player, BlockHitResult hit) {
-        if (world.isClient()) {
-            return ActionResult.SUCCESS;
+    protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos,
+            Player player, BlockHitResult hit) {
+        if (level.isClientSide()) {
+            return InteractionResult.SUCCESS;
         }
-        if (!(player instanceof ServerPlayerEntity serverPlayer)
-                || !(world.getBlockEntity(pos) instanceof ManaReservoirBlockEntity reservoir)) {
-            return ActionResult.FAIL;
+        if (!(player instanceof ServerPlayer serverPlayer)
+                || !(level.getBlockEntity(pos) instanceof ManaReservoirBlockEntity reservoir)) {
+            return InteractionResult.FAIL;
         }
-        if (!serverPlayer.isSneaking()) {
+        if (!serverPlayer.isShiftKeyDown()) {
             reservoir.reportStatus(serverPlayer);
-            return ActionResult.SUCCESS;
+            return InteractionResult.SUCCESS;
         }
-        return reservoir.drawTo(serverPlayer) ? ActionResult.SUCCESS : ActionResult.FAIL;
+        return reservoir.drawTo(serverPlayer) ? InteractionResult.SUCCESS : InteractionResult.FAIL;
     }
 
     @Override
-    protected boolean hasComparatorOutput(BlockState state) {
+    protected boolean hasAnalogOutputSignal(BlockState state) {
         return true;
     }
 
     @Override
-    protected int getComparatorOutput(BlockState state, World world, BlockPos pos) {
-        return world.getBlockEntity(pos) instanceof ManaReservoirBlockEntity reservoir
-                ? Math.round(reservoir.stored() * 15.0f / reservoir.capacity()) : 0;
+    protected int getAnalogOutputSignal(BlockState state, Level level, BlockPos pos) {
+        return level.getBlockEntity(pos) instanceof ManaReservoirBlockEntity reservoir
+                ? Math.round(reservoir.stored() * 15.0F / reservoir.capacity()) : 0;
     }
 
     private static ManaAffinity tuningAffinity(ItemStack stack) {
-        if (stack.isOf(Items.BLAZE_POWDER)) return ManaAffinity.FIRE;
-        if (stack.isOf(Items.SNOWBALL)) return ManaAffinity.FROST;
-        if (stack.isOf(Items.ENDER_PEARL)) return ManaAffinity.VOID;
-        if (stack.isOf(Items.AMETHYST_SHARD)) return ManaAffinity.ARCANE;
+        if (stack.is(Items.BLAZE_POWDER)) return ManaAffinity.FIRE;
+        if (stack.is(Items.SNOWBALL)) return ManaAffinity.FROST;
+        if (stack.is(Items.ENDER_PEARL)) return ManaAffinity.VOID;
+        if (stack.is(Items.AMETHYST_SHARD)) return ManaAffinity.ARCANE;
         return null;
     }
 }

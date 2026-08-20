@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "registries": {
+    "blocks": [
+      "vector_regnum:mage_light",
+      "vector_regnum:oracle_signal",
+      "vector_regnum:created_stone",
+      "vector_regnum:created_ice",
+      "vector_regnum:created_water",
+      "vector_regnum:created_fire",
+      "vector_regnum:created_light",
+      "vector_regnum:created_arcane_force",
+      "vector_regnum:carved_spell_tablet",
+      "vector_regnum:mana_crystal_node",
+      "vector_regnum:raw_crystal_conduit",
+      "vector_regnum:runed_conduit",
+      "vector_regnum:resonant_conduit",
+      "vector_regnum:crystal_vial",
+      "vector_regnum:runed_mana_cell",
+      "vector_regnum:resonant_vault",
+      "vector_regnum:automation_relay"
+    ],
+    "items": [
+      "vector_regnum:sigil_tome",
+      "vector_regnum:spell_scroll",
+      "vector_regnum:spell_book",
+      "vector_regnum:carved_spell_tablet",
+      "vector_regnum:mana_crystal_shard",
+      "vector_regnum:mana_crystal_node",
+      "vector_regnum:raw_crystal_conduit",
+      "vector_regnum:runed_conduit",
+      "vector_regnum:resonant_conduit",
+      "vector_regnum:crystal_vial",
+      "vector_regnum:runed_mana_cell",
+      "vector_regnum:resonant_vault",
+      "vector_regnum:automation_relay"
+    ],
+    "block_entity_types": [
+      "vector_regnum:carved_spell_tablet",
+      "vector_regnum:mana_crystal_node",
+      "vector_regnum:mana_reservoir",
+      "vector_regnum:automation_relay"
+    ]
+  },
+  "attachments": [
+    "vector_regnum:mana",
+    "vector_regnum:mana_capacity",
+    "vector_regnum:mana_affinity",
+    "vector_regnum:attuned_source",
+    "vector_regnum:attuned_dimension",
+    "vector_regnum:channel_lock_until",
+    "vector_regnum:progression_unlocks",
+    "vector_regnum:authored_circle",
+    "vector_regnum:received_tutorial_guide",
+    "vector_regnum:tutorial_guide_version",
+    "vector_regnum:player_data_schema",
+    "vector_regnum:spell_claims"
+  ],
+  "payloads": [
+    "vector_regnum:circle_editor_request",
+    "vector_regnum:circle_editor_snapshot",
+    "vector_regnum:progression_sync",
+    "vector_regnum:ponder_trace_request",
+    "vector_regnum:ponder_trace",
+    "vector_regnum:presentation_start",
+    "vector_regnum:presentation_signal"
+  ],
+  "creative_tabs": {
+    "minecraft:tools_and_utilities": [
+      "vector_regnum:sigil_tome",
+      "vector_regnum:spell_scroll",
+      "vector_regnum:spell_book",
+      "vector_regnum:carved_spell_tablet"
+    ],
+    "minecraft:ingredients": [
+      "vector_regnum:mana_crystal_shard"
+    ],
+    "minecraft:functional_blocks": [
+      "vector_regnum:mana_crystal_node",
+      "vector_regnum:raw_crystal_conduit",
+      "vector_regnum:runed_conduit",
+      "vector_regnum:resonant_conduit",
+      "vector_regnum:crystal_vial",
+      "vector_regnum:runed_mana_cell",
+      "vector_regnum:resonant_vault"
+    ],
+    "minecraft:redstone_blocks": [
+      "vector_regnum:automation_relay"
+    ]
+  },
+  "command_roots": [
+    "vectorregnum"
+  ]
+}
