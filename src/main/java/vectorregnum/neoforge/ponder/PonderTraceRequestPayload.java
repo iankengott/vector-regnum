@@ -1,17 +1,17 @@
 package vectorregnum.neoforge.ponder;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /** Client request for its latest completed server-authored trace. */
-public record PonderTraceRequestPayload(String source) implements CustomPayload {
-    public static final Id<PonderTraceRequestPayload> ID = new Id<>(
-            Identifier.of("vector_regnum", "ponder_trace_request"));
-    public static final PacketCodec<RegistryByteBuf, PonderTraceRequestPayload> CODEC = PacketCodec.tuple(
-            PacketCodecs.string(32), PonderTraceRequestPayload::source,
+public record PonderTraceRequestPayload(String source) implements CustomPacketPayload {
+    public static final Type<PonderTraceRequestPayload> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath("vector_regnum", "ponder_trace_request"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PonderTraceRequestPayload> CODEC = StreamCodec.composite(
+            ByteBufCodecs.stringUtf8(32), PonderTraceRequestPayload::source,
             PonderTraceRequestPayload::new);
 
     public PonderTraceRequestPayload {
@@ -21,7 +21,7 @@ public record PonderTraceRequestPayload(String source) implements CustomPayload 
     }
 
     @Override
-    public Id<? extends CustomPayload> getId() {
-        return ID;
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 }

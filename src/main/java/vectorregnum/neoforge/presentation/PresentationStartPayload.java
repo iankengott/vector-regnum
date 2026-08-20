@@ -1,21 +1,21 @@
 package vectorregnum.neoforge.presentation;
 
 import java.util.UUID;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import vectorregnum.core.presentation.PresentationProgramCodec;
 
 /** One compact immutable presentation score, broadcast once per accepted cast. */
 public record PresentationStartPayload(long instanceId, UUID casterId, long serverTick,
         double originX, double originY, double originZ,
         double directionX, double directionY, double directionZ,
-        String encodedProgram) implements CustomPayload {
-    public static final Id<PresentationStartPayload> ID = new Id<>(
-            Identifier.of("vector_regnum", "presentation_start"));
-    public static final PacketCodec<RegistryByteBuf, PresentationStartPayload> CODEC =
-            PacketCodec.of(PresentationStartPayload::write, PresentationStartPayload::new);
+        String encodedProgram) implements CustomPacketPayload {
+    public static final Type<PresentationStartPayload> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath("vector_regnum", "presentation_start"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PresentationStartPayload> CODEC =
+            StreamCodec.of((buffer, value) -> value.write(buffer), PresentationStartPayload::new);
 
     public PresentationStartPayload {
         if (instanceId < 0 || casterId == null || serverTick < 0
@@ -26,20 +26,20 @@ public record PresentationStartPayload(long instanceId, UUID casterId, long serv
         }
     }
 
-    private PresentationStartPayload(RegistryByteBuf buffer) {
-        this(buffer.readVarLong(), buffer.readUuid(), buffer.readVarLong(),
+    private PresentationStartPayload(RegistryFriendlyByteBuf buffer) {
+        this(buffer.readVarLong(), buffer.readUUID(), buffer.readVarLong(),
                 buffer.readDouble(), buffer.readDouble(), buffer.readDouble(),
                 buffer.readDouble(), buffer.readDouble(), buffer.readDouble(),
-                buffer.readString(PresentationProgramCodec.MAX_ENCODED_LENGTH));
+                buffer.readUtf(PresentationProgramCodec.MAX_ENCODED_LENGTH));
     }
 
-    private void write(RegistryByteBuf buffer) {
+    private void write(RegistryFriendlyByteBuf buffer) {
         buffer.writeVarLong(instanceId);
-        buffer.writeUuid(casterId);
+        buffer.writeUUID(casterId);
         buffer.writeVarLong(serverTick);
         buffer.writeDouble(originX); buffer.writeDouble(originY); buffer.writeDouble(originZ);
         buffer.writeDouble(directionX); buffer.writeDouble(directionY); buffer.writeDouble(directionZ);
-        buffer.writeString(encodedProgram, PresentationProgramCodec.MAX_ENCODED_LENGTH);
+        buffer.writeUtf(encodedProgram, PresentationProgramCodec.MAX_ENCODED_LENGTH);
     }
 
     private static boolean finite(double... values) {
@@ -47,5 +47,5 @@ public record PresentationStartPayload(long instanceId, UUID casterId, long serv
         return true;
     }
 
-    @Override public Id<? extends CustomPayload> getId() { return ID; }
+    @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
 }

@@ -1,18 +1,18 @@
 package vectorregnum.neoforge.editor;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /** Bounded client-to-server editor action. The server owns the circle mutation. */
-public record CircleEditorPayload(String action, String data) implements CustomPayload {
-    public static final Id<CircleEditorPayload> ID = new Id<>(
-            Identifier.of("vector_regnum", "circle_editor_request"));
-    public static final PacketCodec<RegistryByteBuf, CircleEditorPayload> CODEC = PacketCodec.tuple(
-            PacketCodecs.string(64), CircleEditorPayload::action,
-            PacketCodecs.string(8_192), CircleEditorPayload::data,
+public record CircleEditorPayload(String action, String data) implements CustomPacketPayload {
+    public static final Type<CircleEditorPayload> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath("vector_regnum", "circle_editor_request"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, CircleEditorPayload> CODEC = StreamCodec.composite(
+            ByteBufCodecs.stringUtf8(64), CircleEditorPayload::action,
+            ByteBufCodecs.stringUtf8(8_192), CircleEditorPayload::data,
             CircleEditorPayload::new);
 
     public CircleEditorPayload {
@@ -23,7 +23,7 @@ public record CircleEditorPayload(String action, String data) implements CustomP
     }
 
     @Override
-    public Id<? extends CustomPayload> getId() {
-        return ID;
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 }

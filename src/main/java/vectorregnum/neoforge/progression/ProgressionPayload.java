@@ -3,18 +3,18 @@ package vectorregnum.neoforge.progression;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /** Compact server-authoritative discovery snapshot sent to the client manual. */
-public record ProgressionPayload(String serializedUnlocks) implements CustomPayload {
-    public static final Id<ProgressionPayload> ID = new Id<>(
-            Identifier.of("vector_regnum", "progression_sync"));
-    public static final PacketCodec<RegistryByteBuf, ProgressionPayload> CODEC =
-            PacketCodec.tuple(PacketCodecs.STRING, ProgressionPayload::serializedUnlocks,
+public record ProgressionPayload(String serializedUnlocks) implements CustomPacketPayload {
+    public static final Type<ProgressionPayload> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath("vector_regnum", "progression_sync"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, ProgressionPayload> CODEC =
+            StreamCodec.composite(ByteBufCodecs.STRING_UTF8, ProgressionPayload::serializedUnlocks,
                     ProgressionPayload::new);
 
     public ProgressionPayload {
@@ -37,7 +37,7 @@ public record ProgressionPayload(String serializedUnlocks) implements CustomPayl
     }
 
     @Override
-    public Id<? extends CustomPayload> getId() {
-        return ID;
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 }

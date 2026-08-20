@@ -1,10 +1,10 @@
 package vectorregnum.neoforge.presentation;
 
 import java.util.Optional;
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 import vectorregnum.core.presentation.PresentationSignal;
 import vectorregnum.core.presentation.PresentationTrigger;
 import vectorregnum.core.semantic.SemanticOpcode;
@@ -12,11 +12,11 @@ import vectorregnum.core.vm2.Opcode;
 
 /** Bounded authoritative execution hook; it carries resolved geometry, never gameplay decisions. */
 public record PresentationSignalPayload(long instanceId, PresentationSignal signal)
-        implements CustomPayload {
-    public static final Id<PresentationSignalPayload> ID = new Id<>(
-            Identifier.of("vector_regnum", "presentation_signal"));
-    public static final PacketCodec<RegistryByteBuf, PresentationSignalPayload> CODEC =
-            PacketCodec.of(PresentationSignalPayload::write, PresentationSignalPayload::new);
+        implements CustomPacketPayload {
+    public static final Type<PresentationSignalPayload> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath("vector_regnum", "presentation_signal"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PresentationSignalPayload> CODEC =
+            StreamCodec.of((buffer, value) -> value.write(buffer), PresentationSignalPayload::new);
 
     public PresentationSignalPayload {
         if (instanceId < 0 || signal == null) {
@@ -24,11 +24,11 @@ public record PresentationSignalPayload(long instanceId, PresentationSignal sign
         }
     }
 
-    private PresentationSignalPayload(RegistryByteBuf buffer) {
+    private PresentationSignalPayload(RegistryFriendlyByteBuf buffer) {
         this(buffer.readVarLong(), readSignal(buffer));
     }
 
-    private void write(RegistryByteBuf buffer) {
+    private void write(RegistryFriendlyByteBuf buffer) {
         buffer.writeVarLong(instanceId);
         buffer.writeVarLong(signal.sequence());
         buffer.writeVarLong(signal.tick());
@@ -39,7 +39,7 @@ public record PresentationSignalPayload(long instanceId, PresentationSignal sign
         buffer.writeDouble(signal.x()); buffer.writeDouble(signal.y()); buffer.writeDouble(signal.z());
     }
 
-    private static PresentationSignal readSignal(RegistryByteBuf buffer) {
+    private static PresentationSignal readSignal(RegistryFriendlyByteBuf buffer) {
         long sequence = buffer.readVarLong();
         long tick = buffer.readVarLong();
         PresentationTrigger.Kind kind = enumValue(PresentationTrigger.Kind.values(),
@@ -59,5 +59,5 @@ public record PresentationSignalPayload(long instanceId, PresentationSignal sign
         return values[index];
     }
 
-    @Override public Id<? extends CustomPayload> getId() { return ID; }
+    @Override public Type<? extends CustomPacketPayload> type() { return TYPE; }
 }

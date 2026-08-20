@@ -1,17 +1,17 @@
 package vectorregnum.neoforge.ponder;
 
-import net.minecraft.network.RegistryByteBuf;
-import net.minecraft.network.codec.PacketCodec;
-import net.minecraft.network.codec.PacketCodecs;
-import net.minecraft.network.packet.CustomPayload;
-import net.minecraft.util.Identifier;
+import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.network.codec.StreamCodec;
+import net.minecraft.network.codec.ByteBufCodecs;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
+import net.minecraft.resources.ResourceLocation;
 
 /** A complete bounded teaching trace built from authoritative server results. */
-public record PonderTracePayload(String encodedTimeline) implements CustomPayload {
-    public static final Id<PonderTracePayload> ID = new Id<>(
-            Identifier.of("vector_regnum", "ponder_trace"));
-    public static final PacketCodec<RegistryByteBuf, PonderTracePayload> CODEC = PacketCodec.tuple(
-            PacketCodecs.string(PonderTimelineCodec.MAX_ENCODED_LENGTH),
+public record PonderTracePayload(String encodedTimeline) implements CustomPacketPayload {
+    public static final Type<PonderTracePayload> TYPE = new Type<>(
+            ResourceLocation.fromNamespaceAndPath("vector_regnum", "ponder_trace"));
+    public static final StreamCodec<RegistryFriendlyByteBuf, PonderTracePayload> CODEC = StreamCodec.composite(
+            ByteBufCodecs.stringUtf8(PonderTimelineCodec.MAX_ENCODED_LENGTH),
             PonderTracePayload::encodedTimeline, PonderTracePayload::new);
 
     public PonderTracePayload {
@@ -30,7 +30,7 @@ public record PonderTracePayload(String encodedTimeline) implements CustomPayloa
     }
 
     @Override
-    public Id<? extends CustomPayload> getId() {
-        return ID;
+    public Type<? extends CustomPacketPayload> type() {
+        return TYPE;
     }
 }
