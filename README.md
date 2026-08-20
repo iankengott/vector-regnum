@@ -32,7 +32,7 @@ the quick-play endpoint to explicit IPv4. The execution record lives in
 |---|---|
 | Build | NeoForge 21.1.248, ModDevGradle 2.0.141, Mojang official mappings |
 | Loader surface | NeoForge `@Mod`, deferred registries, attachments, SavedData, payloads, events, custom-feature worldgen, client subscribers |
-| Automated suite | 172 JUnit tests and 17 production NeoForge GameTests |
+| Automated suite | 172 JUnit tests and 18 production NeoForge GameTests |
 | Live parity | Registries, payload directions, attachments, creative tab, and command root checked against a manifest |
 | Launch workflow | Guarded NixOS launcher and guarded Hermes server/client mirror on loopback port 25575 |
 
@@ -47,8 +47,9 @@ the parity GameTest before the source was restored.
 - **172 passing JUnit tests** covering the compatibility engine, typed VM,
   static stack analysis, semantics/presentation, circle authoring, media,
   guide/Ponder models, geology, transport, multiplayer policy, automation
-  ownership, progression, and spell-library contracts, plus **17 passing
-  production NeoForge GameTests** on an isolated headless server. The separate
+  ownership, progression, and spell-library contracts, plus **18 passing
+  production NeoForge GameTests** on an isolated headless server, including a
+  real Vector Step follow-up-VM regression. The separate
   frozen Fabric alpha at `c7371ca` retains its 170-test/16-GameTest record.
 - A Minecraft-independent `vm2` with numbers, booleans, points, vectors,
   entity references, immutable lists, Push/Pop/Dup memory, arithmetic, logic,
@@ -128,12 +129,14 @@ the parity GameTest before the source was restored.
 The full NeoForge workflow has been exercised on Hermes: remote Java 21
 tests/build, loopback-only server, quick-joined client, automated in-game
 preflight, and direct inspection of the priorities 1–19 showcase in
-`visual-evidence/hermes-window-20260820T065136Z.png`. A second process restart
+`visual-evidence/hermes-window-20260820T071914Z.png`. The latest process restart
 logged `persistence_claim=restored`, `player_schema=2`, and `unlocks_added=0`;
 both guarded units were stopped afterward. The real Main-PC shortcut then
 exposed and drove a fix for `localhost` resolving to IPv6 while the server
 listens on IPv4. The explicit `127.0.0.1` endpoint passes local build and
-Hermes client verification; its final Main-PC visual rerun remains.
+Hermes client verification. The post-audit Hermes run again joined through the
+explicit IPv4 endpoint and displayed the amethyst/copper showcase with
+Vector-Regnum items in the hotbar; its final Main-PC visual rerun remains.
 
 ## Build and test
 
@@ -156,7 +159,7 @@ JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
 ```
 
 `scripts/verify-port.sh` runs the clean build plus JSON, shell-syntax, and diff
-checks. The GameTest task must separately report all 17 required tests passed.
+checks. The GameTest task must separately report all 18 required tests passed.
 
 ## Play on the main PC
 
@@ -165,7 +168,8 @@ The executable `/home/iank/Desktop/Vector-Regnum.desktop` runs
 stages only this mod in an isolated flat world on `127.0.0.1:25575`, launches
 Minecraft through `steam-run`, and stops the private server when the client
 closes. It does not touch the normal Minecraft launcher, saves, modpacks, or
-port 25565.
+port 25565. Before starting anything, the launcher validates that the checked-in
+EULA, server port, and IPv4 loopback bind are unique and exact.
 
 ## Hermes development workflow
 

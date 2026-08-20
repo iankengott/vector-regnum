@@ -1,7 +1,7 @@
 # Priority 20 execution plan: Fabric to NeoForge 1.21.1
 
 Status: final local visual gate pending, 2026-08-20. The NeoForge baseline
-passes 172 JUnit tests, 17 production GameTests, live registration parity, and
+passes 172 JUnit tests, 18 production GameTests, live registration parity, and
 the guarded Hermes ladder. The first real Main-PC shortcut run found an IPv6
 `localhost` mismatch; explicit `127.0.0.1` is fixed and verified remotely, but
 the real shortcut still needs its final visual rerun before priority 20 closes.
@@ -405,12 +405,15 @@ phase 4 parity manifest and fails when any expected registry ID, attachment ID,
 payload ID, creative-tab membership, or command root is missing from the live
 game. The current suite cannot tell a working port from an empty one.
 
-Gate: all 17 GameTest methods (the 16 ports plus live registration parity) pass
+Gate: all 18 GameTest methods (the 16 ports, live registration parity, and the
+semantic follow-up-VM regression) pass
 on NeoForge through `runGameTestServer` with a real process exit code, and the
 new registration test fails when a registration is deliberately broken. This
 was proved by temporarily renaming the live `sigil_tome` ID: parity was the
 sole required failure, the mutation was restored, and two consecutive
-persisted-world runs then passed all 17 tests.
+persisted-world runs then passed all 17 tests. A final audit then found that a
+semantic impulse could append a follow-up VM during active iteration; deferred
+queueing and a real Vector Step GameTest raised the matrix to 18 tests.
 
 ### Phase 11 — Ladder, launcher, mirror, handoff (6-9 h, parent)
 

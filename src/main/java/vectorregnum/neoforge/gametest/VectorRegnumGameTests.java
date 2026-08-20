@@ -31,6 +31,7 @@ import vectorregnum.core.circle.MagicCircle;
 import vectorregnum.core.circle.PlacedSigil;
 import vectorregnum.core.circle.SpellArtifact;
 import vectorregnum.neoforge.CircleAuthoringService;
+import vectorregnum.neoforge.LibrarySpellService;
 import vectorregnum.neoforge.MageLightBlock;
 import vectorregnum.neoforge.ManaData;
 import vectorregnum.neoforge.OracleSignalBlock;
@@ -43,6 +44,8 @@ import vectorregnum.neoforge.progression.ManaCrystalNodeBlockEntity;
 import vectorregnum.neoforge.progression.ManaDrawRules;
 import vectorregnum.neoforge.progression.ManaSourceGrowthRules;
 import vectorregnum.neoforge.progression.ProgressionContent;
+import vectorregnum.neoforge.progression.ProgressionData;
+import vectorregnum.neoforge.progression.ProgressionUnlock;
 
 import java.util.List;
 import java.util.Optional;
@@ -308,6 +311,21 @@ public final class VectorRegnumGameTests {
         context.assertTrue(reloadedOracle.hasScheduledTick(absoluteOracle, TemporarySpellContent.oracleSignal()),
                 "serialized oracle expiry should remain queued after scheduler reload");
         context.succeed();
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public void semanticImpulseQueuesFollowupVmWithoutMutatingActiveIteration(GameTestHelper context) {
+        ServerPlayer player = connectedCreativePlayer(context);
+        ManaData.setForTesting(player, 1_000.0, 1_000.0);
+        ProgressionData.unlock(player, ProgressionUnlock.MOVEMENT_WEAVING);
+        context.assertTrue(LibrarySpellService.cast(player, "vector_step"),
+                "Vector Step should queue its semantic VM");
+
+        context.runAfterDelay(4, () -> {
+            context.assertTrue(player.getDeltaMovement().lengthSqr() > 0.0,
+                    "the follow-up impulse VM should execute on a later server tick");
+            completeAfterCleanup(context, player);
+        });
     }
 
     private static LevelChunkTicks<Block> reloadScheduler(

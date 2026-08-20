@@ -8,6 +8,27 @@ readonly SERVER_UNIT="vector-regnum-local-server.service"
 readonly SERVER_PORT="25575"
 
 server_started=false
+check_config_only=false
+
+case "${1-}" in
+    --check-config)
+        (( $# == 1 )) || {
+            printf 'Usage: scripts/local-play.sh [--check-config]\n' >&2
+            exit 2
+        }
+        check_config_only=true
+        ;;
+    '')
+        (( $# == 0 )) || {
+            printf 'Usage: scripts/local-play.sh [--check-config]\n' >&2
+            exit 2
+        }
+        ;;
+    *)
+        printf 'Usage: scripts/local-play.sh [--check-config]\n' >&2
+        exit 2
+        ;;
+esac
 
 pause_on_error() {
     if [[ -t 0 ]]; then
@@ -25,6 +46,15 @@ die() {
 unit_load_state() {
     systemctl --user show "$SERVER_UNIT" --property=LoadState --value 2>/dev/null ||
         printf 'not-found\n'
+}
+
+port_is_listening() {
+    ss -H -ltn "sport = :$SERVER_PORT" | grep -q .
+}
+
+port_is_loopback_only() {
+    ss -H -ltn "sport = :$SERVER_PORT" |
+        "$SCRIPT_DIR/check-dev-listener.sh" "$SERVER_PORT" >/dev/null
 }
 
 # Invoked from the EXIT-trap cleanup path.
@@ -58,8 +88,11 @@ trap 'exit 143' TERM
 trap 'exit 129' HUP
 
 [[ -x "$REPO_ROOT/gradlew" ]] || die "Gradle wrapper is missing: $REPO_ROOT/gradlew"
-[[ -f "$REPO_ROOT/dev/hermes/eula.txt" ]] || die 'development EULA file is missing'
-[[ -f "$REPO_ROOT/dev/hermes/server.properties" ]] || die 'development server properties are missing'
+"$SCRIPT_DIR/check-dev-server-config.sh" "$REPO_ROOT/dev/hermes" "$SERVER_PORT" ||
+    die 'development server configuration failed isolation checks'
+if [[ "$check_config_only" == true ]]; then
+    exit 0
+fi
 command -v nix >/dev/null || die 'nix is unavailable'
 command -v steam-run >/dev/null || die 'steam-run is unavailable'
 command -v systemd-run >/dev/null || die 'systemd-run is unavailable'
@@ -75,7 +108,7 @@ done
 
 [[ "$(unit_load_state)" == "not-found" ]] ||
     die "$SERVER_UNIT already exists; another Vector-Regnum launch may be active"
-if ss -H -ltn "sport = :$SERVER_PORT" | grep -q .; then
+if port_is_listening; then
     die "port $SERVER_PORT is already in use"
 fi
 
@@ -106,7 +139,9 @@ server_started=true
 
 printf 'Waiting for the private world to become ready'
 for _ in {1..300}; do
-    if ss -H -ltn "sport = :$SERVER_PORT" | grep -q .; then
+    if port_is_listening; then
+        port_is_loopback_only ||
+            die "port $SERVER_PORT opened on an address other than 127.0.0.1"
         printf ' ready.\nLaunching Minecraft...\n\n'
         break
     fi
@@ -119,8 +154,8 @@ for _ in {1..300}; do
     sleep 1
 done
 
-ss -H -ltn "sport = :$SERVER_PORT" | grep -q . ||
-    die "the server did not open port $SERVER_PORT within five minutes"
+port_is_loopback_only ||
+    die "the server did not open only 127.0.0.1:$SERVER_PORT within five minutes"
 
 set +e
 JAVA_HOME="$vector_jdk" PATH="$vector_path" \

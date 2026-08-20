@@ -28,7 +28,7 @@ verification are complete, but its final Main-PC desktop-launch visual rerun
 remains after the quick-play endpoint was corrected to explicit IPv4. Priority
 20 is therefore still the first unfinished canonical item. It establishes the NeoForge 1.21.1 build,
 registrations, persistence, networking, lifecycle, world generation, client
-runtime, guarded launchers, 172-test JUnit suite, and 17-test production
+runtime, guarded launchers, 172-test JUnit suite, and 18-test production
 NeoForge GameTest matrix while retaining the priorities 1–19 behavior.
 Always re-read `ROADMAP.md` before reporting or implementing work because it
 supersedes this dated checkpoint whenever the queue changes.
@@ -103,13 +103,14 @@ not complete without the full NeoForge ladder.
    task_jdk=$(nix eval --raw nixpkgs#jdk21.outPath)
    JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
      ./gradlew --no-daemon clean test build
+   JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
      ./gradlew --no-daemon runGameTestServer
    find src -type f -name '*.json' -print0 | xargs -0 -n1 jq empty
    find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
    git diff --check
    ```
 
-   The GameTest process must report all 17 required tests passed. Its live
+   The GameTest process must report all 18 required tests passed. Its live
    parity test validates registry IDs, attachments, payload directions,
    creative-tab membership, and the command root against
    `data/vector_regnum/registration_parity.json`.

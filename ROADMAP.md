@@ -16,7 +16,7 @@ art, UX, or production hardening is complete.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Frost Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 172 JUnit/contract tests, 17 production NeoForge GameTests, plus real
+- [x] 172 JUnit/contract tests, 18 production NeoForge GameTests, plus real
   local/Hermes server boots and direct visual inspection.
 
 ## Priorities 1–10 milestone
@@ -120,7 +120,7 @@ acceptance scope.
     21.1.248 and ModDevGradle with Mojang/Parchment mappings. Registrations,
     attachments and claim SavedData, seven payloads, lifecycle/events,
     custom-feature worldgen, client rendering/guide, commands, guarded NixOS
-    and Hermes launchers, 172 JUnit tests, and 17 live NeoForge GameTests pass
+    and Hermes launchers, 172 JUnit tests, and 18 live NeoForge GameTests pass
     their gates. The manifest-driven parity test queries the running
     registries, payload directions, attachments, creative tab, and command
     dispatcher and was proved by an intentional negative control. Behavioral
@@ -262,7 +262,7 @@ acceptance scope.
   media/block-entity round trips, crystal interactions, timers, serialized
   restart contracts, two-player isolation, claims/death migration, relay
   persistence, remote ownership, and redstone/data behavior.
-- [x] Seventeen production NeoForge GameTests replace the legacy integration
+- [x] Eighteen production NeoForge GameTests replace and extend the legacy integration
   coverage and add live registration parity while preserving and expanding the
   loader-neutral JUnit suite.
 - [ ] Configuration, balancing, profiling, localization beyond English,

@@ -16,9 +16,15 @@ NixOS graphics-driver access.
 Closing Minecraft triggers the launcher's cleanup trap, which stops and
 collects the server unit. The launcher refuses unexpected JARs in either dev
 `mods/` directory, a second active launcher, and any pre-existing port-25575
-listener. The desktop entry calls `/run/current-system/sw/bin/bash`, not a
-versioned `/nix/store` system path, so weekly Nix garbage collection cannot
-break it.
+listener. It also runs `scripts/check-dev-server-config.sh` before starting and
+requires exactly `eula=true`, `server-port=25575`, and
+`server-ip=127.0.0.1`; `scripts/verify-port.sh` exercises both its positive and
+unsafe-fixture paths. Its readiness gate also inspects the live socket and
+uses `scripts/check-dev-listener.sh` to reject wildcard, IPv6, or duplicate
+listeners; the verifier exercises those negative fixtures too. The desktop entry calls
+`/run/current-system/sw/bin/bash`,
+not a versioned `/nix/store` system path, so weekly Nix garbage collection
+cannot break it.
 
 ## Hermes development workflow
 
@@ -47,7 +53,7 @@ scripts/hermes-client.sh logs
 
 ## Production NeoForge GameTests
 
-The ordinary Gradle `test` task runs JUnit and contract tests. The 17 production
+The ordinary Gradle `test` task runs JUnit and contract tests. The 18 production
 NeoForge GameTests must additionally run inside the real isolated GameTest
 server when their integration surface changes:
 
@@ -57,11 +63,12 @@ JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
   ./gradlew --no-daemon runGameTestServer
 ```
 
-The runner exits after the matrix completes and must report all 17 required
+The runner exits after the matrix completes and must report all 18 required
 tests passed. The tests cover live registration parity, commands, players,
 attachments, media/tablet and crystal block entities, scheduled expiry,
 serialized tick-queue reload, claim/death migration, relay persistence, remote
-ownership, and redstone/data automation. The parity test reads
+ownership, redstone/data automation, and safe follow-up VM queueing from a real
+Vector Step cast. The parity test reads
 `data/vector_regnum/registration_parity.json` and queries the running registry,
 payload, attachment, creative-tab, and command state; update that manifest when
 an intentional registration changes.

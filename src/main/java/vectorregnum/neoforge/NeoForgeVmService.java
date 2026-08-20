@@ -54,9 +54,11 @@ import java.util.function.BiConsumer;
 public final class NeoForgeVmService {
     private static final int PONDER_LIVE_INTERVAL_TICKS = 10;
     private static final List<ActiveVm> ACTIVE_VMS = new ArrayList<>();
+    private static final List<ActiveVm> PENDING_VMS = new ArrayList<>();
     private static final List<ActiveForce> ACTIVE_FORCES = new ArrayList<>();
     private static final CastAbuseGuard ABUSE_GUARD = new CastAbuseGuard();
     private static final Set<UUID> CANCELLED_OWNERS = new HashSet<>();
+    private static boolean tickingVms;
     private static boolean initialized;
 
     private NeoForgeVmService() {
@@ -74,9 +76,11 @@ public final class NeoForgeVmService {
     @SubscribeEvent
     public static void onServerStopping(ServerStoppingEvent event) {
         ACTIVE_VMS.clear();
+        PENDING_VMS.clear();
         ACTIVE_FORCES.clear();
         ABUSE_GUARD.clear();
         CANCELLED_OWNERS.clear();
+        tickingVms = false;
         initialized = false;
     }
 
@@ -205,7 +209,7 @@ public final class NeoForgeVmService {
         ActiveVm active = new ActiveVm(player.getUUID(), player.serverLevel(),
                 new SpellVm(program, new MinecraftWorldAccess(player), presentation), label,
                 presentation, compilation, new ArrayList<>(), semanticExecutor, new ArrayList<>());
-        ACTIVE_VMS.add(active);
+        (tickingVms ? PENDING_VMS : ACTIVE_VMS).add(active);
         publishLiveTrace(player, active);
         player.displayClientMessage(Component.literal(String.format(
                         "%s queued in vm2 • %.2f μ • tick-resumable",
@@ -214,57 +218,64 @@ public final class NeoForgeVmService {
     }
 
     private static void tick(MinecraftServer server) {
-        Iterator<ActiveVm> vmIterator = ACTIVE_VMS.iterator();
-        while (vmIterator.hasNext()) {
-            ActiveVm active = vmIterator.next();
-            ServerPlayer currentOwner = server.getPlayerList().getPlayer(active.owner);
-            if (CANCELLED_OWNERS.contains(active.owner) || !validLifecycle(currentOwner, active)) {
-                ABUSE_GUARD.release(active.owner);
-                vmIterator.remove();
-                continue;
-            }
-            TickResult result = active.vm.tick();
-            active.trace.add(result);
-            for (WorldEffect effect : result.effects()) {
-                if (effect instanceof WorldEffect.SemanticStep semantic) {
-                    active.semanticSteps.add(semantic.instruction());
-                } else {
-                    apply(currentOwner, active.world, effect);
+        tickingVms = true;
+        try {
+            Iterator<ActiveVm> vmIterator = ACTIVE_VMS.iterator();
+            while (vmIterator.hasNext()) {
+                ActiveVm active = vmIterator.next();
+                ServerPlayer currentOwner = server.getPlayerList().getPlayer(active.owner);
+                if (CANCELLED_OWNERS.contains(active.owner) || !validLifecycle(currentOwner, active)) {
+                    ABUSE_GUARD.release(active.owner);
+                    vmIterator.remove();
+                    continue;
                 }
-            }
-            if (result.status() == TickResult.Status.FAULTED) {
-                ServerPlayer owner = server.getPlayerList().getPlayer(active.owner);
-                result.fault().ifPresent(fault -> {
-                    VectorRegnumMod.LOGGER.warn("vm2 {} fault {} at {}:{}: {}", active.label,
-                            fault.code(), fault.source().line(), fault.source().column(), fault.message());
-                    if (owner != null) {
-                        owner.sendSystemMessage(Component.literal("VM fault " + fault.code() + " at sigil "
-                                        + fault.source().sourceIndex() + ": " + fault.message())
-                                .withStyle(ChatFormatting.RED));
-                    }
-                });
-                publishTrace(owner, active);
-                ABUSE_GUARD.release(active.owner);
-                vmIterator.remove();
-            } else if (result.status() == TickResult.Status.HALTED) {
-                ServerPlayer owner = server.getPlayerList().getPlayer(active.owner);
-                if (owner != null && active.semanticExecutor != null && !active.semanticSteps.isEmpty()) {
-                    try {
-                        active.semanticExecutor.accept(owner, List.copyOf(active.semanticSteps));
-                    } catch (RuntimeException exception) {
-                        VectorRegnumMod.LOGGER.error("Semantic adapter rejected {} after validated VM execution",
-                                active.label, exception);
-                        owner.sendSystemMessage(Component.literal("Semantic execution failed safely for " + active.label)
-                                .withStyle(ChatFormatting.RED));
+                TickResult result = active.vm.tick();
+                active.trace.add(result);
+                for (WorldEffect effect : result.effects()) {
+                    if (effect instanceof WorldEffect.SemanticStep semantic) {
+                        active.semanticSteps.add(semantic.instruction());
+                    } else {
+                        apply(currentOwner, active.world, effect);
                     }
                 }
-                publishTrace(owner, active);
-                ABUSE_GUARD.release(active.owner);
-                vmIterator.remove();
-            } else if (active.trace.size() == 1
-                    || active.trace.size() % PONDER_LIVE_INTERVAL_TICKS == 0) {
-                publishLiveTrace(server.getPlayerList().getPlayer(active.owner), active);
+                if (result.status() == TickResult.Status.FAULTED) {
+                    ServerPlayer owner = server.getPlayerList().getPlayer(active.owner);
+                    result.fault().ifPresent(fault -> {
+                        VectorRegnumMod.LOGGER.warn("vm2 {} fault {} at {}:{}: {}", active.label,
+                                fault.code(), fault.source().line(), fault.source().column(), fault.message());
+                        if (owner != null) {
+                            owner.sendSystemMessage(Component.literal("VM fault " + fault.code() + " at sigil "
+                                            + fault.source().sourceIndex() + ": " + fault.message())
+                                    .withStyle(ChatFormatting.RED));
+                        }
+                    });
+                    publishTrace(owner, active);
+                    ABUSE_GUARD.release(active.owner);
+                    vmIterator.remove();
+                } else if (result.status() == TickResult.Status.HALTED) {
+                    ServerPlayer owner = server.getPlayerList().getPlayer(active.owner);
+                    if (owner != null && active.semanticExecutor != null && !active.semanticSteps.isEmpty()) {
+                        try {
+                            active.semanticExecutor.accept(owner, List.copyOf(active.semanticSteps));
+                        } catch (RuntimeException exception) {
+                            VectorRegnumMod.LOGGER.error("Semantic adapter rejected {} after validated VM execution",
+                                    active.label, exception);
+                            owner.sendSystemMessage(Component.literal("Semantic execution failed safely for " + active.label)
+                                    .withStyle(ChatFormatting.RED));
+                        }
+                    }
+                    publishTrace(owner, active);
+                    ABUSE_GUARD.release(active.owner);
+                    vmIterator.remove();
+                } else if (active.trace.size() == 1
+                        || active.trace.size() % PONDER_LIVE_INTERVAL_TICKS == 0) {
+                    publishLiveTrace(server.getPlayerList().getPlayer(active.owner), active);
+                }
             }
+        } finally {
+            tickingVms = false;
+            ACTIVE_VMS.addAll(PENDING_VMS);
+            PENDING_VMS.clear();
         }
 
         Iterator<ActiveForce> forceIterator = ACTIVE_FORCES.iterator();
@@ -287,7 +298,8 @@ public final class NeoForgeVmService {
     }
 
     public static void cancelOwner(UUID owner, String reason) {
-        long pending = ACTIVE_VMS.stream().filter(active -> active.owner.equals(owner)).count();
+        long pending = java.util.stream.Stream.concat(ACTIVE_VMS.stream(), PENDING_VMS.stream())
+                .filter(active -> active.owner.equals(owner)).count();
         CANCELLED_OWNERS.add(owner);
         ABUSE_GUARD.clear(owner);
         if (pending > 0) VectorRegnumMod.LOGGER.info("Cancelling {} spell VM(s) for {}: {}",
