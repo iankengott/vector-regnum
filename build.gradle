@@ -90,6 +90,14 @@ neoForge {
             sourceSet sourceSets.main
         }
     }
+
+    // Some loader-neutral classes use libraries that ship with Minecraft, such
+    // as DataFixerUpper codecs and gson. Without this the test compile classpath
+    // lacks them even though the main classpath has them.
+    unitTest {
+        enable()
+        testedMod = mods."vector_regnum"
+    }
 }
 
 dependencies {

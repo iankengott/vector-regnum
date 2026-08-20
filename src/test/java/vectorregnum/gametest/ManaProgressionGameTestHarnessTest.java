@@ -4,11 +4,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
-import vectorregnum.fabric.progression.ManaAffinity;
-import vectorregnum.fabric.progression.ManaReservoir;
-import vectorregnum.fabric.progression.ManaSourceGrowthRules;
-import vectorregnum.fabric.progression.ManaTransportRules;
-import vectorregnum.fabric.world.ManaCrystalGeology;
+import vectorregnum.neoforge.progression.ManaAffinity;
+import vectorregnum.neoforge.progression.ManaReservoir;
+import vectorregnum.neoforge.progression.ManaSourceGrowthRules;
+import vectorregnum.neoforge.progression.ManaTransportRules;
+import vectorregnum.neoforge.world.ManaCrystalGeology;
 
 /**
  * Compile-safe scenarios shaped like future Fabric GameTests. A registered
