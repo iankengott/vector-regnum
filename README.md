@@ -137,13 +137,21 @@ JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" ./gradlew --no-daemon test buil
 
 ## Play on the main PC
 
-This launcher runs the deprecated Fabric reference until priority 20 replaces
-it with a clearly named NeoForge launcher. Double-click **Play Vector-Regnum**
-on the desktop. The shortcut runs
-`scripts/local-play.sh`, which resolves Java 21, stages only this mod in an
-isolated flat world on `127.0.0.1:25575`, launches Minecraft through
-`steam-run`, and stops the private server when the client closes. It does not
-touch the normal Minecraft launcher, saves, modpacks, or port 25565.
+**The launcher is disabled during the priority 20 port.** The build no longer
+compiles the Fabric entrypoints and no NeoForge `@Mod` entrypoint exists yet, so
+a launch would start vanilla Minecraft with no Vector-Regnum loaded and look
+like it worked. `scripts/local-play.sh` therefore exits with an explanation
+rather than starting anything.
+
+For a playable build, use the frozen Fabric alpha in the separate
+`vector-regnum-fabric-legacy` checkout at commit `c7371ca`.
+
+When a complete NeoForge slice provides an entrypoint, the guard is removed and
+this launcher returns. It runs `scripts/local-play.sh`, which resolves Java 21,
+stages only this mod in an isolated flat world on `127.0.0.1:25575`, launches
+Minecraft through `steam-run`, and stops the private server when the client
+closes. It does not touch the normal Minecraft launcher, saves, modpacks, or
+port 25565.
 
 ## Hermes development workflow
 

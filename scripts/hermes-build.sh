@@ -44,7 +44,14 @@ java_major="$(sed -E 's/.*version "([0-9]+).*/\1/' <<< "$java_version")"
 }
 printf 'Using %s\n' "$java_version"
 
-./gradlew --no-daemon test build
+# Priority 20 staging. The stage must be explicit: a bare gradle invocation now
+# fails rather than silently building only the loader-neutral subset.
+port_stage="${VECTOR_REGNUM_PORT_STAGE:-core}"
+printf 'Building port stage %s (see gradle/port-manifest.txt).\n' "$port_stage"
+if [[ "$port_stage" != "full" ]]; then
+    printf 'WARNING: this is a partial staged build, not the full automated suite.\n' >&2
+fi
+./gradlew --no-daemon "-PportStage=$port_stage" test build
 REMOTE
 
 vr_note "Hermes tests and build passed."

@@ -17,7 +17,17 @@ repositories {
 // Priority 20 port staging. See gradle/port-manifest.txt, which is the
 // authoritative list. A gate that compiles more or less than the manifest says
 // is not a gate, so the two must be edited together.
-def portStage = providers.gradleProperty("portStage").getOrElse("core")
+// No default. A silent default turns every documented plain `./gradlew build`
+// into a partial build that still reports success, which is exactly the failure
+// this manifest exists to prevent.
+if (!providers.gradleProperty("portStage").isPresent()) {
+    throw new GradleException(
+        "portStage must be set explicitly during the priority 20 port.\n" +
+        "  -PportStage=core   loader-neutral only: 85 of 195 main files, 15 of 47 test classes\n" +
+        "  -PportStage=full   everything; only passes once the port completes\n" +
+        "See gradle/port-manifest.txt. Remove this guard when priority 20 lands.")
+}
+def portStage = providers.gradleProperty("portStage").get()
 def manifest = file("gradle/port-manifest.txt")
 def stagePatterns = { String stage, String key ->
     def out = []

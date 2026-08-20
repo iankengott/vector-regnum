@@ -101,16 +101,24 @@ proportionate to the change, but gameplay or visual work is not complete
 without the full ladder. Priority 20 must replace every Fabric-specific step
 with an equivalent NeoForge step and retain loader-neutral coverage.
 
-1. On NixOS, use Java 21 and run the automated suite:
+1. On NixOS, use Java 21 and run the automated suite. During the priority 20
+   port the stage is mandatory; a bare `./gradlew build` fails on purpose so a
+   partial build cannot be mistaken for the full suite.
 
    ```bash
    task_jdk=$(nix eval --raw nixpkgs#jdk21.outPath)
    JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
-     ./gradlew --no-daemon clean test build
+     ./gradlew --no-daemon -PportStage=full clean test build
    find src -type f -name '*.json' -print0 | xargs -0 -n1 jq empty
    find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
    git diff --check
    ```
+
+   `-PportStage=full` is the real gate and will keep failing until the port
+   completes. `-PportStage=core` builds only the loader-neutral subset, 85 of
+   195 main files and 15 of 47 test classes, and is a staging check rather than
+   a verification. See `gradle/port-manifest.txt`. Drop the property once
+   priority 20 lands.
 
 2. Exercise server/client integration on Hermes through the guarded scripts:
 
