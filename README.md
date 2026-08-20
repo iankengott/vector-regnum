@@ -2,7 +2,7 @@
 
 > **Platform status (2026-08-20):** this is the active Vector-Regnum NeoForge
 > 1.21.1 repository. The Fabric implementation is deprecated and frozen in its
-> own archived repository. Priority 20 awaits its final Main-PC visual rerun.
+> own archived repository. Priority 20 is checked; priority 20a is next.
 > The frozen Fabric repository and all companion projects are listed in
 > [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
@@ -23,11 +23,12 @@ client presentation.
 
 ## NeoForge baseline
 
-Roadmap priority 20's implementation, automated coverage, and Hermes gates are
-complete. Its final Main-PC desktop-launch visual rerun remains after fixing
-the quick-play endpoint to explicit IPv4; the user-controlled
-`scripts/priority20-local-visual-wizard.sh` records that final gate without
-window automation. The execution record lives in
+Roadmap priority 20 is complete. Its implementation, automated coverage,
+Hermes gates, and human-controlled Main-PC desktop-launch visual gate all
+passed. The final local run joined the explicit IPv4 endpoint, rendered
+Vector-Regnum content and items in-world, closed normally, and left the
+development unit inactive and port free. The repeatable visual workflow is
+`scripts/priority20-local-visual-wizard.sh`; the execution record lives in
 `docs/NEOFORGE_PORT_PLAN.md`.
 
 | | |
@@ -138,8 +139,10 @@ exposed and drove a fix for `localhost` resolving to IPv6 while the server
 listens on IPv4. The explicit `127.0.0.1` endpoint passes local build and
 Hermes client verification. The post-audit Hermes run again joined through the
 explicit IPv4 endpoint and displayed the amethyst/copper showcase with
-Vector-Regnum items in the hotbar; its final Main-PC visual rerun remains and is
-prepared as a human-controlled wizard in `scripts/priority20-local-visual-wizard.sh`.
+Vector-Regnum items in the hotbar. Ian then passed the human-controlled
+Main-PC visual gate through `scripts/priority20-local-visual-wizard.sh`,
+confirming in-world content, rendered items, normal shutdown, and clean
+development-unit and port state.
 
 ## Build and test
 
@@ -354,7 +357,7 @@ verification ladder, visual-inspection requirement, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
 [ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priority 20
-awaits its final local visual rerun; priority 20a follows it.
+is checked and priority 20a is the first unfinished item.
 `AGENTS.md` also records Ian's subagent ladder — opencode
 deepseekflash first, then Luna max, then Sol xhigh or Opus 5 medium — plus the
 delegation rules, so no earlier chat context is required.

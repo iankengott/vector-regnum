@@ -112,11 +112,7 @@ acceptance scope.
     signature depth-aware shaders, including the planned Veil-backed
     compositor, and final bespoke art remain optional release-quality
     enhancement rather than a gameplay dependency.
-20. [ ] **NeoForge 1.21.1 migration and repository split.** *Implementation,
-    automated coverage, and Hermes verification are complete; the final
-    Main-PC desktop-launch visual rerun remains after fixing explicit IPv4
-    quick-play. Run `scripts/priority20-local-visual-wizard.sh` to perform and
-    record that human-controlled gate without desktop automation.* The archived Fabric
+20. [x] **NeoForge 1.21.1 migration and repository split.** The archived Fabric
     alpha is fixed at `c7371ca`; the active repository now uses NeoForge
     21.1.248 and ModDevGradle with Mojang/Parchment mappings. Registrations,
     attachments and claim SavedData, seven payloads, lifecycle/events,
@@ -128,6 +124,10 @@ acceptance scope.
     parity, hard safety limits, the loader-neutral presentation IR, and the
     built-in client renderer remain intact, so dedicated-server startup and
     baseline telegraphs do not depend on Veil.
+    The final human-controlled Main-PC desktop-launch gate passed on
+    2026-08-20: the client joined `127.0.0.1:25575`, rendered Vector-Regnum
+    content and items in-world, closed normally, and left the owned server
+    inactive with the development port free.
 20a. [ ] **Veil-backed modular presentation overhaul and compatibility gate.**
     After priority 20 establishes the NeoForge baseline—and before priority 21
     gameplay work—add [FoundryMC Veil](https://github.com/FoundryMC/Veil) as an

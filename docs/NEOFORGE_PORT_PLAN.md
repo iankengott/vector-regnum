@@ -1,12 +1,12 @@
 # Priority 20 execution plan: Fabric to NeoForge 1.21.1
 
-Status: final local visual gate pending, 2026-08-20. The NeoForge baseline
-passes 172 JUnit tests, 18 production GameTests, live registration parity, and
-the guarded Hermes ladder. The first real Main-PC shortcut run found an IPv6
-`localhost` mismatch; explicit `127.0.0.1` is fixed and verified remotely, but
-the real shortcut still needs its final visual rerun before priority 20 closes.
-`scripts/priority20-local-visual-wizard.sh` now makes that gate entirely
-human-controlled and verifies the endpoint and cleanup afterward.
+Status: complete, 2026-08-20. The NeoForge baseline passes 172 JUnit tests,
+18 production GameTests, live registration parity, and the guarded Hermes
+ladder. The first real Main-PC shortcut run found an IPv6 `localhost` mismatch;
+explicit `127.0.0.1` fixed it. Ian then passed the human-controlled local
+visual gate with `scripts/priority20-local-visual-wizard.sh`, confirming
+in-world Vector-Regnum content and rendered items, normal shutdown, an
+inactive owned server unit, and a free development port.
 
 Revision 2 incorporates an adversarial review. Two blockers, four high findings,
 and two medium findings were confirmed against the tree and fixed below. The
@@ -468,5 +468,6 @@ them, so phases 4 through 10 each carry a manual gate that costs real time.
 
 ## Ordering constraint
 
-Priority 20a and priority 21 do not begin until this plan completes and the
-full NeoForge ladder passes. No new gameplay lands on Fabric.
+This constraint is satisfied: the plan and full NeoForge ladder passed.
+Priority 20a is next; priority 21 still waits for its compatibility gate. No
+new gameplay lands on Fabric.
