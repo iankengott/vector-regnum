@@ -11,7 +11,8 @@ Usage: scripts/hermes-client.sh ACTION
 
 Control only Vector-Regnum's isolated NeoForge development server and client on
 Hermes. The server is staged from dev/hermes, started on port 25575, and proven
-ready before the quick-play client starts.
+ready before the quick-play client starts. The client uses Veil by default;
+set VR_CLIENT_RENDERER=builtin to exercise the dependency-free fallback.
 
 Actions:
   start       Start the isolated server, wait for 25575, then launch the client.
@@ -25,18 +26,24 @@ USAGE
 }
 
 action="${1:-help}"
+client_renderer="${VR_CLIENT_RENDERER:-veil}"
 (( $# <= 1 )) || { usage >&2; vr_die "too many arguments"; }
 case "$action" in
     start|restart|stop|status|logs|logs-follow) ;;
     help|-h|--help) usage; exit 0 ;;
     *) usage >&2; vr_die "unknown action: $action" ;;
 esac
+case "$client_renderer" in
+    veil|builtin) ;;
+    *) vr_die "VR_CLIENT_RENDERER must be veil or builtin" ;;
+esac
 
 vr_check_remote_identity
 vr_require_remote_marker
 
 vr_ssh bash -s -- \
-    "$VR_REMOTE_DIR" "$VR_SERVER_UNIT" "$VR_CLIENT_UNIT" "$VR_DEV_SERVER_PORT" "$action" <<'REMOTE'
+    "$VR_REMOTE_DIR" "$VR_SERVER_UNIT" "$VR_CLIENT_UNIT" "$VR_DEV_SERVER_PORT" "$action" \
+    "$client_renderer" <<'REMOTE'
 set -euo pipefail
 
 remote_dir="$1"
@@ -44,11 +51,13 @@ server_unit="$2"
 client_unit="$3"
 server_port="$4"
 action="$5"
+client_renderer="$6"
 
 [[ "$remote_dir" =~ ^/home/ian-kengott/projects/[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || exit 1
 [[ "$server_unit" == "vector-regnum-dev-server.service" ]] || exit 1
 [[ "$client_unit" == "vector-regnum-dev-client.service" ]] || exit 1
 [[ "$server_port" == "25575" ]] || exit 1
+[[ "$client_renderer" == "veil" || "$client_renderer" == "builtin" ]] || exit 1
 
 unit_load_state() {
     local unit="$1"
@@ -224,6 +233,12 @@ start_client() {
         exit 1
     }
 
+    client_gradle_args=(--no-daemon)
+    if [[ "$client_renderer" == "veil" ]]; then
+        client_gradle_args+=(-Pvector_regnum_enable_veil=true)
+    fi
+    client_gradle_args+=(runClient)
+
     systemd-run \
         --user \
         --unit="$client_unit" \
@@ -233,8 +248,9 @@ start_client() {
         --description='Vector-Regnum NeoForge development client' \
         --setenv="JAVA_HOME=$verified_java_home" \
         --setenv="PATH=$verified_unit_path" \
-        "$remote_dir/gradlew" --no-daemon runClient
-    printf 'launched %s; inspect with scripts/hermes-client.sh status or logs\n' "$client_unit"
+        "$remote_dir/gradlew" "${client_gradle_args[@]}"
+    printf 'launched %s with %s renderer; inspect with scripts/hermes-client.sh status or logs\n' \
+        "$client_unit" "$client_renderer"
 }
 
 start_stack() {

@@ -1,0 +1,6 @@
+{
+  "shape": "veil:torus",
+  "dimensions": [2.0, 2.0, 0.06],
+  "rotation": [-90.0, 0.0, 0.0],
+  "from_surface": true
+}

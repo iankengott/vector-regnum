@@ -1,6 +1,6 @@
 # Priority 20 execution plan: Fabric to NeoForge 1.21.1
 
-Status: complete, 2026-08-20. The NeoForge baseline passes 172 JUnit tests,
+Status: complete, 2026-08-20. The priority-20 migration checkpoint passed 172 JUnit tests,
 18 production GameTests, live registration parity, and the guarded Hermes
 ladder. The first real Main-PC shortcut run found an IPv6 `localhost` mismatch;
 explicit `127.0.0.1` fixed it. Ian then passed the human-controlled local
@@ -469,5 +469,8 @@ them, so phases 4 through 10 each carry a manual gate that costs real time.
 ## Ordering constraint
 
 This constraint is satisfied: the plan and full NeoForge ladder passed.
-Priority 20a is next; priority 21 still waits for its compatibility gate. No
-new gameplay lands on Fabric.
+Priority 20a's initial optional Veil and target-pack gates passed on 2026-08-20,
+but the priority is reopened for complete Veil ownership of particle-based
+animations except enchanting-table particles. Priority 21 remains blocked
+until that migration and the repeated verification ladder pass. No new gameplay
+lands on Fabric.

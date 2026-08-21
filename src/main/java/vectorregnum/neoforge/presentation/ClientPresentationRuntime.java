@@ -28,6 +28,7 @@ import vectorregnum.core.presentation.PresentationCueKind;
 import vectorregnum.core.presentation.PresentationElement;
 import vectorregnum.core.presentation.PresentationInstruction;
 import vectorregnum.core.presentation.PresentationLod;
+import vectorregnum.core.presentation.PresentationParticleStyle;
 import vectorregnum.core.presentation.PresentationProgram;
 import vectorregnum.core.presentation.PresentationProgramCodec;
 import vectorregnum.core.presentation.PresentationQuality;
@@ -35,8 +36,10 @@ import vectorregnum.core.presentation.PresentationSignal;
 import vectorregnum.core.presentation.PresentationTrigger;
 
 /**
- * Bounded client interpreter for compiler-generated spell scores. Essential geometry
- * uses vanilla-compatible particles, so truth cues survive without shader support.
+ * Bounded client interpreter for compiler-generated spell scores and compact
+ * authoritative world traces. With Veil active, Quasar motifs own every
+ * particle-based animation except the enchanting-table truth cue; the guarded
+ * built-in renderer is the mandatory Veil-absent/failure fallback.
  */
 public final class ClientPresentationRuntime {
     private static final int MAX_INSTANCES = 32;
@@ -44,21 +47,27 @@ public final class ClientPresentationRuntime {
     private static final Map<Long, Instance> INSTANCES = new LinkedHashMap<>();
     private static final List<ActiveCue> ACTIVE_CUES = new ArrayList<>();
     private static PresentationAccessibility accessibility = PresentationAccessibility.DEFAULT;
+    private static long nextCueId = 1;
     private static boolean initialized;
 
     private ClientPresentationRuntime() { }
 
-    /** Registers the two client-bound presentation payloads. */
+    /** Registers every client-bound presentation payload. */
     public static void register(PayloadRegistrar registrar) {
         registrar.playToClient(PresentationStartPayload.TYPE, PresentationStartPayload.CODEC,
                 ClientPresentationRuntime::handleStartPayload)
                 .playToClient(PresentationSignalPayload.TYPE, PresentationSignalPayload.CODEC,
-                        ClientPresentationRuntime::handleSignalPayload);
+                        ClientPresentationRuntime::handleSignalPayload)
+                .playToClient(PresentationTracePayload.TYPE, PresentationTracePayload.CODEC,
+                        ClientPresentationRuntime::handleTracePayload)
+                .playToClient(CirclePreviewPayload.TYPE, CirclePreviewPayload.CODEC,
+                        ClientPresentationRuntime::handleCirclePreviewPayload);
     }
 
     public static void initialize() {
         if (initialized) return;
         initialized = true;
+        OptionalPresentationBackend.initialize();
         NeoForge.EVENT_BUS.addListener(ClientPresentationRuntime::onClientTick);
         NeoForge.EVENT_BUS.addListener(ClientPresentationRuntime::onRenderGui);
         NeoForge.EVENT_BUS.addListener(ClientPresentationRuntime::onClientLoggingOut);
@@ -70,6 +79,40 @@ public final class ClientPresentationRuntime {
 
     private static void handleSignalPayload(PresentationSignalPayload payload, IPayloadContext ignored) {
         signal(payload);
+    }
+
+    private static void handleTracePayload(PresentationTracePayload payload,
+            IPayloadContext ignored) {
+        try {
+            for (TraceCueFactory.SynthesizedCue cue : TraceCueFactory.synthesize(payload)) {
+                spawnSynthesizedCue(cue);
+            }
+        } catch (RuntimeException ignored2) {
+            // Invalid remote trace data is discarded and cannot affect play.
+        }
+    }
+
+    private static void handleCirclePreviewPayload(CirclePreviewPayload payload,
+            IPayloadContext ignored) {
+        try {
+            ClientCirclePreviews.start(payload);
+        } catch (RuntimeException ignored2) {
+            // Invalid remote preview data is discarded and cannot affect play.
+        }
+    }
+
+    /** Spawns one factory-built cue through the shared bounded pipeline. */
+    static void spawnSynthesizedCue(TraceCueFactory.SynthesizedCue cue) {
+        Minecraft client = Minecraft.getInstance();
+        if (client.player == null || client.level == null) return;
+        if (ACTIVE_CUES.size() >= MAX_ACTIVE_CUES) return;
+        PresentationLod lod = PresentationLod.select(
+                client.player.position().distanceTo(cue.point()), accessibility.quality());
+        if (!lod.renders(cue.instruction())) return;
+        Instance instance = new Instance(cue.program(), cue.origin(), cue.direction());
+        ACTIVE_CUES.add(new ActiveCue(nextCueId++, instance, cue.instruction(), cue.point(),
+                lod, new SplittableRandom(cue.program().deterministicSeed()
+                        ^ cue.instruction().rendererId().hashCode())));
     }
 
     private static void onClientTick(ClientTickEvent.Post ignored) {
@@ -85,6 +128,15 @@ public final class ClientPresentationRuntime {
     }
 
     public static PresentationAccessibility accessibility() { return accessibility; }
+
+    public static String backendId() { return OptionalPresentationBackend.id(); }
+
+    public static boolean veilActive() { return OptionalPresentationBackend.veilActive(); }
+
+    public static void onResourceReload() {
+        clear();
+        OptionalPresentationBackend.resourceReloaded();
+    }
 
     public static void setAccessibility(PresentationAccessibility settings) {
         accessibility = settings == null ? PresentationAccessibility.DEFAULT : settings;
@@ -146,7 +198,7 @@ public final class ClientPresentationRuntime {
         for (PresentationInstruction instruction : instance.program.instructions()) {
             if (!signal.matches(instruction) || !lod.renders(instruction)) continue;
             if (ACTIVE_CUES.size() >= MAX_ACTIVE_CUES) break;
-            ACTIVE_CUES.add(new ActiveCue(instance, instruction, point, lod,
+            ACTIVE_CUES.add(new ActiveCue(nextCueId++, instance, instruction, point, lod,
                     new SplittableRandom(instance.program.deterministicSeed()
                             ^ signal.sequence() * 0x9E3779B97F4A7C15L
                             ^ instruction.rendererId().hashCode())));
@@ -155,6 +207,7 @@ public final class ClientPresentationRuntime {
 
     private static void tick(Minecraft client) {
         if (client.level == null || client.player == null) { clear(); return; }
+        ClientCirclePreviews.tick(client);
         Iterator<ActiveCue> iterator = ACTIVE_CUES.iterator();
         while (iterator.hasNext()) {
             ActiveCue cue = iterator.next();
@@ -167,7 +220,13 @@ public final class ClientPresentationRuntime {
         }
     }
 
-    private static void clear() { INSTANCES.clear(); ACTIVE_CUES.clear(); }
+    private static void clear() {
+        INSTANCES.clear();
+        ACTIVE_CUES.forEach(ActiveCue::endBackend);
+        ACTIVE_CUES.clear();
+        ClientCirclePreviews.clear();
+        OptionalPresentationBackend.clear();
+    }
 
     private static void renderHud(GuiGraphics context, DeltaTracker ignored) {
         Minecraft client = Minecraft.getInstance();
@@ -223,26 +282,43 @@ public final class ClientPresentationRuntime {
     }
 
     private static final class ActiveCue {
+        private final long cueId;
         private final Instance instance;
         private final PresentationInstruction instruction;
         private final Vec3 point;
         private final PresentationLod lod;
         private final SplittableRandom random;
+        private final PresentationCueContext context;
         private int age;
         private boolean soundPlayed;
+        private boolean backendStarted;
 
-        private ActiveCue(Instance instance, PresentationInstruction instruction,
+        private ActiveCue(long cueId, Instance instance, PresentationInstruction instruction,
                 Vec3 point, PresentationLod lod, SplittableRandom random) {
+            this.cueId = cueId;
             this.instance = instance; this.instruction = instruction;
             this.point = point; this.lod = lod; this.random = random;
+            this.context = PresentationCueContext.create(cueId, instruction,
+                    instance.origin, instance.direction, point, lod,
+                    instance.program.deterministicSeed());
         }
 
         private boolean tick(Minecraft client) {
             int offset = instruction.startOffsetTicks();
             int duration = instruction.durationTicks();
-            if (age++ < offset) return true;
-            int localAge = age - offset - 1;
-            if (localAge >= duration) return false;
+            int currentAge = age++;
+            if (currentAge < offset) return true;
+            int localAge = currentAge - offset;
+            if (localAge >= duration) {
+                endBackend();
+                return false;
+            }
+            if (!backendStarted) {
+                backendStarted = true;
+                OptionalPresentationBackend.cueStarted(context, accessibility);
+            }
+            OptionalPresentationBackend.cueTick(context, accessibility,
+                    localAge, duration, envelope(localAge));
             if (instruction.cueKind() == PresentationCueKind.SPATIAL_SOUND) {
                 if (!soundPlayed) { soundPlayed = true; playSound(client); }
                 return true;
@@ -264,23 +340,37 @@ public final class ClientPresentationRuntime {
                     : (int) Math.floor(3 * density);
             if (count <= 0) return;
             PresentationElement element = PresentationElement.fromParameter(parameter("element", 0));
-            ParticleOptions primary = particle(element);
+            PresentationParticleStyle style = style();
+            ParticleOptions primary = particle(style, element);
             double radius = Math.clamp(parameter("radius", 2), .5, 32);
             double progress = (localAge + 1.0) / duration;
             String renderer = instruction.rendererId();
             if (renderer.contains("invocation_circle") || renderer.contains("selection_boundary")
-                    || renderer.contains("barrier") || renderer.contains("aura")) {
+                    || renderer.contains("barrier") || renderer.contains("aura")
+                    || renderer.contains("trace/ring")) {
                 double shownRadius = renderer.contains("invocation") ? .75 : radius;
+                Vec3 right = axisParameter("axis_r", null);
+                Vec3 up = axisParameter("axis_u", right == null ? new Vec3(0, 0, 1) : null);
                 ring(client, point.add(0, -.35, 0), shownRadius * Math.min(1, progress * 2),
-                        primary, Math.max(8, count * 6));
+                        primary, Math.max(8, count * 6), right, up);
             } else if (renderer.contains("raycast") || renderer.contains("projectile")
-                    || renderer.contains("vector_motion") || renderer.contains("redstone_pulse")) {
-                line(client, instance.origin, instance.origin.add(instance.direction.scale(
-                        Math.max(2, radius * 2))), primary, Math.max(4, count * 3));
+                    || renderer.contains("vector_motion") || renderer.contains("redstone_pulse")
+                    || renderer.contains("trace/beam")) {
+                double length = parameter("length", Math.max(2, radius * 2));
+                line(client, instance.origin, instance.origin.add(instance.direction.scale(length)),
+                        primary, Math.max(4, count * 3));
             } else if (renderer.contains("fractured")) {
                 for (int index = 0; index < count * 2; index++) {
                     Vec3 offset = randomOffset(.7 + progress);
                     add(client, ParticleTypes.LARGE_SMOKE, point.add(offset), 0, .01, 0);
+                }
+            } else if (renderer.contains("trace/burst")) {
+                int burstCount = Math.clamp((int) parameter("count", count), 1, 24);
+                for (int index = 0; index < burstCount; index++) {
+                    Vec3 offset = randomOffset(Math.min(radius, .4 + radius * progress));
+                    add(client, primary, point.add(offset),
+                            -offset.x * .06, .02 + random.nextDouble() * .04,
+                            -offset.z * .06);
                 }
             } else {
                 for (int index = 0; index < count; index++) {
@@ -320,11 +410,20 @@ public final class ClientPresentationRuntime {
         }
 
         private double envelope() {
-            int localAge = age - instruction.startOffsetTicks();
+            return envelope(age - instruction.startOffsetTicks() - 1);
+        }
+
+        private double envelope(int localAge) {
             if (localAge < 0 || localAge >= instruction.durationTicks()) return 0;
             double progress = localAge / (double) instruction.durationTicks();
             double fade = Math.min(1.0, Math.min(progress * 4.0, (1.0 - progress) * 4.0));
             return instruction.intensity() * Math.max(0, fade);
+        }
+
+        private void endBackend() {
+            if (!backendStarted) return;
+            backendStarted = false;
+            OptionalPresentationBackend.cueEnded(cueId);
         }
 
         private Vec3 randomOffset(double scale) {
@@ -333,21 +432,53 @@ public final class ClientPresentationRuntime {
                     random.nextDouble(-scale, scale));
         }
 
-        private static ParticleOptions particle(PresentationElement element) {
-            return switch (element) {
-                case FIRE -> ParticleTypes.FLAME;
-                case FROST -> ParticleTypes.SNOWFLAKE;
-                case VOID -> ParticleTypes.PORTAL;
-                case ARCANE -> ParticleTypes.ENCHANT;
+        private PresentationParticleStyle style() {
+            int ordinal = (int) Math.round(parameter("style",
+                    PresentationParticleStyle.MOTES.ordinal()));
+            if (!PresentationParticleStyle.isValidOrdinal(ordinal)) {
+                return PresentationParticleStyle.MOTES;
+            }
+            return PresentationParticleStyle.values()[ordinal];
+        }
+
+        private Vec3 axisParameter(String prefix, Vec3 fallback) {
+            Double x = instruction.parameters().get(prefix + "x");
+            Double y = instruction.parameters().get(prefix + "y");
+            Double z = instruction.parameters().get(prefix + "z");
+            if (x == null || y == null || z == null) return fallback;
+            Vec3 axis = new Vec3(x, y, z);
+            return axis.lengthSqr() < 1.0e-8 ? fallback : axis.normalize();
+        }
+
+        private static ParticleOptions particle(PresentationParticleStyle style,
+                PresentationElement element) {
+            return switch (style) {
+                case MOTES -> switch (element) {
+                    case FIRE -> ParticleTypes.FLAME;
+                    case FROST -> ParticleTypes.SNOWFLAKE;
+                    case VOID -> ParticleTypes.PORTAL;
+                    case ARCANE -> ParticleTypes.ENCHANT;
+                };
+                case CLOUD -> ParticleTypes.CLOUD;
+                case SMOKE -> ParticleTypes.SMOKE;
+                case LARGE_SMOKE -> ParticleTypes.LARGE_SMOKE;
+                case SPARK -> ParticleTypes.ELECTRIC_SPARK;
+                case END_ROD -> ParticleTypes.END_ROD;
+                case TOTEM -> ParticleTypes.TOTEM_OF_UNDYING;
+                case WITCH -> ParticleTypes.WITCH;
+                case EXPLOSION -> ParticleTypes.EXPLOSION;
+                case EXPLOSION_EMITTER -> ParticleTypes.EXPLOSION_EMITTER;
             };
         }
 
         private static void ring(Minecraft client, Vec3 center, double radius,
-                ParticleOptions particle, int points) {
+                ParticleOptions particle, int points, Vec3 right, Vec3 up) {
+            Vec3 planeRight = right == null ? new Vec3(1, 0, 0) : right;
+            Vec3 planeUp = up == null ? new Vec3(0, 0, 1) : up;
             for (int index = 0; index < points; index++) {
                 double angle = Math.PI * 2 * index / points;
-                add(client, particle, center.add(Math.cos(angle) * radius, 0,
-                        Math.sin(angle) * radius), 0, .004, 0);
+                add(client, particle, center.add(planeRight.scale(Math.cos(angle) * radius))
+                        .add(planeUp.scale(Math.sin(angle) * radius)), 0, .004, 0);
             }
         }
 
@@ -360,6 +491,10 @@ public final class ClientPresentationRuntime {
 
         private static void add(Minecraft client, ParticleOptions particle, Vec3 point,
                 double velocityX, double velocityY, double velocityZ) {
+            // Sole sanctioned built-in emission choke point. Under an active Veil
+            // backend only the enchanting-table truth cue may pass; every other
+            // family is owned by Quasar motifs in the backend.
+            if (!VanillaParticleAllowlist.mayEmit(particle)) return;
             if (client.level != null) client.level.addParticle(particle, point.x, point.y, point.z,
                     velocityX, velocityY, velocityZ);
         }

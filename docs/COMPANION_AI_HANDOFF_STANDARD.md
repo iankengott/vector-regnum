@@ -12,8 +12,10 @@ contract and add only repository-specific boundaries and invariants.
    A scaffold must say it is a scaffold and must not imply build, commands,
    tests, or gameplay exist.
 3. **Subagent collaboration** — a named ordered ladder, not an open choice.
-   Here that is opencode deepseekflash (`opencode/deepseek-v4-flash-free`,
-   `--variant max`) first, Luna max second, Sol xhigh or Opus 5 medium only when
+   Here that is the temporary free ox-alpha (`opencode/x-preview-f-free`) first
+   while it is still offered, opencode deepseekflash
+   (`opencode/deepseek-v4-flash-free`, `--variant max`) second, Luna max third,
+   Sol xhigh or Opus 5 medium only when
    extremely necessary. Bounded non-overlapping files; the parent owns
    integration, documentation, and the full verification ladder, and verifies
    subagent output rather than trusting a summary.

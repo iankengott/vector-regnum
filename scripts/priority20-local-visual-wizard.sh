@@ -184,7 +184,7 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=3
+TOTAL_STAGES=4
 
 readonly REPO_ROOT="/home/iank/Desktop/my mods/mods-editing/vector-regnum"
 readonly DESKTOP_LAUNCHER="/home/iank/Desktop/Vector-Regnum.desktop"
@@ -198,7 +198,7 @@ fail() {
   exit 1
 }
 
-banner "Vector-Regnum priority 20 visual gate"
+banner "Vector-Regnum priorities 20 and 20a visual gate"
 
 stage "Isolated launcher preflight"
 say "This wizard never opens, focuses, types into, or closes a window."
@@ -218,18 +218,30 @@ fi
 printf '  %s✓ preflight passed%s\n' "$GREEN" "$RESET"
 pause "Press Enter for the human-controlled launch step."
 
-stage "Launch and inspect Minecraft"
+stage "Launch and inspect the Veil backend"
 step "On your desktop, double-click Play Vector-Regnum. Do not use another launcher."
 step "Wait for Minecraft 1.21.1 to enter the isolated flat world; this can take about a minute."
 step "Confirm there is no Connection refused, Disconnected, or incompatible-mod screen."
 confirm "Did the real desktop shortcut reach an in-world view?" ||
   fail "Visual gate not attested; nothing was marked complete."
-step "Open the creative inventory and inspect the Vector-Regnum content: tome/guide, spell media, crystals/storage, and relay."
-confirm "Were Vector-Regnum items visible and rendered without obvious missing textures?" ||
-  fail "Content visual gate not attested; nothing was marked complete."
-step "Return to the world and confirm normal geometry/HUD rendering without a stuck loading overlay."
-confirm "Did the in-world client presentation look usable?" ||
-  fail "In-world visual gate not attested; nothing was marked complete."
+step "Press T, run /vectorregnum devkit, and close chat. This unlocks and refills the isolated test player."
+step "Run /vectorregnum showcase. Look for a circle or ring near you, a directed Firebolt gesture, and an expanding Frost Nova gesture."
+step "The effects should stay near their origin or path and fade within about 15 seconds. A brief bright flare is fine; a stuck full-screen layer, giant opaque rectangle, or magenta/black missing texture is not."
+step "Run /vectorregnum circle vm_starter, then /vectorregnum circle cast. Confirm the authored Vector Step has a readable origin/direction cue and moves you without leaving a permanent effect."
+step "Wait a few seconds between casts. Run /vectorregnum library cast aegis_shell, then /vectorregnum library cast mage_light. Look for a bounded ward/aura and a localized light effect."
+step "Veil adds colored motes, soft glow, and local spell lighting. The log proves which backend loaded; your job is only to reject obviously broken or unreadable rendering."
+confirm "Did the showcase, authored cast, and two library casts appear near their true locations, remain readable, and end without broken or stuck rendering?" ||
+  fail "Veil presentation gate not attested; nothing was marked complete."
+
+stage "Exercise reload, LOD, and accessibility fallbacks"
+step "Press F3+T, wait for the reload-complete message, then run /vectorregnum showcase again."
+confirm "Did the same effects render after resource reload without a broken or permanently missing layer?" ||
+  fail "Resource-reload gate not attested; nothing was marked complete."
+step "Press O. Set quality to Minimal, enable Reduced Motion and Photosensitive, then close the screen."
+step "Run /vectorregnum showcase once more. The expressive Veil layers may disappear, but origin, direction, area, danger, and impact cues must remain readable."
+confirm "Did the accessible low-LOD path preserve the mandatory truth telegraphs?" ||
+  fail "Accessible fallback gate not attested; nothing was marked complete."
+step "Press O and restore Full quality, Reduced Motion off, and Photosensitive off before closing Minecraft."
 
 stage "Close normally and prove cleanup"
 step "Close Minecraft normally from its own menu or window. Do not close another application."
@@ -252,22 +264,44 @@ grep -Fq 'Connecting to 127.0.0.1, 25575' "$CLIENT_LOG" ||
   fail "The client log does not prove the explicit IPv4 quick-play endpoint."
 grep -Fq 'Vector-Regnum NeoForge initialized' "$CLIENT_LOG" ||
   fail "The client log does not prove Vector-Regnum initialized on NeoForge."
+grep -Fq 'Vector-Regnum presentation backend: veil-4.4.1 (Veil 4.4.1)' "$CLIENT_LOG" ||
+  fail "The client log does not prove the pinned Veil backend activated."
+quasar_loaded="$(rg -o -m1 'Loaded ([0-9]+) quasar particles' -r '$1' "$CLIENT_LOG" || true)"
+case "$quasar_loaded" in
+  ''|*[!0-9]*) fail "The client log does not prove the bounded Quasar vocabulary loaded." ;;
+esac
+(( quasar_loaded >= 19 )) ||
+  fail "The client log proves only $quasar_loaded Quasar motifs loaded; the migrated priority-20a vocabulary has 19."
+if rg -i 'Veil presentation backend failed|Veil Quasar emitter did not load|quasar registry loading errors' "$CLIENT_LOG" >/dev/null; then
+  fail "The client log records a Veil or Quasar failure."
+fi
+point_light_warning='Failed to validate shader (veil:light/point) : active samplers with a different type refer to the same texture image unit'
+reload_line="$(rg -n -m1 '\[Debug\]: Reloaded resource packs' "$CLIENT_LOG" | cut -d: -f1 || true)"
+[[ -n "$reload_line" ]] || fail "The client log does not prove the requested F3+T resource reload completed."
+point_light_warning_before_reload="$(head -n "$reload_line" "$CLIENT_LOG" | rg -F -c "$point_light_warning" || true)"
+point_light_warning_after_reload="$(tail -n "+$reload_line" "$CLIENT_LOG" | rg -F -c "$point_light_warning" || true)"
+unexpected_shader_validation="$(rg 'Failed to validate shader' "$CLIENT_LOG" | rg -F -v "$point_light_warning" || true)"
+[[ -z "$unexpected_shader_validation" ]] || fail "The client log records an unexpected Veil shader-validation warning."
+(( point_light_warning_before_reload <= 2 )) || fail "The known Veil point-light warning repeated more than twice before resource reload."
+(( point_light_warning_after_reload <= 2 )) || fail "The known Veil point-light warning repeated more than twice after resource reload."
 grep -Fq 'Stopping!' "$CLIENT_LOG" ||
   fail "The client log does not show Minecraft's normal shutdown path."
 
 mkdir -p -- "$REPO_ROOT/visual-evidence"
-evidence_file="$REPO_ROOT/visual-evidence/main-pc-priority20-visual-attestation.txt"
+evidence_file="$REPO_ROOT/visual-evidence/main-pc-priority20a-visual-attestation.txt"
 {
   printf 'status=passed\n'
   printf 'checked_at_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
   printf 'checked_by=%s@%s\n' "$(whoami)" "$(hostname)"
   printf 'launcher=%s\n' "$DESKTOP_LAUNCHER"
   printf 'endpoint=127.0.0.1:%s\n' "$SERVER_PORT"
-  printf 'observed=in-world; vector-regnum-content; rendered-items; normal-cleanup\n'
+  printf 'renderer=veil-4.4.1\n'
+  printf 'point_light_warnings=%s_before_reload;%s_after_reload\n' "$point_light_warning_before_reload" "$point_light_warning_after_reload"
+  printf 'observed=authored-spells; library-spells; resource-reload; low-lod; reduced-motion; photosensitive; truth-fallback; normal-cleanup\n'
   printf 'server_unit=not-found\n'
   printf 'port_%s=free\n' "$SERVER_PORT"
 } > "$evidence_file"
 printf '  %s✓ wrote attestation%s %s\n' "$GREEN" "$RESET" "$evidence_file"
 
 finish
-say "Priority 20 now has its required local human evidence. Give the result to the project agent so it can update ROADMAP.md and the handoff docs."
+say "Priority 20a now has its required local human evidence. Give the result to the project agent so it can update ROADMAP.md and the handoff docs."

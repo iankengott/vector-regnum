@@ -30,10 +30,17 @@ specifications.
 client rendering foundation for Vector-Regnum after the NeoForge migration.
 Vector-Regnum owns the bounded adapter and semantic module vocabulary; Veil is
 infrastructure beneath the existing loader-neutral presentation IR, not an
-authored-spell language or a source of gameplay authority. The exact Minecraft
-1.21.1 version is selected and pinned only after testing Veil present and
-absent, dedicated-server classloading, resource reload, accessibility/LOD
-fallbacks, shader interoperability, Create, and the target modpack.
+authored-spell language or a source of gameplay authority. Priority 20a pins
+Veil 4.4.1 for Minecraft 1.21.1. Veil-present and Veil-absent clients,
+dedicated-server classloading, resource reload, accessibility/LOD fallbacks,
+and the exact Create 6.0.10, Sodium, Iris, and Bliss target-pack matrix passed.
+Those results validate the current partial adapter, not completion of priority
+20a. With Veil active, Veil/Quasar must replace every Vector-Regnum
+particle-based animation except Minecraft enchanting-table particles
+(`ParticleTypes.ENCHANT`). Built-in particle animations remain only as the
+Veil-absent or failed fallback. A complete emission inventory and automated
+single-exception allowlist must guard that boundary before the visual gates are
+repeated.
 
 The built-in renderer always preserves mechanics-derived origin, direction,
 area, timing, allegiance, danger, and impact cues. Post-processing, advanced

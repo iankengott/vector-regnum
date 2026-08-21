@@ -24,3 +24,10 @@ type = "required"
 versionRange = "${minecraft_version_range}"
 ordering = "NONE"
 side = "BOTH"
+
+[[dependencies.vector_regnum]]
+modId = "veil"
+type = "optional"
+versionRange = "[${veil_version}]"
+ordering = "AFTER"
+side = "CLIENT"

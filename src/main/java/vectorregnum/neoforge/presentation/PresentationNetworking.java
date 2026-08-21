@@ -22,7 +22,11 @@ public final class PresentationNetworking {
                 .playToClient(PresentationStartPayload.TYPE, PresentationStartPayload.CODEC,
                 PresentationNetworking::ignoreStart)
                 .playToClient(PresentationSignalPayload.TYPE, PresentationSignalPayload.CODEC,
-                        PresentationNetworking::ignoreSignal);
+                        PresentationNetworking::ignoreSignal)
+                .playToClient(PresentationTracePayload.TYPE, PresentationTracePayload.CODEC,
+                        PresentationNetworking::ignoreTrace)
+                .playToClient(CirclePreviewPayload.TYPE, CirclePreviewPayload.CODEC,
+                        PresentationNetworking::ignoreCirclePreview);
     }
 
     /** Retained for callers from the pre-port lifecycle bootstrap. */
@@ -44,6 +48,14 @@ public final class PresentationNetworking {
     }
 
     private static void ignoreSignal(PresentationSignalPayload payload, IPayloadContext context) {
+        // A server never receives its own client-bound payload.
+    }
+
+    private static void ignoreTrace(PresentationTracePayload payload, IPayloadContext context) {
+        // A server never receives its own client-bound payload.
+    }
+
+    private static void ignoreCirclePreview(CirclePreviewPayload payload, IPayloadContext context) {
         // A server never receives its own client-bound payload.
     }
 }
