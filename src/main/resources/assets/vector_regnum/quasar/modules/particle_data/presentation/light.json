@@ -1,0 +1,13 @@
+{
+  "render_style": "CUBE",
+  "should_collide": false,
+  "face_velocity": false,
+  "additive": true,
+  "modules": [
+    {"module": "drag", "strength": 0.9},
+    {"module": "color", "gradient": {
+      "rgb_points": [{"percent": 0.0, "color": "0xFFF3D6"}, {"percent": 1.0, "color": "0xFFC97A"}],
+      "alpha_points": [{"percent": 0.0, "alpha": 0.95}, {"percent": 1.0, "alpha": 0.0}]},
+      "interpolant": "q.agePercent"}
+  ]
+}

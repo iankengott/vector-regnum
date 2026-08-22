@@ -1,6 +1,5 @@
 package vectorregnum.neoforge;
 
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
@@ -30,6 +29,9 @@ import vectorregnum.core.vm2.Vector3;
 import vectorregnum.core.vm2.WorldAccess;
 import vectorregnum.core.vm2.WorldEffect;
 import vectorregnum.core.presentation.PresentationCompiler;
+import vectorregnum.core.presentation.PresentationElement;
+import vectorregnum.core.presentation.PresentationParticleStyle;
+import vectorregnum.neoforge.presentation.ServerTraces;
 import vectorregnum.core.semantic.SemanticInstruction;
 import vectorregnum.core.circle.CircleCoordinate;
 import vectorregnum.core.circle.PlacedSigil;
@@ -315,9 +317,11 @@ public final class NeoForgeVmService {
                 Vec3 change = clamped(toMinecraft(impulse.impulse()), 4.0);
                 entity.setDeltaMovement(entity.getDeltaMovement().add(change));
                 entity.hasImpulse = true;
-                world.sendParticles(ParticleTypes.ELECTRIC_SPARK,
-                        entity.getX(), entity.getY() + entity.getBbHeight() * 0.5, entity.getZ(),
-                        24, 0.35, 0.45, 0.35, 0.12);
+                ServerTraces.burst(world,
+                        new Vec3(entity.getX(), entity.getY() + entity.getBbHeight() * 0.5,
+                                entity.getZ()),
+                        PresentationParticleStyle.SPARK, PresentationElement.ARCANE,
+                        0.9F, 1.0F, 12);
             }
             default -> {
                 ActiveForce active = new ActiveForce(owner.getUUID(), world, effect, effect.durationTicks());

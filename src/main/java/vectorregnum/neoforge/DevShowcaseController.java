@@ -2,7 +2,9 @@ package vectorregnum.neoforge;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -155,6 +157,13 @@ public final class DevShowcaseController {
         }
         SemanticCreationExecutor.create(player, new CreationSpec(CreationMaterial.ARCANE_FORCE,
                 CreationForm.BARRIER, 8, 600, false));
+        BlockPos createProbePos = sourcePos
+                .relative(player.getDirection().getClockWise(), 4);
+        boolean createRendererProbe = stageOptionalBlock(player.serverLevel(), createProbePos,
+                ResourceLocation.fromNamespaceAndPath("create", "mechanical_press"));
+        createRendererProbe &= stageOptionalBlock(player.serverLevel(),
+                createProbePos.relative(player.getDirection().getClockWise()),
+                ResourceLocation.fromNamespaceAndPath("create", "large_cogwheel"));
         giveIfMissing(player, ProgressionContent.manaCrystalShard(),
                 new ItemStack(ProgressionContent.manaCrystalShard(), 8));
         giveIfMissing(player, ProgressionContent.crystalVialItem(),
@@ -198,7 +207,7 @@ public final class DevShowcaseController {
         VectorRegnumMod.LOGGER.info(
                 "VISUAL_CHECKPOINT_READY milestone=priorities_1_19 player={} circle_sigils={} "
                         + "library_spells={} automation_relay={} vm_status={} vm_cost={} duration_ticks={} "
-                        + "persistence_claim={} player_schema={} unlocks_added={}",
+                        + "persistence_claim={} player_schema={} unlocks_added={} create_renderer_probe={}",
                 player.getGameProfile().getName(),
                 circle.sigils().size(),
                 ProgressionSpellLibrary.ALL.size(),
@@ -208,7 +217,8 @@ public final class DevShowcaseController {
                 SpellVisualManager.DEV_SHOWCASE_DURATION_TICKS,
                 persistenceClaim,
                 playerSchema,
-                unlocksAdded);
+                unlocksAdded,
+                createRendererProbe);
     }
 
     private static void giveIfMissing(ServerPlayer player, Item item, ItemStack stack) {
@@ -222,6 +232,14 @@ public final class DevShowcaseController {
         BlockState previous = world.getBlockState(pos);
         world.setBlock(pos, block.defaultBlockState(), Block.UPDATE_ALL);
         STAGED_BLOCKS.add(new StagedBlock(world, pos.immutable(), previous, block));
+    }
+
+    private static boolean stageOptionalBlock(ServerLevel world, BlockPos pos,
+            ResourceLocation blockId) {
+        Block block = BuiltInRegistries.BLOCK.getOptional(blockId).orElse(null);
+        if (block == null) return false;
+        stageIfAir(world, pos, block);
+        return world.getBlockState(pos).is(block);
     }
 
     private record StagedBlock(ServerLevel world, BlockPos pos, BlockState previous,

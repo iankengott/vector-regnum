@@ -23,19 +23,23 @@ end-to-end alpha passes, but still need balance and hardening.
 
 ## Current handoff checkpoint
 
-As of 2026-08-20, priority 20 is checked. It establishes the NeoForge 1.21.1
-build, registrations, persistence, networking, lifecycle, world generation,
-client runtime, guarded launchers, 172-test JUnit suite, and 18-test production
-NeoForge GameTest matrix while retaining the priorities 1–19 behavior. Its
-guarded Hermes verification and human-controlled Main-PC desktop visual gate
-also passed; the local client joined explicit IPv4, rendered Vector-Regnum
-content and items, closed normally, and left the unit inactive and port free.
-Always re-read `ROADMAP.md` before reporting or implementing work because it
-supersedes this dated checkpoint whenever the queue changes.
+As of 2026-08-21, priority 20a is checked. The current NeoForge 1.21.1 tree has
+212 passing JUnit tests and 18 passing production GameTests. Servers emit only
+compact `presentation_trace`/`circle_preview` payloads through the budgeted
+`ServerTraces` choke point; with Veil active, Quasar owns every Vector-Regnum
+particle animation except `ParticleTypes.ENCHANT`, enforced by
+`VanillaParticleAllowlist` at the single guarded client choke point and by
+`ParticleAllowlistSourceScanTest`. Hermes gates passed Veil-present (19 Quasar
+motifs loaded, checkpoint staged, live capture inspected) and Veil-absent
+(built-in backend), and both dev units stopped with port 25575 free. Ian then
+passed the human-controlled Main-PC desktop attestation through
+`scripts/priority20-local-visual-wizard.sh`: authored and library casts, F3+T,
+minimal LOD, reduced-motion/photosensitive fallbacks, normal shutdown, the
+unloaded owned unit, and free port 25575 all passed on the final artifact.
 
-Priority 20a is now the first unfinished canonical item. It establishes the
-optional Veil-backed modular renderer and compatibility gate before new
-gameplay development begins at priority 21.
+Priority 21 is the first unfinished canonical item. Always re-read
+`ROADMAP.md` before reporting or implementing work because it supersedes this
+dated checkpoint whenever the queue changes.
 
 ## Subagent collaboration
 
@@ -43,7 +47,20 @@ Ian wants implementation work delegated into bounded independent subtasks when
 concurrency is available. Choose a subagent by walking this ladder in order and
 taking the first available profile:
 
-1. **opencode deepseekflash (preferred).** Model
+1. **ox-alpha (preferred while it lasts).** Model `opencode/x-preview-f-free`:
+
+   ```bash
+   opencode run -m opencode/x-preview-f-free \
+     --dir "/home/iank/Desktop/my mods/mods-editing/vector-regnum" "<task>"
+   ```
+
+   Added 2026-08-21. Smart, fast, and free, so use it first for inventory,
+   mechanical refactors, mapping renames, test scaffolding, and any task whose
+   result the compiler or the verification ladder can check. It is a temp model
+   that is only free for a bit: confirm it is still offered before delegating,
+   never build a plan around its presence, and fall through to deepseekflash
+   the moment it is gone.
+2. **opencode deepseekflash (stable free fallback).** Model
    `opencode/deepseek-v4-flash-free` driven at maximum reasoning:
 
    ```bash
@@ -51,21 +68,21 @@ taking the first available profile:
      --dir "/home/iank/Desktop/my mods/mods-editing/vector-regnum" "<task>"
    ```
 
-   It is free, so prefer it and always pass `--variant max`. Use it for
-   inventory, mechanical refactors, mapping renames, test scaffolding, and any
-   task whose result the compiler or the verification ladder can check.
+   It is free, so prefer it whenever ox-alpha is unavailable, and always pass
+   `--variant max`. Same task fit as above.
    `~/.config/opencode/opencode.jsonc` already pins opencode's own `explore` and
    `general` agents to this model.
-2. **Luna max.** Escalate here for cross-cutting design, loader-semantics
+3. **Luna max.** Escalate here for cross-cutting design, loader-semantics
    judgment, integration reasoning, and difficult review — work where being
    confidently wrong is expensive and no compiler will catch it.
-3. **Sol xhigh or Opus 5 medium.** Only when a task is extremely demanding and
+4. **Sol xhigh or Opus 5 medium.** Only when a task is extremely demanding and
    both profiles above have proven insufficient. Justify the escalation in the
    handoff notes.
 
 Never substitute a model outside this ladder; if none is available, keep the
-work in the parent. Do not assign multiple agents overlapping files. Give a
-deepseekflash subagent explicit file lists rather than asking it to search, and
+work in the parent. Do not assign multiple agents overlapping files. Give an
+ox-alpha or deepseekflash subagent explicit file lists rather than asking it to
+search, and
 state read-only when it must not write. The parent agent owns final
 integration, documentation, and the complete verification ladder, and must
 independently verify subagent output rather than trusting a summary.
@@ -172,6 +189,9 @@ rendering, command, persistence, or NeoForge integration change requires steps
   required for dedicated-server startup, authoritative gameplay, or mandatory
   truth telegraphs; the built-in renderer and accessible low-LOD path remain
   functional when Veil or post-processing is unavailable.
+- With Veil active, Veil/Quasar owns every Vector-Regnum particle-based
+  animation except Minecraft enchanting-table particles. Built-in particle
+  animation code remains available only for Veil-absent or failed fallback.
 - Tutorial changes require bumping the versioned guide attachment so existing
   players receive the revised manual.
 - The Hermes automated showcase is gated by

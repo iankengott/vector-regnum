@@ -1,8 +1,10 @@
 # Vector-Regnum
 
-> **Platform status (2026-08-20):** this is the active Vector-Regnum NeoForge
+> **Platform status (2026-08-21):** this is the active Vector-Regnum NeoForge
 > 1.21.1 repository. The Fabric implementation is deprecated and frozen in its
-> own archived repository. Priority 20 is checked; priority 20a is next.
+> own archived repository. Priority 20a's Veil particle migration, automated
+> suite, Hermes gates, and human-controlled Main-PC desktop attestation passed;
+> priority 21 is the first unfinished item.
 > The frozen Fabric repository and all companion projects are listed in
 > [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
@@ -13,7 +15,7 @@ effects; invalid programs fault at an exact physical sigil and may collapse into
 Wild Magic.
 
 The current build is a substantial playable alpha, not a finished release. It
-implements the first coherent working pass of priorities 1–19: typed/ticked
+implements the first coherent working pass of priorities 1–20a: typed/ticked
 execution, authoring and diagnostics,
 safety-bounded control flow, perception, physics, cost accounting, three spell
 media, finite crystal progression, Ponders, the visual Field Manual, the
@@ -35,7 +37,7 @@ development unit inactive and port free. The repeatable visual workflow is
 |---|---|
 | Build | NeoForge 21.1.248, ModDevGradle 2.0.141, Mojang official mappings |
 | Loader surface | NeoForge `@Mod`, deferred registries, attachments, SavedData, payloads, events, custom-feature worldgen, client subscribers |
-| Automated suite | 172 JUnit tests and 18 production NeoForge GameTests |
+| Automated suite | 212 JUnit tests and 18 production NeoForge GameTests |
 | Live parity | Registries, payload directions, attachments, creative tab, and command root checked against a manifest |
 | Launch workflow | Guarded NixOS launcher and guarded Hermes server/client mirror on loopback port 25575 |
 
@@ -43,14 +45,57 @@ The production matrix queries the running game rather than inferring loader
 health from compilation. A deliberate broken registry ID was confirmed to fail
 the parity GameTest before the source was restored.
 
+## Optional Veil renderer
+
+The priority-20a implementation pins Veil 4.4.1 as an optional client-only
+dependency. One reflectively loaded adapter maps the bounded presentation
+program and compact authoritative world traces into nineteen Quasar emitter
+motifs (element motes, torus rings, cylinder beams, bursts, sparks, smoke, and
+light), at most 8 deferred lights, at most 16 emitters, and optional bloom.
+Every mapped visual geometry family receives a capped Quasar motif. The
+built-in renderer remains the only renderer on the default runtime and
+dedicated server, and the mandatory Veil-absent/failure fallback.
+
+With Veil active it owns every Vector-Regnum particle-based animation; the sole
+vanilla-particle allowlist entry is the enchanting-table truth cue
+(`VanillaParticleAllowlist`), enforced at the single guarded emission choke
+point in `ClientPresentationRuntime`. Servers no longer spawn vanilla
+particles at all: `SpellVisualManager`, `NeoForgeVmService`, and
+`SemanticSpellExecutor` emit compact `presentation_trace`/`circle_preview`
+payloads through the budgeted `ServerTraces` choke point, and each receiving
+client renders them through its own backend. A source-scan test
+(`ParticleAllowlistSourceScanTest`) proves every emission flows through the
+guarded choke point, a vocabulary test proves every requestable Quasar motif
+exists, and payload/factory tests cover the wire bounds.
+
+`scripts/verify-priority20a.sh` proves the dependency boundary and focused
+policy tests. The exact target-pack matrix passed with Create 6.0.10, Sodium
+0.8.13-beta.2, Iris 1.8.14-beta.1, and Bliss 2.1.2. The inspected matrix image
+`visual-evidence/main-pc-priority20a-create-matrix-safe.png` shows the staged
+Create mechanical press and cogwheel beside the spell scene.
+Iris compatibility mode keeps Quasar but disables Veil deferred lights and
+bloom, avoiding invalid instanced draws.
+
+For the completed priority, the full automated ladder passed (212 JUnit tests,
+18 GameTests, JSON/script checks), guarded Hermes clients booted with Veil
+present (all 19 motifs loaded, checkpoint staged, live trace capture in
+`visual-evidence/hermes-window-20260821T141107Z.png`) and absent (built-in
+backend, checkpoint staged), and both Hermes dev units were stopped with port
+25575 free. Ian then passed the human-controlled Main-PC desktop attestation on
+the final artifact through `scripts/priority20-local-visual-wizard.sh`.
+Authored and library casts, F3+T reload, minimal LOD, reduced motion,
+photosensitive mode, and mandatory truth cues passed under Veil. Minecraft
+closed normally, the owned unit unloaded, and port 25575 was free.
+
 ## Confirmed working in the NeoForge alpha
 
 - NeoForge 21.1.248, ModDevGradle 2.0.141, official/Parchment mappings,
   Gradle 9.2.1, and Java 21.
-- **172 passing JUnit tests** covering the compatibility engine, typed VM,
+- **212 passing JUnit tests** covering the compatibility engine, typed VM,
   static stack analysis, semantics/presentation, circle authoring, media,
   guide/Ponder models, geology, transport, multiplayer policy, automation
-  ownership, progression, and spell-library contracts, plus **18 passing
+  ownership, progression, spell-library contracts, and the priority-20a
+  particle allowlist/trace wire/Quasar vocabulary checks, plus **18 passing
   production NeoForge GameTests** on an isolated headless server, including a
   real Vector Step follow-up-VM regression. The separate
   frozen Fabric alpha at `c7371ca` retains its 170-test/16-GameTest record.
@@ -143,6 +188,13 @@ Vector-Regnum items in the hotbar. Ian then passed the human-controlled
 Main-PC visual gate through `scripts/priority20-local-visual-wizard.sh`,
 confirming in-world content, rendered items, normal shutdown, and clean
 development-unit and port state.
+
+Priority 20a added two more inspected Hermes runs. The built-in capture
+`visual-evidence/hermes-window-20260820T152855Z.png` retained mandatory
+geometry and particles with Veil absent. The Veil capture
+`visual-evidence/hermes-window-20260820T153048Z.png` showed the same readable
+scene with Quasar motes, bloom, and local lighting. Both clients reached
+`VISUAL_CHECKPOINT_READY`; both remote units were stopped afterward.
 
 ## Build and test
 
@@ -291,13 +343,14 @@ Every spell combines many restrained, coordinated
 layers: readable form and telegraphing, particles and procedural geometry,
 illumination and dynamic/shadow response, darkness/fog and air movement,
 spatial sound, camera/screen response, material interaction, and lingering aftermath. Those
-examples are a floor rather than a closed list. Roadmap priority 20a adds
+examples are a floor rather than a closed list. The priority-20a work added
 [FoundryMC Veil](https://github.com/FoundryMC/Veil) as an optional modular
 rendering backend for reusable particles, beams, ribbons, meshes, lights,
-framebuffers, and post effects. Veil will consume the existing bounded
-presentation program rather than replace its spell grammar. Essential effects
-remain scalable, accessible, mechanically truthful, and functional through the
-built-in renderer when Veil or a compatible shader path is unavailable.
+framebuffers, and post effects. Veil 4.4.1 consumes the existing bounded
+presentation program and compact authoritative traces rather than replace the
+spell grammar. Essential effects remain scalable, accessible, mechanically
+truthful, and functional through the built-in renderer when Veil or a
+compatible shader path is unavailable.
 
 See [SPELL_PRESENTATION.md](SPELL_PRESENTATION.md) for the presentation IR,
 semantic-generation rules, sensory choreography standard, runtime boundaries,
@@ -337,15 +390,13 @@ small versioned API. See [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
 ## Still not finished
 
-The immediate work is the Veil-backed modular presentation overhaul and
-compatibility gate before new gameplay work. The elemental identity model,
-reagent economy, persistent upkeep
-and conclusions, shared-memory branching, explicitly approved cooperative
-rituals, security and accessibility hardening, and the optional SMP integration
-API follow. Configuration, balancing, profiling, full playtests,
-NeoForge/modpack compatibility, final art, localization, and release packaging
-come afterward; that release milestone also owns publishing inspected in-game
-images to the Regnum Hub.
+Priority 21's elemental identity and affinity model is next. The reagent
+economy, persistent upkeep and conclusions, shared-memory branching,
+explicitly approved cooperative rituals, security and accessibility hardening,
+and the optional SMP integration API follow. Configuration, balancing,
+profiling, full playtests, NeoForge/modpack compatibility, final art,
+localization, and release packaging come afterward; that release milestone also
+owns publishing inspected in-game images to the Regnum Hub.
 
 See [ROADMAP.md](ROADMAP.md) for the detailed status.
 
@@ -356,11 +407,13 @@ the machine boundaries, canonical priority queue, required NixOS and Hermes
 verification ladder, visual-inspection requirement, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
-[ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priority 20
-is checked and priority 20a is the first unfinished item.
-`AGENTS.md` also records Ian's subagent ladder — opencode
-deepseekflash first, then Luna max, then Sol xhigh or Opus 5 medium — plus the
-delegation rules, so no earlier chat context is required.
+[ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priority 20a's
+migration and every automated, remote, compatibility, and human visual gate are
+complete; priority 21 is the first unfinished item.
+`AGENTS.md` also records Ian's subagent ladder — the temporary free ox-alpha
+first while it lasts, then opencode deepseekflash, then Luna max, then Sol
+xhigh or Opus 5 medium — plus the delegation rules, so no earlier chat context
+is required.
 
 ---
 

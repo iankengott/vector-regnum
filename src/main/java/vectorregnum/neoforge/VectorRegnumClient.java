@@ -16,9 +16,11 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
+import net.neoforged.neoforge.client.event.RegisterClientReloadListenersEvent;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.minecraft.server.packs.resources.ResourceManagerReloadListener;
 import org.lwjgl.glfw.GLFW;
 import vectorregnum.neoforge.editor.CircleEditorClientNetworking;
 import vectorregnum.neoforge.guide.FieldManualClientApi;
@@ -77,6 +79,12 @@ public final class VectorRegnumClient {
             event.register(ponderKey);
             event.register(editorKey);
             event.register(presentationQualityKey);
+        }
+
+        @SubscribeEvent
+        public static void registerReloadListeners(RegisterClientReloadListenersEvent event) {
+            event.registerReloadListener((ResourceManagerReloadListener) ignored ->
+                    ClientPresentationRuntime.onResourceReload());
         }
     }
 

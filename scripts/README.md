@@ -11,7 +11,8 @@ deprecated Fabric alpha remains reproducible in the separate
 same checked-in test-world configuration used on Hermes, starts the server in
 the owned transient unit `vector-regnum-local-server.service`, waits for
 `127.0.0.1:25575`, and launches the quick-play client through `steam-run` for
-NixOS graphics-driver access.
+NixOS graphics-driver access. The local client enables the exact optional Veil
+4.4.1 runtime; the dedicated server remains dependency-free.
 
 Closing Minecraft triggers the launcher's cleanup trap, which stops and
 collects the server unit. The launcher refuses unexpected JARs in either dev
@@ -35,9 +36,41 @@ scripts/priority20-local-visual-wizard.sh
 
 The wizard does not open, focus, type into, or close Minecraft. It preflights
 the isolated launcher, gives the human an explicit in-game checklist, and then
-verifies the IPv4 endpoint, owned-unit cleanup, and free port after the human
-closes Minecraft normally. A passed run writes the ignored evidence record
-`visual-evidence/main-pc-priority20-visual-attestation.txt`.
+verifies authored and library casts, resource reload, accessible low LOD, the
+IPv4 endpoint, owned-unit cleanup, and free port after the human closes
+Minecraft normally. The final priority-20a pass succeeded on 2026-08-21 and
+wrote the ignored evidence record
+`visual-evidence/main-pc-priority20a-visual-attestation.txt`.
+
+## Priority 20a renderer checks
+
+These commands validate the completed Veil particle migration. Active Veil
+replaces every Vector-Regnum particle animation except enchanting-table
+particles, the automated allowlist guards that rule, and the automated plus
+Hermes-present/absent gates passed on 2026-08-21. The human-controlled Main-PC
+desktop attestation also passed on the final artifact that day.
+
+Check the live handoff documents for claims that contradict the completed
+priority before closing later documentation passes:
+
+```bash
+scripts/check-handoff-docs.sh
+```
+
+Run the deterministic dependency, classloading, resource, and focused-test
+gate with:
+
+```bash
+scripts/verify-priority20a.sh
+```
+
+On the Main PC, `scripts/priority20a-compat-matrix.sh run` stages exact
+SHA-256-verified Veil 4.4.1, Create 6.0.10, Sodium 0.8.13-beta.2, Iris
+1.8.14-beta.1, and Bliss 2.1.2 artifacts from the target Prism pack into
+ignored isolated run directories. It never changes the live pack. The run
+stages a Create mechanical press and cogwheel in the automated scene, requires
+Iris-safe Veil compatibility mode, and rejects unexpected high-severity OpenGL
+diagnostics. The `stage` and `check` actions can be run separately.
 
 ## Hermes development workflow
 
@@ -62,6 +95,13 @@ scripts/hermes-sync.sh
 scripts/hermes-build.sh
 scripts/hermes-client.sh restart
 scripts/hermes-client.sh logs
+```
+
+Hermes clients use Veil by default. Set `VR_CLIENT_RENDERER=builtin` on the
+client command to prove the dependency-free fallback, for example:
+
+```bash
+VR_CLIENT_RENDERER=builtin scripts/hermes-client.sh restart
 ```
 
 ## Production NeoForge GameTests

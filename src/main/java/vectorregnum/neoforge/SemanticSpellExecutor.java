@@ -6,7 +6,6 @@ import java.util.List;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,7 +29,10 @@ import net.minecraft.world.phys.Vec3;
 import vectorregnum.core.semantic.SemanticInstruction;
 import vectorregnum.core.semantic.SemanticOpcode;
 import vectorregnum.core.semantic.SemanticSchema;
+import vectorregnum.core.presentation.PresentationElement;
+import vectorregnum.core.presentation.PresentationParticleStyle;
 import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
+import vectorregnum.neoforge.presentation.ServerTraces;
 
 /** Opcode-driven server adapter for every curated semantic operation. */
 public final class SemanticSpellExecutor {
@@ -240,14 +242,16 @@ public final class SemanticSpellExecutor {
                 livingTargets().forEach(entity -> entity.addEffect(
                         new MobEffectInstance(MobEffects.GLOWING, Math.max(duration, 200), 0)));
             } else if (style.equals("vein_trace")) {
-                int found = 0; BlockPos center = player.blockPosition(); int r = Math.min(12, (int) radius);
+                List<Vec3> ores = new ArrayList<>(32);
+                BlockPos center = player.blockPosition(); int r = Math.min(12, (int) radius);
                 for (BlockPos pos : BlockPos.betweenClosed(center.offset(-r, -r, -r), center.offset(r, r, r))) {
                     if (isOre(world.getBlockState(pos))) {
-                        world.sendParticles(ParticleTypes.ELECTRIC_SPARK, pos.getX() + .5,
-                                pos.getY() + .5, pos.getZ() + .5, 8, .2, .2, .2, .02);
-                        if (++found >= 32) break;
+                        ores.add(new Vec3(pos.getX() + .5, pos.getY() + .5, pos.getZ() + .5));
+                        if (ores.size() >= 32) break;
                     }
                 }
+                ServerTraces.burstAll(world, ores, PresentationParticleStyle.SPARK,
+                        PresentationElement.ARCANE, 0.35F, 0.7F, 14);
             }
         }
 

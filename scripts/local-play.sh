@@ -159,7 +159,7 @@ port_is_loopback_only ||
 
 set +e
 JAVA_HOME="$vector_jdk" PATH="$vector_path" \
-    steam-run "$REPO_ROOT/gradlew" --no-daemon runClient
+    steam-run "$REPO_ROOT/gradlew" --no-daemon -Pvector_regnum_enable_veil=true runClient
 client_status=$?
 set -e
 

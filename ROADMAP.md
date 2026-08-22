@@ -16,7 +16,7 @@ art, UX, or production hardening is complete.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Frost Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 172 JUnit/contract tests, 18 production NeoForge GameTests, plus real
+- [x] 212 JUnit/contract tests, 18 production NeoForge GameTests, plus real
   local/Hermes server boots and direct visual inspection.
 
 ## Priorities 1–10 milestone
@@ -117,8 +117,9 @@ acceptance scope.
     21.1.248 and ModDevGradle with Mojang/Parchment mappings. Registrations,
     attachments and claim SavedData, seven payloads, lifecycle/events,
     custom-feature worldgen, client rendering/guide, commands, guarded NixOS
-    and Hermes launchers, 172 JUnit tests, and 18 live NeoForge GameTests pass
-    their gates. The manifest-driven parity test queries the running
+    and Hermes launchers, the 172-test migration checkpoint, and 18 live
+    NeoForge GameTests passed their gates. The manifest-driven parity test
+    queries the running
     registries, payload directions, attachments, creative tab, and command
     dispatcher and was proved by an intentional negative control. Behavioral
     parity, hard safety limits, the loader-neutral presentation IR, and the
@@ -128,7 +129,7 @@ acceptance scope.
     2026-08-20: the client joined `127.0.0.1:25575`, rendered Vector-Regnum
     content and items in-world, closed normally, and left the owned server
     inactive with the development port free.
-20a. [ ] **Veil-backed modular presentation overhaul and compatibility gate.**
+20a. [x] **Veil-backed modular presentation overhaul and compatibility gate.**
     After priority 20 establishes the NeoForge baseline—and before priority 21
     gameplay work—add [FoundryMC Veil](https://github.com/FoundryMC/Veil) as an
     optional client rendering backend beneath the existing bounded
@@ -146,7 +147,49 @@ acceptance scope.
     implementation, then verify Veil present/absent, dedicated-server
     classloading, resource reload, low LOD, reduced-motion/photosensitivity,
     representative library and player-authored spells, and the target SMP
-    renderer/Create compatibility matrix.
+    renderer/Create compatibility matrix. Veil 4.4.1 is pinned as an optional
+    client dependency and isolated behind one reflectively loaded adapter. The
+    semantic mapper exposes the complete curated bounded module vocabulary.
+    Every mapped visual geometry family receives a capped Quasar motif; capped
+    deferred lights and optional bloom add more depth when the renderer supports
+    them without replacing the built-in truth renderer. The default runtime
+    and dedicated GameTest server load without Veil; backend faults fail closed.
+    The initial adapter passed its then-current 197-test JUnit suite, 18
+    GameTests, resource reload, minimal LOD,
+    reduced-motion/photosensitive controls, authored and library casts, guarded
+    Veil-present/absent Hermes clients, and the exact Veil/Create/Sodium/Iris/
+    Bliss target-pack matrix passed. That matrix stages and visibly renders a
+    Create mechanical press and cogwheel. Iris compatibility mode disables
+    Veil deferred lights and bloom while retaining Quasar and mandatory truth
+    cues; this removed repeated invalid instanced draws. Ian repeated the
+    Main-PC desktop gate after those fixes on 2026-08-20. The client exercised
+    authored and library spells, F3+T reload, and accessibility fallbacks, then
+    closed normally with the owned unit absent and port 25575 free.
+    This initial adapter and its gates were not enough to complete the priority.
+    The 2026-08-21 migration finished that work: every Vector-Regnum
+    particle-emission path was inventoried and migrated so servers emit only
+    compact `presentation_trace`/`circle_preview` payloads through the budgeted
+    `ServerTraces` choke point, and each client renders them through its active
+    backend. With Veil active, Quasar motifs (19 authored emitters: element
+    motes, torus rings, cylinder beams, bursts, sparks, smoke, light) own every
+    Vector-Regnum particle-based animation; built-in vanilla particles are
+    emitted only through one guarded choke point whose runtime allowlist admits
+    exactly `ParticleTypes.ENCHANT`, and remain fully available for the
+    Veil-absent or failed fallback. Enforcement is automated:
+    `ParticleAllowlistSourceScanTest` proves no ungated emission or stray
+    `ParticleTypes` reference exists, `VanillaParticleAllowlistTest` proves the
+    active-backend allowlist behavior, `PresentationTracePayloadTest` covers
+    wire bounds and cue synthesis, and `QuasarEmitterVocabularyTest` proves
+    every requestable motif exists and stays capped. The full ladder passed:
+    212 JUnit tests, all 18 GameTests on the real server, JSON/script checks,
+    `verify-priority20a.sh`, guarded Hermes clients with Veil present (all 19
+    motifs loaded, checkpoint staged, live capture inspected) and absent
+    (built-in backend, checkpoint staged), and both dev units stopped with port
+    25575 free. Ian then passed the human-controlled Main-PC desktop attestation
+    through `scripts/priority20-local-visual-wizard.sh` on the final artifact:
+    authored and library casts, F3+T reload, minimal LOD, reduced motion,
+    photosensitive mode, mandatory truth cues, normal shutdown, unloaded owned
+    unit, and free port 25575 all passed.
 21. [ ] **Elemental identity and affinity expansion.** Replace Frost with Ice;
     add Water, Air, Earth, Lightning, Time, Space, Light, Dark, Nature, Sound,
     and rare Void around the ordinary twelve; retain Arcane only as neutral raw
@@ -256,9 +299,12 @@ acceptance scope.
   atmosphere, spatial audio, tactile response, impact, and aftermath. The list
   is intentionally non-exhaustive, and the system should generate additional
   context-appropriate layers from spell semantics.
-- [ ] Original Vector-Regnum block/item texture pass plus the priority-20a
-  Veil-backed modular renderer, with a built-in truth-telegraph fallback, for
-  release-quality presentation.
+- [x] Priority-20a Veil-backed modular renderer with full Veil ownership of
+  particle animations except enchanting-table particles, plus a built-in
+  truth-telegraph fallback. Migration, automated enforcement,
+  Hermes-present/absent gates, and the human-controlled Main-PC desktop
+  attestation passed 2026-08-21.
+- [ ] Original Vector-Regnum block/item texture pass and final presentation art.
 - [x] Sixteen production Fabric GameTests in the frozen legacy repository cover commands, attachments,
   media/block-entity round trips, crystal interactions, timers, serialized
   restart contracts, two-player isolation, claims/death migration, relay

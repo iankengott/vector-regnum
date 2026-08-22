@@ -1,8 +1,6 @@
 package vectorregnum.neoforge;
 
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.ParticleOptions;
-import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -23,8 +21,11 @@ import vectorregnum.core.WildMagicCategory;
 import vectorregnum.core.circle.CircleDiagnostic;
 import vectorregnum.core.circle.MagicCircle;
 import vectorregnum.core.circle.PlacedSigil;
-import vectorregnum.core.presentation.ExecutionEvent;
+import vectorregnum.core.presentation.PresentationElement;
+import vectorregnum.core.presentation.PresentationParticleStyle;
 import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
+import vectorregnum.neoforge.presentation.CirclePreviewPayload;
+import vectorregnum.neoforge.presentation.ServerTraces;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -33,9 +34,16 @@ import java.util.Set;
 import java.util.SplittableRandom;
 import java.util.stream.Collectors;
 
-/** Turns deterministic core effect commands into authoritative world changes and particle traces. */
+/**
+ * Turns deterministic core effect commands into authoritative world changes and
+ * compact trace events. This manager never spawns vanilla particles: every
+ * visual is a bounded payload that each receiving client renders through its
+ * own presentation backend (Quasar motifs under Veil, guarded built-in
+ * fallback otherwise).
+ */
 public final class SpellVisualManager {
     static final int DEV_SHOWCASE_DURATION_TICKS = 300;
+    private static final int MAX_PREVIEW_SIGILS = CirclePreviewPayload.MAX_SIGILS;
     private static final List<ActiveVisual> ACTIVE = new ArrayList<>();
     private static boolean initialized;
 
@@ -48,7 +56,9 @@ public final class SpellVisualManager {
 
     @SubscribeEvent
     public static void onServerTick(ServerTickEvent.Post event) {
-        tick(event.getServer());
+        MinecraftServer server = event.getServer();
+        ServerTraces.tickBudget(server.overworld().getGameTime());
+        tick(server);
     }
 
     @SubscribeEvent
@@ -75,53 +85,35 @@ public final class SpellVisualManager {
     }
 
     public static void startShowcase(ServerPlayer player) {
-        ACTIVE.add(new CircleVisual(player));
-    }
-
-    /** Resolves only bounded, mechanics-derived VM events into cosmetic particles. */
-    public static void acceptVmEvent(ServerPlayer player, ExecutionEvent event) {
-        if (player == null || player.isRemoved() || event == null) {
-            return;
-        }
         ServerLevel world = player.serverLevel();
-        Vec3 point = player.getEyePosition();
-        switch (event) {
-            case ExecutionEvent.Started ignored -> world.sendParticles(ParticleTypes.ENCHANT,
-                    point.x, point.y, point.z, 3, 0.12, 0.12, 0.12, 0.03);
-            case ExecutionEvent.DelayStarted delay -> world.sendParticles(ParticleTypes.END_ROD,
-                    point.x, point.y, point.z, Math.min(6, delay.delayTicks()),
-                    0.16, 0.16, 0.16, 0.01);
-            case ExecutionEvent.WorldEffectEmitted ignored -> world.sendParticles(
-                    ParticleTypes.ELECTRIC_SPARK, point.x, point.y, point.z,
-                    5, 0.2, 0.2, 0.2, 0.03);
-            case ExecutionEvent.Halted ignored -> world.sendParticles(ParticleTypes.END_ROD,
-                    point.x, point.y, point.z, 4, 0.18, 0.18, 0.18, 0.02);
-            case ExecutionEvent.Faulted ignored -> world.sendParticles(ParticleTypes.SMOKE,
-                    point.x, point.y, point.z, 8, 0.22, 0.25, 0.22, 0.03);
-            default -> { }
-        }
+        Vec3 forward = player.getViewVector(1.0F).normalize();
+        Vec3 horizontal = forward.cross(new Vec3(0.0, 1.0, 0.0));
+        Vec3 right = horizontal.lengthSqr() < 1.0e-6
+                ? new Vec3(1.0, 0.0, 0.0) : horizontal.normalize();
+        Vec3 up = right.cross(forward).normalize();
+        Vec3 center = player.getEyePosition().add(forward.scale(5.0));
+        ServerTraces.circlePreview(world, new CirclePreviewPayload(
+                ServerTraces.nextInstanceId(), true,
+                center.x, center.y, center.z, right.x, right.y, right.z,
+                up.x, up.y, up.z,
+                List.of(2.25F, 1.45F), 32, List.of(),
+                DEV_SHOWCASE_DURATION_TICKS, world.getGameTime()));
     }
 
     public static void showAuthoredCircle(
             ServerPlayer player, MagicCircle circle, List<CircleDiagnostic> diagnostics) {
-        ACTIVE.removeIf(visual -> visual instanceof AuthoredCircleVisual authored
-                && authored.player.getUUID().equals(player.getUUID()));
-        ACTIVE.add(new AuthoredCircleVisual(player, circle, diagnostics));
+        broadcastPreview(player, circle, diagnostics, null, null);
     }
 
     public static void showAuthoredCircleAt(ServerPlayer player, MagicCircle circle,
             List<CircleDiagnostic> diagnostics, Vec3 center) {
-        ACTIVE.removeIf(visual -> visual instanceof AuthoredCircleVisual authored
-                && authored.player.getUUID().equals(player.getUUID()));
-        ACTIVE.add(new AuthoredCircleVisual(player, circle, diagnostics, center));
+        broadcastPreview(player, circle, diagnostics, center, null);
     }
 
     /** Draws a fixed editor preview parallel to a server-captured block face. */
     public static void showAuthoredCircleOnFace(ServerPlayer player, MagicCircle circle,
             List<CircleDiagnostic> diagnostics, Vec3 center, Direction face) {
-        ACTIVE.removeIf(visual -> visual instanceof AuthoredCircleVisual authored
-                && authored.player.getUUID().equals(player.getUUID()));
-        ACTIVE.add(new AuthoredCircleVisual(player, circle, diagnostics, center, face));
+        broadcastPreview(player, circle, diagnostics, center, face);
     }
 
     private static void tick(MinecraftServer server) {
@@ -139,6 +131,69 @@ public final class SpellVisualManager {
         }
     }
 
+    /** Broadcasts one verified circle descriptor; the client animates it locally. */
+    private static void broadcastPreview(ServerPlayer player, MagicCircle circle,
+            List<CircleDiagnostic> diagnostics, Vec3 anchoredCenter, Direction anchorFace) {
+        ServerLevel world = player.serverLevel();
+        Vec3 forward;
+        Vec3 right;
+        Vec3 up;
+        if (anchorFace == null) {
+            forward = player.getViewVector(1.0F).normalize();
+            Vec3 horizontal = forward.cross(new Vec3(0.0, 1.0, 0.0));
+            right = horizontal.lengthSqr() < 1.0e-6
+                    ? new Vec3(1.0, 0.0, 0.0) : horizontal.normalize();
+            up = right.cross(forward).normalize();
+        } else {
+            forward = new Vec3(anchorFace.getStepX(), anchorFace.getStepY(),
+                    anchorFace.getStepZ());
+            Vec3 referenceUp = Math.abs(forward.y) > 0.9
+                    ? new Vec3(0.0, 0.0, 1.0) : new Vec3(0.0, 1.0, 0.0);
+            right = referenceUp.cross(forward).normalize();
+            up = forward.cross(right).normalize();
+        }
+        Vec3 center = anchoredCenter == null
+                ? player.getEyePosition().add(forward.scale(5.0)) : anchoredCenter;
+        Set<vectorregnum.core.circle.CircleCoordinate> errors = diagnostics.stream()
+                .filter(diagnostic -> diagnostic.severity() == CircleDiagnostic.Severity.ERROR)
+                .flatMap(diagnostic -> diagnostic.location().stream())
+                .collect(Collectors.toUnmodifiableSet());
+        int ringCount = Math.min(circle.ringCount(), CirclePreviewPayload.MAX_RINGS);
+        List<Float> radii = new ArrayList<>(ringCount);
+        for (int ring = 0; ring < ringCount; ring++) {
+            radii.add((float) radius(ring, circle));
+        }
+        List<CirclePreviewPayload.SigilDot> sigils = new ArrayList<>(MAX_PREVIEW_SIGILS);
+        for (PlacedSigil placed : circle.executionOrder()) {
+            if (sigils.size() >= MAX_PREVIEW_SIGILS) break;
+            int coordinateRing = placed.coordinate().ring();
+            if (coordinateRing >= ringCount) continue;
+            int visual = errors.contains(placed.coordinate())
+                    ? CirclePreviewPayload.VISUAL_FAULT : visualFor(placed.type());
+            sigils.add(new CirclePreviewPayload.SigilDot(coordinateRing,
+                    placed.coordinate().clockwiseSlot(), visual));
+        }
+        ServerTraces.circlePreview(world, new CirclePreviewPayload(
+                ServerTraces.nextInstanceId(), false,
+                center.x, center.y, center.z, right.x, right.y, right.z, up.x, up.y, up.z,
+                radii, Math.min(circle.slotsPerRing(), CirclePreviewPayload.MAX_SLOTS_PER_RING),
+                sigils, DEV_SHOWCASE_DURATION_TICKS, world.getGameTime()));
+    }
+
+    private static int visualFor(String type) {
+        if (type.contains("FIRE")) return CirclePreviewPayload.VISUAL_FIRE;
+        if (type.contains("FROST")) return CirclePreviewPayload.VISUAL_FROST;
+        if (type.contains("VOID")) return CirclePreviewPayload.VISUAL_VOID;
+        if (type.equals("EXECUTE")) return CirclePreviewPayload.VISUAL_EXECUTE;
+        if (type.startsWith("SHAPE_")) return CirclePreviewPayload.VISUAL_SHAPE;
+        return CirclePreviewPayload.VISUAL_DEFAULT;
+    }
+
+    private static double radius(int ring, MagicCircle circle) {
+        double step = 2.2 / Math.max(1, circle.ringCount());
+        return 2.6 - ring * step;
+    }
+
     private interface ActiveVisual {
         boolean tick();
     }
@@ -150,7 +205,17 @@ public final class SpellVisualManager {
                 && world.isLoaded(caster.blockPosition());
     }
 
+    private static PresentationElement trailElement(Element element) {
+        return switch (element) {
+            case FIRE -> PresentationElement.FIRE;
+            case FROST -> PresentationElement.FROST;
+            case VOID -> PresentationElement.VOID;
+            case ARCANE -> PresentationElement.FIRE;
+        };
+    }
+
     private static final class ProjectileVisual implements ActiveVisual {
+        private static final int CADENCE_TICKS = 2;
         private final ServerPlayer caster;
         private final ServerLevel world;
         private final Vec3 origin;
@@ -185,19 +250,16 @@ public final class SpellVisualManager {
                     caster));
             if (blockHit.getType() != HitResult.Type.MISS) {
                 Vec3 hitPosition = blockHit.getLocation();
-                world.sendParticles(ParticleTypes.SMOKE,
-                        hitPosition.x, hitPosition.y, hitPosition.z,
-                        8, 0.2, 0.2, 0.2, 0.02);
+                ServerTraces.burst(world, hitPosition, PresentationParticleStyle.SMOKE,
+                        trailElement(element), 0.5F, 0.7F, 12);
                 return false;
             }
-            ParticleOptions primary = element == Element.FROST
-                    ? ParticleTypes.SNOWFLAKE
-                    : element == Element.VOID ? ParticleTypes.DRAGON_BREATH : ParticleTypes.FLAME;
-            world.sendParticles(primary, position.x, position.y, position.z,
-                    7, radius * 0.18, radius * 0.18, radius * 0.18, 0.02);
-            world.sendParticles(ParticleTypes.END_ROD, position.x, position.y, position.z,
-                    2, 0.08, 0.08, 0.08, 0.0);
-
+            if (age % CADENCE_TICKS == 0) {
+                ServerTraces.motes(world, position, PresentationParticleStyle.MOTES,
+                        trailElement(element), (float) (radius * 0.5), 0.85F, 10);
+                ServerTraces.motes(world, position, PresentationParticleStyle.END_ROD,
+                        PresentationElement.ARCANE, 0.08F, 0.4F, 8);
+            }
             List<LivingEntity> hits = world.getEntitiesOfClass(
                     LivingEntity.class,
                     new AABB(position, position).inflate(radius),
@@ -211,8 +273,8 @@ public final class SpellVisualManager {
                 } else if (element == Element.FROST) {
                     target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
                 }
-                world.sendParticles(ParticleTypes.EXPLOSION, position.x, position.y, position.z,
-                        3, 0.2, 0.2, 0.2, 0.0);
+                ServerTraces.burst(world, position, PresentationParticleStyle.EXPLOSION,
+                        trailElement(element), 0.8F, 1.0F, 10);
                 return false;
             }
             return true;
@@ -226,7 +288,6 @@ public final class SpellVisualManager {
         private final Element element;
         private final double targetRadius;
         private final double magnitude;
-        private int age;
 
         private AuraVisual(ServerPlayer caster, EffectCommand.Aura command) {
             this.caster = caster;
@@ -235,48 +296,47 @@ public final class SpellVisualManager {
             this.element = command.element().orElse(Element.ARCANE);
             this.targetRadius = Math.max(1.0, Math.min(command.radius(), 12.0));
             this.magnitude = command.magnitude();
+            // One authoritative ring descriptor replaces per-tick particle streaming;
+            // clients grow the ring across the aura window themselves.
+            ServerTraces.ring(this.world, this.center, (float) this.targetRadius,
+                    trailElement(this.element), 80, 0.8F);
         }
 
         @Override
         public boolean tick() {
-            if (age++ >= 80 || !casterAvailable(caster, world)) {
+            if (!casterAvailable(caster, world)) {
                 return false;
             }
-            double radius = Math.min(targetRadius, 0.35 + age * 0.16);
-            ParticleOptions particle = element == Element.FROST
-                    ? ParticleTypes.SNOWFLAKE
-                    : element == Element.FIRE ? ParticleTypes.FLAME : ParticleTypes.ENCHANT;
-            if (age % 2 != 0) {
-                return true;
-            }
-            int points = Math.max(16, (int) Math.ceil(radius * 6.0));
-            for (int i = 0; i < points; i++) {
-                double angle = Math.PI * 2.0 * i / points;
-                double x = center.x + Math.cos(angle) * radius;
-                double z = center.z + Math.sin(angle) * radius;
-                world.sendParticles(particle, x, center.y + 0.15, z,
-                        1, 0.02, 0.08, 0.02, 0.0);
+            if (++age > 80) {
+                return false;
             }
             if (age == 32) {
-                List<LivingEntity> targets = world.getEntitiesOfClass(
-                        LivingEntity.class,
-                        new AABB(center, center).inflate(targetRadius, 2.5, targetRadius),
-                        entity -> entity != caster
-                                && entity.isAlive()
-                                && SpellSecurityPolicy.canAffectEntity(caster, entity)
-                                && entity.distanceToSqr(center) <= targetRadius * targetRadius);
-                for (LivingEntity target : targets) {
-                    if (element == Element.FROST) {
-                        target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 140, 2));
-                    }
-                    target.hurt(world.damageSources().magic(), (float) Math.min(20.0, 2.0 * magnitude));
-                }
+                applyBurst();
             }
             return true;
+        }
+
+        private int age;
+
+        private void applyBurst() {
+            List<LivingEntity> targets = world.getEntitiesOfClass(
+                    LivingEntity.class,
+                    new AABB(center, center).inflate(targetRadius, 2.5, targetRadius),
+                    entity -> entity != caster
+                            && entity.isAlive()
+                            && SpellSecurityPolicy.canAffectEntity(caster, entity)
+                            && entity.distanceToSqr(center) <= targetRadius * targetRadius);
+            for (LivingEntity target : targets) {
+                if (element == Element.FROST) {
+                    target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 140, 2));
+                }
+                target.hurt(world.damageSources().magic(), (float) Math.min(20.0, 2.0 * magnitude));
+            }
         }
     }
 
     private static final class WildMagicVisual implements ActiveVisual {
+        private static final int CADENCE_TICKS = 4;
         private final ServerPlayer caster;
         private final ServerLevel world;
         private final EffectCommand.WildMagic command;
@@ -290,7 +350,8 @@ public final class SpellVisualManager {
             this.world = caster.serverLevel();
             this.command = command;
             this.random = new SplittableRandom(command.variationSeed());
-            this.origin = command.origin().map(SpellVisualManager::toMinecraft).orElse(caster.getEyePosition());
+            this.origin = command.origin().map(SpellVisualManager::toMinecraft)
+                    .orElse(caster.getEyePosition());
             this.violentDirection = randomDirection(random);
         }
 
@@ -301,223 +362,38 @@ public final class SpellVisualManager {
             }
             if (age == 1 && command.category() == WildMagicCategory.INTERNAL_MANA_DETONATION) {
                 caster.hurt(world.damageSources().magic(), 4.0F);
-                world.sendParticles(ParticleTypes.EXPLOSION_EMITTER,
-                        origin.x, origin.y, origin.z, 1, 0.0, 0.0, 0.0, 0.0);
+                ServerTraces.burst(world, origin, PresentationParticleStyle.EXPLOSION_EMITTER,
+                        PresentationElement.ARCANE, 2.0F, 1.0F, 15);
             }
-
+            if (age % CADENCE_TICKS != 0) {
+                return true;
+            }
             switch (command.category()) {
-                case INTERNAL_MANA_DETONATION -> world.sendParticles(
-                        ParticleTypes.TOTEM_OF_UNDYING,
-                        caster.getX(), caster.getY() + caster.getBbHeight() * 0.6, caster.getZ(),
-                        18, 0.5, 0.8, 0.5, 0.2);
+                case INTERNAL_MANA_DETONATION -> ServerTraces.burst(world,
+                        new Vec3(caster.getX(), caster.getY() + caster.getBbHeight() * 0.6,
+                                caster.getZ()),
+                        PresentationParticleStyle.TOTEM, PresentationElement.ARCANE,
+                        1.2F, 0.9F, 8);
                 case UNSTRUCTURED_ELEMENT_BURST -> {
+                    List<Vec3> points = new ArrayList<>(16);
                     for (int i = 0; i < 16; i++) {
-                        Vec3 offset = randomDirection(random).scale(0.4 + random.nextDouble() * 3.5);
-                        Vec3 position = origin.add(offset);
-                        world.sendParticles(ParticleTypes.WITCH,
-                                position.x, position.y, position.z,
-                                1, 0.04, 0.04, 0.04, 0.05);
+                        points.add(origin.add(randomDirection(random)
+                                .scale(0.4 + random.nextDouble() * 3.5)));
                     }
+                    ServerTraces.burstAll(world, points, PresentationParticleStyle.WITCH,
+                            PresentationElement.VOID, 0.25F, 0.7F, 10);
                 }
                 case VIOLENT_MISCAST -> {
-                    Vec3 position = origin.add(violentDirection.scale(age * 0.48));
-                    world.sendParticles(ParticleTypes.LARGE_SMOKE,
-                            position.x, position.y, position.z,
-                            6, 0.25, 0.25, 0.25, 0.04);
-                    world.sendParticles(ParticleTypes.FLAME,
-                            position.x, position.y, position.z,
-                            4, 0.15, 0.15, 0.15, 0.05);
+                    Vec3 tip = origin.add(violentDirection.scale(age * 0.48));
+                    ServerTraces.beam(world, origin, tip,
+                            PresentationParticleStyle.LARGE_SMOKE, PresentationElement.VOID,
+                            0.3F, 10, 0.8F);
+                    ServerTraces.beam(world, origin, tip,
+                            PresentationParticleStyle.MOTES, PresentationElement.FIRE,
+                            0.15F, 10, 0.6F);
                 }
             }
             return true;
-        }
-    }
-
-    private static final class CircleVisual implements ActiveVisual {
-        private final ServerPlayer player;
-        private final ServerLevel world;
-        private final Vec3 center;
-        private final Vec3 right;
-        private final Vec3 up;
-        private int age;
-
-        private CircleVisual(ServerPlayer player) {
-            this.player = player;
-            this.world = player.serverLevel();
-            Vec3 forward = player.getViewVector(1.0F).normalize();
-            Vec3 horizontal = forward.cross(new Vec3(0.0, 1.0, 0.0));
-            this.right = horizontal.lengthSqr() < 1.0e-6
-                    ? new Vec3(1.0, 0.0, 0.0)
-                    : horizontal.normalize();
-            this.up = right.cross(forward).normalize();
-            this.center = player.getEyePosition().add(forward.scale(5.0));
-        }
-
-        @Override
-        public boolean tick() {
-            if (age++ >= DEV_SHOWCASE_DURATION_TICKS || !casterAvailable(player, world)) {
-                return false;
-            }
-            if (age % 4 == 0) {
-                drawRing(world, center, right, up, 2.25, 32, ParticleTypes.END_ROD);
-                drawRing(world, center, right, up, 1.45, 20, ParticleTypes.ENCHANT);
-            }
-            if (age % 8 == 0) {
-                drawStar(world, center, right, up, 1.85);
-            }
-            return true;
-        }
-    }
-
-    /** Draws the actual authored ring/slot topology and animates compiler order. */
-    private static final class AuthoredCircleVisual implements ActiveVisual {
-        private static final int DURATION_TICKS = DEV_SHOWCASE_DURATION_TICKS;
-        private final ServerPlayer player;
-        private final ServerLevel world;
-        private final MagicCircle circle;
-        private final Set<vectorregnum.core.circle.CircleCoordinate> errors;
-        private final Vec3 center;
-        private final Vec3 right;
-        private final Vec3 up;
-        private int age;
-
-        private AuthoredCircleVisual(
-                ServerPlayer player, MagicCircle circle, List<CircleDiagnostic> diagnostics) {
-            this(player, circle, diagnostics, null, null);
-        }
-
-        private AuthoredCircleVisual(ServerPlayer player, MagicCircle circle,
-                List<CircleDiagnostic> diagnostics, Vec3 anchoredCenter) {
-            this(player, circle, diagnostics, anchoredCenter, null);
-        }
-
-        private AuthoredCircleVisual(ServerPlayer player, MagicCircle circle,
-                List<CircleDiagnostic> diagnostics, Vec3 anchoredCenter, Direction anchorFace) {
-            this.player = player;
-            this.world = player.serverLevel();
-            this.circle = circle;
-            this.errors = diagnostics.stream()
-                    .filter(diagnostic -> diagnostic.severity() == CircleDiagnostic.Severity.ERROR)
-                    .flatMap(diagnostic -> diagnostic.location().stream())
-                    .collect(Collectors.toUnmodifiableSet());
-            Vec3 forward;
-            if (anchorFace == null) {
-                forward = player.getViewVector(1.0F).normalize();
-                Vec3 horizontal = forward.cross(new Vec3(0.0, 1.0, 0.0));
-                this.right = horizontal.lengthSqr() < 1.0e-6
-                        ? new Vec3(1.0, 0.0, 0.0) : horizontal.normalize();
-                this.up = right.cross(forward).normalize();
-            } else {
-                forward = new Vec3(anchorFace.getStepX(), anchorFace.getStepY(),
-                        anchorFace.getStepZ());
-                Vec3 referenceUp = Math.abs(forward.y) > 0.9
-                        ? new Vec3(0.0, 0.0, 1.0) : new Vec3(0.0, 1.0, 0.0);
-                this.right = referenceUp.cross(forward).normalize();
-                this.up = forward.cross(right).normalize();
-            }
-            this.center = anchoredCenter == null
-                    ? player.getEyePosition().add(forward.scale(5.0)) : anchoredCenter;
-        }
-
-        @Override
-        public boolean tick() {
-            if (age++ >= DURATION_TICKS || !casterAvailable(player, world)) {
-                return false;
-            }
-            if (age % 4 == 0) {
-                for (int ring = 0; ring < circle.ringCount(); ring++) {
-                    double radius = radius(ring);
-                    drawRing(world, center, right, up, radius,
-                            Math.max(18, circle.slotsPerRing() * 3),
-                            ring == 0 ? ParticleTypes.END_ROD : ParticleTypes.ENCHANT);
-                }
-            }
-            List<PlacedSigil> ordered = circle.executionOrder().stream().limit(128).toList();
-            for (int index = 0; index < ordered.size(); index++) {
-                PlacedSigil sigil = ordered.get(index);
-                Vec3 position = position(sigil);
-                boolean active = index == Math.min(ordered.size() - 1, age / 12);
-                ParticleOptions particle = errors.contains(sigil.coordinate())
-                        ? ParticleTypes.LARGE_SMOKE : particleFor(sigil.type());
-                world.sendParticles(particle, position.x, position.y, position.z,
-                        active ? 8 : 1, active ? 0.13 : 0.02, active ? 0.13 : 0.02,
-                        active ? 0.13 : 0.02, active ? 0.025 : 0.0);
-                if (active) {
-                    drawLine(world, center, position, ParticleTypes.WITCH);
-                }
-            }
-            return true;
-        }
-
-        private double radius(int ring) {
-            double step = 2.2 / Math.max(1, circle.ringCount());
-            return 2.6 - ring * step;
-        }
-
-        private Vec3 position(PlacedSigil sigil) {
-            double angle = Math.PI * 2.0 * sigil.coordinate().clockwiseSlot()
-                    / circle.slotsPerRing();
-            double radius = radius(sigil.coordinate().ring());
-            return center.add(right.scale(Math.sin(angle) * radius))
-                    .add(up.scale(Math.cos(angle) * radius));
-        }
-
-        private static ParticleOptions particleFor(String type) {
-            if (type.contains("FIRE")) return ParticleTypes.FLAME;
-            if (type.contains("FROST")) return ParticleTypes.SNOWFLAKE;
-            if (type.contains("VOID")) return ParticleTypes.DRAGON_BREATH;
-            if (type.equals("EXECUTE")) return ParticleTypes.TOTEM_OF_UNDYING;
-            if (type.startsWith("SHAPE_")) return ParticleTypes.ELECTRIC_SPARK;
-            return ParticleTypes.END_ROD;
-        }
-    }
-
-    private static void drawRing(
-            ServerLevel world,
-            Vec3 center,
-            Vec3 right,
-            Vec3 up,
-            double radius,
-            int points,
-            ParticleOptions particle) {
-        for (int i = 0; i < points; i++) {
-            double angle = Math.PI * 2.0 * i / points;
-            Vec3 position = center
-                    .add(right.scale(Math.cos(angle) * radius))
-                    .add(up.scale(Math.sin(angle) * radius));
-            world.sendParticles(particle, position.x, position.y, position.z,
-                    1, 0.0, 0.0, 0.0, 0.0);
-        }
-    }
-
-    private static void drawStar(ServerLevel world, Vec3 center, Vec3 right, Vec3 up, double radius) {
-        Vec3[] points = new Vec3[5];
-        for (int i = 0; i < points.length; i++) {
-            double angle = -Math.PI / 2.0 + Math.PI * 2.0 * i / points.length;
-            points[i] = center
-                    .add(right.scale(Math.cos(angle) * radius))
-                    .add(up.scale(Math.sin(angle) * radius));
-        }
-        for (int i = 0; i < points.length; i++) {
-            Vec3 start = points[i];
-            Vec3 end = points[(i + 2) % points.length];
-            for (int step = 0; step <= 6; step++) {
-                double t = step / 6.0;
-                Vec3 position = start.scale(1.0 - t).add(end.scale(t));
-                world.sendParticles(ParticleTypes.FLAME,
-                        position.x, position.y, position.z,
-                        1, 0.0, 0.0, 0.0, 0.0);
-            }
-        }
-    }
-
-    private static void drawLine(
-            ServerLevel world, Vec3 start, Vec3 end, ParticleOptions particle) {
-        for (int step = 0; step <= 10; step++) {
-            double amount = step / 10.0;
-            Vec3 position = start.scale(1.0 - amount).add(end.scale(amount));
-            world.sendParticles(particle, position.x, position.y, position.z,
-                    1, 0.0, 0.0, 0.0, 0.0);
         }
     }
 

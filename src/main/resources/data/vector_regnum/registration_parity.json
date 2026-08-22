@@ -60,13 +60,15 @@
       "vector_regnum:circle_editor_request",
       "vector_regnum:ponder_trace_request"
     ],
-    "clientbound": [
-      "vector_regnum:circle_editor_snapshot",
-      "vector_regnum:progression_sync",
-      "vector_regnum:ponder_trace",
-      "vector_regnum:presentation_start",
-      "vector_regnum:presentation_signal"
-    ]
+ "clientbound": [
+  "vector_regnum:circle_editor_snapshot",
+  "vector_regnum:progression_sync",
+  "vector_regnum:ponder_trace",
+  "vector_regnum:presentation_start",
+  "vector_regnum:presentation_signal",
+  "vector_regnum:presentation_trace",
+  "vector_regnum:circle_preview"
+ ]
   },
   "creative_tabs": {
     "minecraft:tools_and_utilities": [

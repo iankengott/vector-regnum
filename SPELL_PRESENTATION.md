@@ -60,22 +60,45 @@ rendering infrastructure, while Vector-Regnum remains responsible for turning
 arbitrary valid spell programs into coherent, bounded, mechanically truthful
 compositions. The compiler and `PresentationProgram` stay loader-neutral.
 
-The client selects either a built-in backend or a Veil backend behind the same
-curated interface. Veil classes must remain in client-only integration code and
-must not be loaded by a dedicated server. The Veil backend may implement
+The client selects either a built-in backend or the pinned Veil 4.4.1 backend
+behind the same curated interface. One reflectively loaded client adapter owns
+all Veil imports, so the default runtime and dedicated server never resolve
+Veil classes. The bounded module vocabulary covers
 particles, beams, ribbons, trails, runes, animated meshes, surfaces, volumes,
 deferred lights, framebuffers, and optional post-processing, but authored
 spells can address only Vector-Regnum's versioned module IDs and bounded typed
 parameters. They cannot provide arbitrary Veil definitions, GLSL, resources,
 packets, or executable code.
 
+The priority-20a Veil adapter gives every mapped visual geometry family a
+bounded Quasar motif. It also provides capped deferred lights and bloom where
+compatible. Bespoke beam, ribbon, mesh, surface, and volume geometry remains a
+release-art task; the built-in renderer supplies their mandatory truth shape in
+the meantime. With Iris loaded, the adapter keeps Quasar but disables Veil
+deferred lights and bloom because the full target scene exposed invalid
+instanced draws on that combination.
+
+Priority 20a completed the particle migration. With Veil active, Veil/Quasar
+owns every Vector-Regnum particle-based animation except Minecraft
+enchanting-table particles (`ParticleTypes.ENCHANT`). Built-in particle
+animations stay available for Veil-absent or failed fallback, but do not run
+beside the active Veil version. `ParticleAllowlistSourceScanTest` inventories
+the emission paths and enforces the single exception at the guarded client
+choke point. Server visuals travel as compact `presentation_trace` and
+`circle_preview` payloads through `ServerTraces` rather than server-spawned
+particles.
+
 The built-in backend is not temporary scaffolding: it permanently owns the
 minimum truth telegraph and graceful fallback. Veil absence or initialization
 failure, resource reload failure, disabled post-processing, incompatible
 shaderpacks, low graphics settings, and accessibility modes may remove
 expressive layers but never origin, direction, affected area, timing,
-allegiance, danger, or impact cues. The exact Minecraft 1.21.1 Veil version is
-pinned only after the NeoForge port can test it against the target pack.
+allegiance, danger, or impact cues. The completed priority-20a implementation
+passed resource reload, accessible low LOD, authored and library spells,
+backend failure fallback, Veil-present and Veil-absent Hermes clients, and the
+target Veil/Create/Sodium/Iris/Bliss pack. The final Main-PC desktop gate then
+exercised the migrated particle path and normal cleanup on the playable
+artifact.
 
 A conceptual presentation program may contain:
 
@@ -187,9 +210,10 @@ weather, medium, target type, and elemental interactions where practical.
 
 The priority-19 Fabric alpha established the stable presentation IR, codec,
 authoritative execution-event boundary, and first bounded client interpreter.
-The NeoForge port must preserve that compiler/runtime split. Priority 20a adds
-a Veil adapter behind the same interface while retaining the built-in backend.
-Future original particles, models, shaders, sounds, UI effects,
+The NeoForge port preserves that compiler/runtime split. Priority 20a adds a
+complete bounded Veil adapter behind the same interface while retaining the
+built-in backend. The module vocabulary is intentionally broader than the
+current Quasar motif set. Future original models, shaders, sounds, UI effects,
 coercive-attention mechanics, and environmental layers target that curated
 boundary so they compose for library and player-authored spells without
 creating an arbitrary-code path.
