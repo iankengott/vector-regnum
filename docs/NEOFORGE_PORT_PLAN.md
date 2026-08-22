@@ -207,7 +207,10 @@ Two traps B identified:
   becomes `loadAdditional` and `writeNbt` becomes `saveAdditional` with
   different parameters. A missed override compiles and never runs.
 
-**Status: in progress, 4 of about 9 slices done. This is where to resume.**
+**Historical checkpoint, superseded:** after slice 4, 4 of about 9 mapping
+slices were complete. The port later completed and passed the full ladder. Use
+the numbered queue in `ROADMAP.md`, not this checkpoint, to choose current
+work.
 
 | Slice | Commit | Scope | Result |
 |---|---|---|---|
@@ -216,14 +219,15 @@ Two traps B identified:
 | 3 | `4cbac5e` | 7 payload records to `StreamCodec` | 149 tests |
 | 4 | `9bb16c7` | 3 temporary-effect blocks | 149 tests |
 
-Remaining, 26 classes and 3,747 lines, grouped as they should be sliced:
+At that checkpoint, 26 classes and 3,747 lines remained, grouped as follows:
 progression 9 classes / 923 lines (the only group that still recovers tests,
 gating 5 of the 9 excluded test classes behind `ManaReservoir`,
 `ManaTransportRules` and `ManaDrawRules`), root 7 / 843 including the block
 entities, guide 2 / 559, editor 1 / 465, ponder 3 / 422, automation 3 / 388,
 presentation 1 / 147.
 
-**Next action: slice 5, the progression cluster.**
+The next action at that historical checkpoint was slice 5, the progression
+cluster. It is recorded here as execution history, not unfinished work.
 
 Two lessons from slices 1-4, both earned the hard way:
 
@@ -470,7 +474,8 @@ them, so phases 4 through 10 each carry a manual gate that costs real time.
 
 This constraint is satisfied: the plan and full NeoForge ladder passed.
 Priority 20a's initial optional Veil and target-pack gates passed on 2026-08-20,
-but the priority is reopened for complete Veil ownership of particle-based
-animations except enchanting-table particles. Priority 21 remains blocked
-until that migration and the repeated verification ladder pass. No new gameplay
-lands on Fabric.
+and its complete Veil ownership migration and repeated verification ladder
+passed on 2026-08-21. The final Main-PC attestation exercised authored and
+library casts, F3+T reload, accessible low LOD, and normal cleanup on the final
+artifact. Priority 20a is checked and priority 21 is next. No new gameplay lands
+on Fabric.

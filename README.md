@@ -2,9 +2,9 @@
 
 > **Platform status (2026-08-21):** this is the active Vector-Regnum NeoForge
 > 1.21.1 repository. The Fabric implementation is deprecated and frozen in its
-> own archived repository. Priority 20a's Veil particle migration and its
-> automated plus Hermes gates are complete; only the human-controlled Main-PC
-> desktop attestation remains before 20a is checked.
+> own archived repository. Priority 20a's Veil particle migration, automated
+> suite, Hermes gates, and human-controlled Main-PC desktop attestation passed;
+> priority 21 is the first unfinished item.
 > The frozen Fabric repository and all companion projects are listed in
 > [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
@@ -15,7 +15,7 @@ effects; invalid programs fault at an exact physical sigil and may collapse into
 Wild Magic.
 
 The current build is a substantial playable alpha, not a finished release. It
-implements the first coherent working pass of priorities 1–19: typed/ticked
+implements the first coherent working pass of priorities 1–20a: typed/ticked
 execution, authoring and diagnostics,
 safety-bounded control flow, perception, physics, cost accounting, three spell
 media, finite crystal progression, Ponders, the visual Field Manual, the
@@ -76,16 +76,16 @@ Create mechanical press and cogwheel beside the spell scene.
 Iris compatibility mode keeps Quasar but disables Veil deferred lights and
 bloom, avoiding invalid instanced draws.
 
-For the completed migration, the full automated ladder passed (212 JUnit tests,
+For the completed priority, the full automated ladder passed (212 JUnit tests,
 18 GameTests, JSON/script checks), guarded Hermes clients booted with Veil
 present (all 19 motifs loaded, checkpoint staged, live trace capture in
 `visual-evidence/hermes-window-20260821T141107Z.png`) and absent (built-in
 backend, checkpoint staged), and both Hermes dev units were stopped with port
-25575 free. The remaining work for 20a is the human-controlled Main-PC desktop
-attestation: launch `Vector-Regnum.desktop`, exercise authored and library
-casts plus F3+T under Veil, close normally, and confirm the owned unit is
-inactive with port 25575 free
-(`scripts/priority20-local-visual-wizard.sh`).
+25575 free. Ian then passed the human-controlled Main-PC desktop attestation on
+the final artifact through `scripts/priority20-local-visual-wizard.sh`.
+Authored and library casts, F3+T reload, minimal LOD, reduced motion,
+photosensitive mode, and mandatory truth cues passed under Veil. Minecraft
+closed normally, the owned unit unloaded, and port 25575 was free.
 
 ## Confirmed working in the NeoForge alpha
 
@@ -390,9 +390,8 @@ small versioned API. See [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
 ## Still not finished
 
-The immediate work is the human-controlled Main-PC desktop attestation that
-completes priority 20a. Priority 21's elemental identity and affinity model, the
-reagent economy, persistent upkeep and conclusions, shared-memory branching,
+Priority 21's elemental identity and affinity model is next. The reagent
+economy, persistent upkeep and conclusions, shared-memory branching,
 explicitly approved cooperative rituals, security and accessibility hardening,
 and the optional SMP integration API follow. Configuration, balancing,
 profiling, full playtests, NeoForge/modpack compatibility, final art,
@@ -409,8 +408,8 @@ verification ladder, visual-inspection requirement, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
 [ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priority 20a's
-migration and automated/Hermes gates are complete and only its human-controlled
-Main-PC desktop attestation remains; priority 21 follows.
+migration and every automated, remote, compatibility, and human visual gate are
+complete; priority 21 is the first unfinished item.
 `AGENTS.md` also records Ian's subagent ladder — the temporary free ox-alpha
 first while it lasts, then opencode deepseekflash, then Luna max, then Sol
 xhigh or Opus 5 medium — plus the delegation rules, so no earlier chat context

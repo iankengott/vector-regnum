@@ -1,9 +1,10 @@
 # Field Manual backend decision
 
 > Historical platform decision: this comparison selected the backend for the
-> now-deprecated Fabric 1.21.1 alpha. NeoForge priority 20 must revalidate the
-> native implementation and any optional library candidates against the active
-> NeoForge target; do not reuse Fabric artifact conclusions as current facts.
+> now-deprecated Fabric 1.21.1 alpha. NeoForge priority 20 later revalidated and
+> retained the native implementation on the active target. Keep the comparison
+> below as historical evidence; do not reuse its Fabric artifact conclusions as
+> current dependency facts.
 
 Decision date: 2026-08-11. Target: Fabric 1.21.1.
 

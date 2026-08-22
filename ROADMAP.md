@@ -16,7 +16,7 @@ art, UX, or production hardening is complete.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Frost Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 197 JUnit/contract tests, 18 production NeoForge GameTests, plus real
+- [x] 212 JUnit/contract tests, 18 production NeoForge GameTests, plus real
   local/Hermes server boots and direct visual inspection.
 
 ## Priorities 1–10 milestone
@@ -129,7 +129,7 @@ acceptance scope.
     2026-08-20: the client joined `127.0.0.1:25575`, rendered Vector-Regnum
     content and items in-world, closed normally, and left the owned server
     inactive with the development port free.
-20a. [ ] **Veil-backed modular presentation overhaul and compatibility gate.**
+20a. [x] **Veil-backed modular presentation overhaul and compatibility gate.**
     After priority 20 establishes the NeoForge baseline—and before priority 21
     gameplay work—add [FoundryMC Veil](https://github.com/FoundryMC/Veil) as an
     optional client rendering backend beneath the existing bounded
@@ -154,7 +154,8 @@ acceptance scope.
     deferred lights and optional bloom add more depth when the renderer supports
     them without replacing the built-in truth renderer. The default runtime
     and dedicated GameTest server load without Veil; backend faults fail closed.
-    The 197-test JUnit suite, 18 GameTests, resource reload, minimal LOD,
+    The initial adapter passed its then-current 197-test JUnit suite, 18
+    GameTests, resource reload, minimal LOD,
     reduced-motion/photosensitive controls, authored and library casts, guarded
     Veil-present/absent Hermes clients, and the exact Veil/Create/Sodium/Iris/
     Bliss target-pack matrix passed. That matrix stages and visibly renders a
@@ -184,8 +185,11 @@ acceptance scope.
     `verify-priority20a.sh`, guarded Hermes clients with Veil present (all 19
     motifs loaded, checkpoint staged, live capture inspected) and absent
     (built-in backend, checkpoint staged), and both dev units stopped with port
-    25575 free. The sole remaining item is the human-controlled Main-PC desktop
-    attestation (`scripts/priority20-local-visual-wizard.sh`).
+    25575 free. Ian then passed the human-controlled Main-PC desktop attestation
+    through `scripts/priority20-local-visual-wizard.sh` on the final artifact:
+    authored and library casts, F3+T reload, minimal LOD, reduced motion,
+    photosensitive mode, mandatory truth cues, normal shutdown, unloaded owned
+    unit, and free port 25575 all passed.
 21. [ ] **Elemental identity and affinity expansion.** Replace Frost with Ice;
     add Water, Air, Earth, Lightning, Time, Space, Light, Dark, Nature, Sound,
     and rare Void around the ordinary twelve; retain Arcane only as neutral raw
@@ -295,11 +299,11 @@ acceptance scope.
   atmosphere, spatial audio, tactile response, impact, and aftermath. The list
   is intentionally non-exhaustive, and the system should generate additional
   context-appropriate layers from spell semantics.
-- [ ] Priority-20a Veil-backed modular renderer with full Veil ownership of
+- [x] Priority-20a Veil-backed modular renderer with full Veil ownership of
   particle animations except enchanting-table particles, plus a built-in
-  truth-telegraph fallback. Migration, automated enforcement, and
-  Hermes-present/absent gates passed 2026-08-21; only the human-controlled
-  Main-PC desktop attestation remains.
+  truth-telegraph fallback. Migration, automated enforcement,
+  Hermes-present/absent gates, and the human-controlled Main-PC desktop
+  attestation passed 2026-08-21.
 - [ ] Original Vector-Regnum block/item texture pass and final presentation art.
 - [x] Sixteen production Fabric GameTests in the frozen legacy repository cover commands, attachments,
   media/block-entity round trips, crystal interactions, timers, serialized

@@ -38,7 +38,8 @@ The wizard does not open, focus, type into, or close Minecraft. It preflights
 the isolated launcher, gives the human an explicit in-game checklist, and then
 verifies authored and library casts, resource reload, accessible low LOD, the
 IPv4 endpoint, owned-unit cleanup, and free port after the human closes
-Minecraft normally. A priority-20a pass writes the ignored evidence record
+Minecraft normally. The final priority-20a pass succeeded on 2026-08-21 and
+wrote the ignored evidence record
 `visual-evidence/main-pc-priority20a-visual-attestation.txt`.
 
 ## Priority 20a renderer checks
@@ -46,8 +47,15 @@ Minecraft normally. A priority-20a pass writes the ignored evidence record
 These commands validate the completed Veil particle migration. Active Veil
 replaces every Vector-Regnum particle animation except enchanting-table
 particles, the automated allowlist guards that rule, and the automated plus
-Hermes-present/absent gates passed on 2026-08-21. The remaining item is the
-human-controlled Main-PC desktop attestation below.
+Hermes-present/absent gates passed on 2026-08-21. The human-controlled Main-PC
+desktop attestation also passed on the final artifact that day.
+
+Check the live handoff documents for claims that contradict the completed
+priority before closing later documentation passes:
+
+```bash
+scripts/check-handoff-docs.sh
+```
 
 Run the deterministic dependency, classloading, resource, and focused-test
 gate with:

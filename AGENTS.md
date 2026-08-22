@@ -23,26 +23,23 @@ end-to-end alpha passes, but still need balance and hardening.
 
 ## Current handoff checkpoint
 
-As of 2026-08-21, priority 20a's Veil particle migration is implemented and its
-automated plus Hermes gates passed. The current NeoForge 1.21.1 tree has 212
-passing JUnit tests and 18 passing production GameTests. Servers now emit only
+As of 2026-08-21, priority 20a is checked. The current NeoForge 1.21.1 tree has
+212 passing JUnit tests and 18 passing production GameTests. Servers emit only
 compact `presentation_trace`/`circle_preview` payloads through the budgeted
 `ServerTraces` choke point; with Veil active, Quasar owns every Vector-Regnum
 particle animation except `ParticleTypes.ENCHANT`, enforced by
 `VanillaParticleAllowlist` at the single guarded client choke point and by
 `ParticleAllowlistSourceScanTest`. Hermes gates passed Veil-present (19 Quasar
 motifs loaded, checkpoint staged, live capture inspected) and Veil-absent
-(built-in backend), and both dev units were stopped with port 25575 free.
-Priority 20a remains unfinished only until Ian performs the human-controlled
-Main-PC desktop attestation (`scripts/priority20-local-visual-wizard.sh`):
-launch the real shortcut, exercise authored and library casts plus F3+T under
-Veil, close normally, and confirm the owned unit is inactive with port 25575
-free. Do not begin priority 21 until that attestation is recorded. Always
-re-read `ROADMAP.md` before reporting or implementing work because it
-supersedes this dated checkpoint whenever the queue changes.
+(built-in backend), and both dev units stopped with port 25575 free. Ian then
+passed the human-controlled Main-PC desktop attestation through
+`scripts/priority20-local-visual-wizard.sh`: authored and library casts, F3+T,
+minimal LOD, reduced-motion/photosensitive fallbacks, normal shutdown, the
+unloaded owned unit, and free port 25575 all passed on the final artifact.
 
-Priority 20a is the first unfinished canonical item. Do not begin priority 21
-until the Main-PC attestation completes the visual ladder.
+Priority 21 is the first unfinished canonical item. Always re-read
+`ROADMAP.md` before reporting or implementing work because it supersedes this
+dated checkpoint whenever the queue changes.
 
 ## Subagent collaboration
 

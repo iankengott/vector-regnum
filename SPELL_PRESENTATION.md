@@ -78,23 +78,27 @@ the meantime. With Iris loaded, the adapter keeps Quasar but disables Veil
 deferred lights and bloom because the full target scene exposed invalid
 instanced draws on that combination.
 
-That adapter is still incomplete. With Veil active, Veil/Quasar must own every
-Vector-Regnum particle-based animation. Minecraft enchanting-table particles
-(`ParticleTypes.ENCHANT`) are the only exception. Built-in particle animations
-stay available for Veil-absent or failed fallback, but must not run beside the
-active Veil version. Completion requires an inventory of every particle spawn
-and resource path plus an automated allowlist check that permits only the
-enchanting-table exception.
+Priority 20a completed the particle migration. With Veil active, Veil/Quasar
+owns every Vector-Regnum particle-based animation except Minecraft
+enchanting-table particles (`ParticleTypes.ENCHANT`). Built-in particle
+animations stay available for Veil-absent or failed fallback, but do not run
+beside the active Veil version. `ParticleAllowlistSourceScanTest` inventories
+the emission paths and enforces the single exception at the guarded client
+choke point. Server visuals travel as compact `presentation_trace` and
+`circle_preview` payloads through `ServerTraces` rather than server-spawned
+particles.
 
 The built-in backend is not temporary scaffolding: it permanently owns the
 minimum truth telegraph and graceful fallback. Veil absence or initialization
 failure, resource reload failure, disabled post-processing, incompatible
 shaderpacks, low graphics settings, and accessibility modes may remove
 expressive layers but never origin, direction, affected area, timing,
-allegiance, danger, or impact cues. The partial priority-20a adapter verified
-resource reload, accessible low LOD, authored and library spells, backend
-failure fallback, and the target Veil/Create/Sodium/Iris/Bliss pack. Repeat
-those gates after the full particle migration.
+allegiance, danger, or impact cues. The completed priority-20a implementation
+passed resource reload, accessible low LOD, authored and library spells,
+backend failure fallback, Veil-present and Veil-absent Hermes clients, and the
+target Veil/Create/Sodium/Iris/Bliss pack. The final Main-PC desktop gate then
+exercised the migrated particle path and normal cleanup on the playable
+artifact.
 
 A conceptual presentation program may contain:
 
@@ -206,9 +210,10 @@ weather, medium, target type, and elemental interactions where practical.
 
 The priority-19 Fabric alpha established the stable presentation IR, codec,
 authoritative execution-event boundary, and first bounded client interpreter.
-The NeoForge port preserves that compiler/runtime split. Priority 20a has a
-partial Veil adapter behind the same interface while retaining the built-in backend.
-Future original particles, models, shaders, sounds, UI effects,
+The NeoForge port preserves that compiler/runtime split. Priority 20a adds a
+complete bounded Veil adapter behind the same interface while retaining the
+built-in backend. The module vocabulary is intentionally broader than the
+current Quasar motif set. Future original models, shaders, sounds, UI effects,
 coercive-attention mechanics, and environmental layers target that curated
 boundary so they compose for library and player-authored spells without
 creating an arbitrary-code path.

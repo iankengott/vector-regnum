@@ -34,13 +34,12 @@ authored-spell language or a source of gameplay authority. Priority 20a pins
 Veil 4.4.1 for Minecraft 1.21.1. Veil-present and Veil-absent clients,
 dedicated-server classloading, resource reload, accessibility/LOD fallbacks,
 and the exact Create 6.0.10, Sodium, Iris, and Bliss target-pack matrix passed.
-Those results validate the current partial adapter, not completion of priority
-20a. With Veil active, Veil/Quasar must replace every Vector-Regnum
-particle-based animation except Minecraft enchanting-table particles
-(`ParticleTypes.ENCHANT`). Built-in particle animations remain only as the
-Veil-absent or failed fallback. A complete emission inventory and automated
-single-exception allowlist must guard that boundary before the visual gates are
-repeated.
+Priority 20a completed on 2026-08-21 after the emission inventory, compact
+client trace migration, automated single-exception allowlist, repeated Hermes
+Veil-present/absent checks, and final human Main-PC visual gate passed. With
+Veil active, Veil/Quasar replaces every Vector-Regnum particle-based animation
+except Minecraft enchanting-table particles (`ParticleTypes.ENCHANT`). Built-in
+particle animations remain only as the Veil-absent or failed fallback.
 
 The built-in renderer always preserves mechanics-derived origin, direction,
 area, timing, allegiance, danger, and impact cues. Post-processing, advanced
