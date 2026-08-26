@@ -31,13 +31,13 @@ class ManaInfrastructureBalanceTest {
     @Test
     void affinityMismatchCannotIncreaseTransportYield() {
         assertEquals(20, ManaReservoirBlockEntity.expectedDelivery(100,
-                ManaAffinity.FIRE, ManaAffinity.FROST, 8,
+                ManaAffinity.FIRE, ManaAffinity.ICE, 8,
                 ManaTransportRules.ConduitTier.RAW_CRYSTAL));
         assertEquals(23, ManaReservoirBlockEntity.expectedDelivery(100,
-                ManaAffinity.FIRE, ManaAffinity.FROST, 24,
+                ManaAffinity.FIRE, ManaAffinity.ICE, 24,
                 ManaTransportRules.ConduitTier.RUNED));
         assertEquals(25, ManaReservoirBlockEntity.expectedDelivery(100,
-                ManaAffinity.FIRE, ManaAffinity.FROST, 64,
+                ManaAffinity.FIRE, ManaAffinity.ICE, 64,
                 ManaTransportRules.ConduitTier.RESONANT));
     }
 
@@ -50,5 +50,15 @@ class ManaInfrastructureBalanceTest {
         assertEquals(8, restored.distance());
         assertEquals(false, ManaReservoirBlockEntity.canRetune(0, restored.input()));
         assertEquals(true, ManaReservoirBlockEntity.canRetune(0, 0));
+    }
+
+    @Test
+    void oldFrostPendingTransfersMigrateToIce() {
+        var restored = ManaReservoirBlockEntity.restorePending(100, "frost", 8,
+                ManaTransportRules.ConduitTier.RAW_CRYSTAL);
+        assertEquals(ManaAffinity.ICE, restored.affinity());
+        assertEquals(ManaAffinity.ARCANE,
+                ManaReservoirBlockEntity.restorePending(100, "not-an-element", 8,
+                        ManaTransportRules.ConduitTier.RAW_CRYSTAL).affinity());
     }
 }

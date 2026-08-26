@@ -1,7 +1,7 @@
 {
   "id": "field_manual",
   "title": "Vector-Regnum Field Manual",
-  "version": 6,
+  "version": 7,
   "theme": "brass_ink_and_amethyst",
   "chapters": [
     {
@@ -220,6 +220,39 @@
               "label": "Ponder the real fault",
               "alt": "Display the diagnostic, VM fault, or Wild Magic category carried by the actual result.",
               "metadata": { "scene": "fault_and_miscast", "trace": "actual_fault_events" }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "elements",
+      "title": "Elemental Identity",
+      "icon": "minecraft:amethyst_shard",
+      "pages": [
+        {
+          "id": "elemental_identity",
+          "title": "Natural Element and Attunement",
+      "body": "Every character carries exactly one permanent natural element. Your channel attunement is mutable and selects which source resonance you can draw efficiently; changing it never changes your natural identity. Arcane is neutral raw mana, Void is rare, and Ice is the cold resonance. Tune sources with prismarine crystals (Water), blaze powder (Fire), a feather (Air), a clay ball (Earth), a copper ingot (Lightning), a clock (Time), an ender pearl (Space), glowstone dust (Light), an ink sac (Dark), wheat seeds (Nature), a snowball (Ice), an echo shard (Sound), an ender eye (Void), or an amethyst shard (Arcane).",
+          "required_unlocks": [],
+          "elements": [
+            {
+              "type": "DIAGRAM",
+              "label": "Fourteen bounded resonances",
+              "alt": "A permanent natural element anchors a character while a separate channel attunement points toward a source.",
+              "metadata": { "diagram": "elemental_identity_and_attunement", "natural": "permanent", "attunement": "mutable", "bands": "100,75,50,25", "opposed_floor": "25" }
+            },
+            {
+              "type": "EXAMPLE",
+              "label": "Tune a channel",
+              "alt": "Use the mana attune command to select a mutable channel resonance without replacing the natural element.",
+              "metadata": { "example": "channel_attunement", "command": "/vectorregnum mana attune ice", "natural_is_unchanged": "true" }
+            },
+            {
+              "type": "LINK",
+              "label": "Return to finite sources",
+              "alt": "Open the page explaining source charges and loaded remote draw.",
+              "metadata": { "target": "mana_sources" }
             }
           ]
         }

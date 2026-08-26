@@ -19,6 +19,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import vectorregnum.core.vm2.Instruction;
+import vectorregnum.core.Element;
 import vectorregnum.core.vm2.ManaCostModel;
 import vectorregnum.core.vm2.Program;
 import vectorregnum.core.vm2.RuntimeValue;
@@ -194,7 +195,8 @@ public final class NeoForgeVmService {
             ABUSE_GUARD.release(player.getUUID());
             return false;
         }
-        double cost = program.manaCost().total();
+        Element spellElement = spellElement(compilation);
+        double cost = ManaData.adjustedCost(player, program.manaCost().total(), spellElement);
         if (chargeMana && (!ManaData.ensureAvailable(player, cost)
                 || !ManaData.trySpend(player, cost))) {
             player.displayClientMessage(Component.literal(String.format(
@@ -210,6 +212,7 @@ public final class NeoForgeVmService {
                 PresentationCompiler.compile(label, presentationSeed, program));
         ActiveVm active = new ActiveVm(player.getUUID(), player.serverLevel(),
                 new SpellVm(program, new MinecraftWorldAccess(player), presentation), label,
+                chargeMana,
                 presentation, compilation, new ArrayList<>(), semanticExecutor, new ArrayList<>());
         (tickingVms ? PENDING_VMS : ACTIVE_VMS).add(active);
         publishLiveTrace(player, active);
@@ -251,6 +254,10 @@ public final class NeoForgeVmService {
                                     .withStyle(ChatFormatting.RED));
                         }
                     });
+                    if (owner != null && active.chargeMana) {
+                        ManaData.lockChannel(owner,
+                                ManaData.stabilityLockTicks(owner, 100L, spellElement(active.compilation)));
+                    }
                     publishTrace(owner, active);
                     ABUSE_GUARD.release(active.owner);
                     vmIterator.remove();
@@ -450,11 +457,23 @@ public final class NeoForgeVmService {
         return new Vm2CircleCompilation(order, program, List.of());
     }
 
+    private static Element spellElement(Vm2CircleCompilation compilation) {
+        return compilation.executionOrder().stream()
+                .map(PlacedSigil::type)
+                .filter(type -> type.startsWith("ELEMENT_"))
+                .map(type -> type.substring("ELEMENT_".length()))
+                .map(Element::fromId)
+                .flatMap(Optional::stream)
+                .findFirst()
+                .orElse(Element.ARCANE);
+    }
+
     public record PerceptionReport(
             TickResult.Status status, int entityCount, ManaCostModel.Breakdown cost) {
     }
 
     private record ActiveVm(UUID owner, ServerLevel world, SpellVm vm, String label,
+            boolean chargeMana,
             VmPresentationBridge presentation, Vm2CircleCompilation compilation,
             List<TickResult> trace,
             BiConsumer<ServerPlayer, List<SemanticInstruction>> semanticExecutor,

@@ -1,8 +1,8 @@
 {
   "max_lifetime": 10,
-  "rate": 3,
+  "rate": 2,
   "count": 2,
-  "max_particles": 24,
+  "max_particles": 48,
   "emitter_settings": {
     "shape": "vector_regnum:presentation/sphere",
     "particle_settings": "vector_regnum:presentation/motes"

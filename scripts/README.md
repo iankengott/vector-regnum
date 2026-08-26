@@ -31,16 +31,59 @@ For a release or roadmap visual gate that must be performed by a person on the
 Main PC, run:
 
 ```bash
-scripts/priority20-local-visual-wizard.sh
+scripts/priority21-local-visual-wizard.sh
 ```
 
 The wizard does not open, focus, type into, or close Minecraft. It preflights
 the isolated launcher, gives the human an explicit in-game checklist, and then
-verifies authored and library casts, resource reload, accessible low LOD, the
-IPv4 endpoint, owned-unit cleanup, and free port after the human closes
-Minecraft normally. The final priority-20a pass succeeded on 2026-08-21 and
-wrote the ignored evidence record
-`visual-evidence/main-pc-priority20a-visual-attestation.txt`.
+verifies permanent natural identity versus mutable channel attunement, Ice
+terminology and visuals, Field Manual v7, authored/library casts, resource
+reload, accessible low LOD, the IPv4 endpoint, owned-unit cleanup, and free
+port after the human closes Minecraft normally. It writes the ignored evidence
+record `visual-evidence/main-pc-priority21-visual-attestation.txt` only after
+every human and automatic gate passes. The implementation remains in the
+combined `priority20-local-visual-wizard.sh`; the priority-21 entry point is a
+stable wrapper.
+
+For the 2026-08-22 priority-21 closeout, Ian explicitly reported that the
+corrected final artifact was “all good” after the earlier full visual exercise;
+the later rendering-only change was then opened through the real desktop
+launcher and its guide was directly inspected before and after the fix. No
+wizard attestation file was retroactively synthesized. That split evidence and
+the normal shutdown/port checks are recorded in
+`docs/PRIORITY_21_DECISIONS.tsv`. Future human roadmap gates should use the
+wizard so their complete checklist is captured in one record.
+
+## Priority 21 elemental checks
+
+Regenerate the complete bounded Quasar vocabulary from the canonical element
+list, then prove the generated tree is unchanged on a second run:
+
+```bash
+scripts/generate-priority21-presentation-assets.sh
+scripts/generate-priority21-presentation-assets.sh
+```
+
+Run the focused matrix, migration, legacy-alias, tuning-item, guide, resource,
+and source-policy gate with:
+
+```bash
+scripts/verify-priority21.sh
+```
+
+The Hermes automated scene first logs `VISUAL_CHECKPOINT_READY` after its
+gameplay checks, waits for those bounded cues to expire, and then emits the
+two-row canonical palette and logs `ELEMENT_PALETTE_READY ... count=14`.
+Capture after the second marker. Exercise both the default Veil client and the
+dependency-free fallback with `VR_CLIENT_RENDERER=builtin`.
+
+The final Main-PC guide gate must open the real desktop launcher and inspect
+the manual itself, not infer rendering from tests. At compact scale, confirm
+dark text has no duplicate shadow, illustrations show the complete source and
+preserve aspect ratio, the first plate fits the opening viewport, and search
+results remain readable. Keep screenshots under the ignored
+`visual-evidence/guide-audit/` directory, close Minecraft normally, and confirm
+the local unit is inactive and port 25575 is free.
 
 ## Priority 20a renderer checks
 
@@ -106,7 +149,7 @@ VR_CLIENT_RENDERER=builtin scripts/hermes-client.sh restart
 
 ## Production NeoForge GameTests
 
-The ordinary Gradle `test` task runs JUnit and contract tests. The 18 production
+The ordinary Gradle `test` task runs JUnit and contract tests. The 19 production
 NeoForge GameTests must additionally run inside the real isolated GameTest
 server when their integration surface changes:
 
@@ -116,7 +159,7 @@ JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
   ./gradlew --no-daemon runGameTestServer
 ```
 
-The runner exits after the matrix completes and must report all 18 required
+The runner exits after the matrix completes and must report all 19 required
 tests passed. The tests cover live registration parity, commands, players,
 attachments, media/tablet and crystal block entities, scheduled expiry,
 serialized tick-queue reload, claim/death migration, relay persistence, remote

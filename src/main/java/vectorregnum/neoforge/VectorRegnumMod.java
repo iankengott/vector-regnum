@@ -34,7 +34,7 @@ public final class VectorRegnumMod {
         ProgressionContent.initialize(new PlayerManaBridge() {
             @Override
             public ManaAffinity requestedAffinity(net.minecraft.server.level.ServerPlayer player) {
-                return ManaData.affinity(player);
+                return ManaData.channelAffinity(player);
             }
 
             @Override

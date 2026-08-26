@@ -14,9 +14,9 @@ art, UX, or production hardening is complete.
 - [x] NeoForge 1.21.1 build, dedicated server, guarded Hermes workflow, and
   one-click local launch; the Fabric alpha remains frozen separately.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
-- [x] Persistent tutorial guide, Sigil Tome, Firebolt, Frost Nova, effects,
+- [x] Persistent tutorial guide, Sigil Tome, Firebolt, Ice Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 212 JUnit/contract tests, 18 production NeoForge GameTests, plus real
+- [x] 235 JUnit/contract tests, 19 production NeoForge GameTests, plus real
   local/Hermes server boots and direct visual inspection.
 
 ## Priorities 1–10 milestone
@@ -62,7 +62,7 @@ acceptance scope.
     navigation; contextual item/block links; progression-aware entries; and
     readable, accessible scaling. Prototype a native screen against maintained
     Fabric 1.21.1 guidebook libraries before choosing the implementation.
-    The selected native v6 backend is data-driven and adds three original
+    The selected native backend is data-driven; its current v7 content adds three original
     illustrated plates, scrolling and scrollbars, search/history/bookmarks,
     scaling and compact layouts, tooltips/alt text, contextual links, unlock
     gating, live recipes with bounded tag/alternative cycling, item icons, and
@@ -190,12 +190,24 @@ acceptance scope.
     authored and library casts, F3+T reload, minimal LOD, reduced motion,
     photosensitive mode, mandatory truth cues, normal shutdown, unloaded owned
     unit, and free port 25575 all passed.
-21. [ ] **Elemental identity and affinity expansion.** Replace Frost with Ice;
+21. [x] **Elemental identity and affinity expansion.** Replace Frost with Ice;
     add Water, Air, Earth, Lightning, Time, Space, Light, Dark, Nature, Sound,
     and rare Void around the ordinary twelve; retain Arcane only as neutral raw
     mana. Every character receives exactly one permanent natural element while
     channel attunement remains mutable. Use a data-driven symmetric affinity
-    matrix with 100/75/50/25% efficiency bands and a 25% opposed floor.
+    matrix with 100/75/50/25% efficiency bands and a 25% opposed floor. The
+    schema-3 implementation gives each player one server-authored permanent
+    natural element and a separate mutable channel, migrates legacy Frost data
+    and block states to Ice, and drives source conversion, spell quotes,
+    instability, all 14 tuning items, Field Manual v7, and the complete
+    59-emitter Quasar palette from the canonical data. Remote source draws are
+    atomic even when insufficient. The final ladder passed 235 JUnit tests,
+    all 19 production GameTests, the focused verifier, JSON/shell/diff checks,
+    guarded Hermes build/client/checkpoint inspection, and the real Main-PC
+    desktop launcher. The guide audit removed dark-text shadows, corrected
+    full-source image scaling, and proportionally fitted compact illustrations;
+    before/after screenshots were directly inspected. Both development stacks
+    stopped normally with port 25575 free.
 22. [ ] **Casting media, reagents, and resource escrow.** Distinguish bare
     casting, rituals, engravings, spellbooks, scrolls, and installed circles.
     Optional reagents may reduce mana, casting time, upkeep, and instability
@@ -257,7 +269,7 @@ acceptance scope.
 - [x] Command-based server-authoritative editor and persistent draft.
 - [x] Save, inspect, validate, copy into media, and recover via checksums.
 - [x] Animated actual circle topology with compiler order/error highlighting.
-- [x] Versioned Field Manual v6 with exact crystal/media/infrastructure recipes and commands,
+- [x] Versioned Field Manual v7 with exact crystal/media/infrastructure recipes and commands,
   data-driven visual elements, search/history/bookmarks/scaling/scrolling,
   progression gating, live recipe/item rendering, and a native Ponder action.
 - [x] Illustrated custom Field Manual inspired by Patchouli/Lexica Botania and

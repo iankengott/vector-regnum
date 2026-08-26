@@ -9,7 +9,6 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -132,10 +131,6 @@ public final class ManaReservoirBlock extends BaseEntityBlock {
     }
 
     private static ManaAffinity tuningAffinity(ItemStack stack) {
-        if (stack.is(Items.BLAZE_POWDER)) return ManaAffinity.FIRE;
-        if (stack.is(Items.SNOWBALL)) return ManaAffinity.FROST;
-        if (stack.is(Items.ENDER_PEARL)) return ManaAffinity.VOID;
-        if (stack.is(Items.AMETHYST_SHARD)) return ManaAffinity.ARCANE;
-        return null;
+        return ManaTuningItems.affinity(stack).orElse(null);
     }
 }

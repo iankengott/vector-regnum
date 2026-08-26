@@ -42,6 +42,12 @@ public final class MultiplayerLifecycleService {
                 || !(event.getEntity() instanceof ServerPlayer newPlayer)) return;
         NeoForgeVmService.cancelOwner(oldPlayer.getUUID(), event.isWasDeath()
                 ? "owner died" : "player instance changed");
+        String originalNatural = oldPlayer.getData(PlayerAttachmentContent.NATURAL_ELEMENT);
+        String cloneNatural = newPlayer.getData(PlayerAttachmentContent.NATURAL_ELEMENT);
+        if ((cloneNatural == null || cloneNatural.isBlank())
+                && originalNatural != null && !originalNatural.isBlank()) {
+            newPlayer.setData(PlayerAttachmentContent.NATURAL_ELEMENT, originalNatural);
+        }
         migrate(newPlayer, event.isWasDeath());
     }
 
@@ -69,6 +75,10 @@ public final class MultiplayerLifecycleService {
         int oldSchema = player.getData(PlayerAttachmentContent.PLAYER_DATA_SCHEMA);
         ManaData.migrateAndSanitize(player, deathCopy, oldSchema);
         player.setData(PlayerAttachmentContent.PLAYER_DATA_SCHEMA,
+                PlayerDataMigration.CURRENT_SCHEMA);
+        VectorRegnumMod.LOGGER.info("priority21_identity player={} natural={} channel={} schema={}",
+                player.getUUID(), ManaData.naturalElement(player).id(),
+                ManaData.channelAffinity(player).getSerializedName(),
                 PlayerDataMigration.CURRENT_SCHEMA);
         if (oldSchema != PlayerDataMigration.CURRENT_SCHEMA) {
             VectorRegnumMod.LOGGER.info("Migrated Vector-Regnum player {} from schema {} to {}",

@@ -16,8 +16,8 @@ import java.util.List;
 /** Gives each player a persistent first-join field manual and starter tome. */
 public final class TutorialGuide {
     public static final String FIELD_MANUAL_TITLE_PREFIX = "Vector-Regnum Field Manual v";
-    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "6";
-    private static final int CURRENT_GUIDE_VERSION = 6;
+    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "7";
+    private static final int CURRENT_GUIDE_VERSION = 7;
     private TutorialGuide() {
     }
 
@@ -64,11 +64,14 @@ public final class TutorialGuide {
                 page("MANA\n\n"
                         + "You begin with 0 μ and 0 capacity. Mana never regenerates. Craft a crystal source and shards. Use a shard on the source to grow capacity; then use the source with an empty hand to draw.\n\n"
                         + "The last used source can feed later casts while its chunk is loaded; distance weakens each charge by inverse-square falloff. Tune your channel with /vectorregnum mana attune <element>."),
+                page("ELEMENTAL IDENTITY\n\n"
+                        + "Every character has exactly one permanent natural element. Channel attunement is mutable and changes source efficiency without changing that identity. Arcane is neutral raw mana; Void is rare. Ice is the cold resonance.\n\n"
+                        + "Efficiency bands are symmetric: 100% aligned, 75% near, 50% distant, and 25% opposed (never lower). Try /vectorregnum mana attune ice to change your channel."),
                 page("CRYSTAL RECIPES\n\n"
                         + "Shard (shapeless): amethyst shard + lapis lazuli + glowstone dust.\n\n"
                         + "Source (crafting grid):\nALA\nLCL\nALA\n\n"
                         + "A = amethyst block\nL = lapis block\nC = crying obsidian\n\n"
-                        + "Use blaze powder, snowball, ender pearl, or amethyst shard on a source to tune fire, frost, void, or arcane. Natural crystals mature and recharge only while loaded and buried in conductive rock."),
+                        + "Tune sources with prismarine crystals=water, blaze powder=fire, feather=air, clay ball=earth, copper ingot=lightning, clock=time, ender pearl=space, glowstone dust=light, ink sac=dark, wheat seeds=nature, snowball=ice, echo shard=sound, ender eye=void, or amethyst shard=arcane. Natural crystals mature and recharge only while loaded and buried in conductive rock."),
                 page("MANA STORAGE\n\n"
                         + "Connect a source to a Crystal Vial with Raw Crystal Conduits. Upgrade both together to a Runed Cell/Conduit, then a Resonant Vault/Conduit.\n\n"
                         + "Raw: 200 μ, 8 blocks, 80%\n"

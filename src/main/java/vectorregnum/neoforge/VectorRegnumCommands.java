@@ -63,7 +63,7 @@ public final class VectorRegnumCommands {
                         .requires(source -> source.hasPermission(2))
                         .executes(context -> giveSource(context.getSource())));
         var attune = Commands.literal("attune");
-        for (ManaAffinity affinity : ManaAffinity.values()) {
+        for (ManaAffinity affinity : ManaAffinity.channelValues()) {
             attune.then(Commands.literal(affinity.name().toLowerCase())
                     .executes(context -> attune(context.getSource(), affinity)));
         }
@@ -243,7 +243,7 @@ public final class VectorRegnumCommands {
         }
         SpellVisualManager.startShowcase(player);
         CastService.cast(player, SpellPresets.FIREBOLT, false);
-        CastService.cast(player, SpellPresets.FROST_NOVA, false);
+        CastService.cast(player, SpellPresets.ICE_NOVA, false);
         player.sendSystemMessage(Component.literal("VECTOR-REGNUM • VISUAL COMPILATION")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
         return 1;
@@ -256,9 +256,10 @@ public final class VectorRegnumCommands {
             return 1;
         }
         player.sendSystemMessage(Component.literal(String.format(
-                        "Vector-Regnum mana: %.2f / %.2f μ • %s affinity",
+                        "Vector-Regnum mana: %.2f / %.2f μ • natural %s • channel %s",
                         ManaData.available(player), ManaData.capacity(player),
-                        ManaData.affinity(player).name().toLowerCase()))
+                        ManaData.naturalElement(player).id(),
+                        ManaData.channelAffinity(player).name().toLowerCase()))
                 .withStyle(ChatFormatting.AQUA), false);
         BlockPos crystal = ManaData.attunedSource(player);
         if (crystal != null) {
@@ -294,7 +295,7 @@ public final class VectorRegnumCommands {
     private static int attune(CommandSourceStack source, ManaAffinity affinity) {
         ServerPlayer player = targetPlayer(source);
         if (player == null) return noPlayer(source);
-        ManaData.setAffinity(player, affinity);
+        ManaData.setChannelAffinity(player, affinity);
         player.sendSystemMessage(Component.literal("Channel tuned to " + affinity.name().toLowerCase()
                         + " resonance")
                 .withStyle(ChatFormatting.AQUA), false);

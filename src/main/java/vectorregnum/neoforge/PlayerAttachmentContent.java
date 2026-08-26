@@ -39,6 +39,13 @@ public final class PlayerAttachmentContent {
                     .copyOnDeath()
                     .build());
 
+    /** The character's permanent natural element; an empty value is migrated once. */
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> NATURAL_ELEMENT =
+            ATTACHMENTS.register("natural_element", () -> AttachmentType.<String>builder(() -> "")
+                    .serialize(Codec.STRING)
+                    .copyOnDeath()
+                    .build());
+
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Long>> ATTUNED_SOURCE =
             ATTACHMENTS.register("attuned_source", () -> AttachmentType.<Long>builder(() -> Long.MIN_VALUE)
                     .serialize(Codec.LONG)

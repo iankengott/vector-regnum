@@ -10,6 +10,9 @@ import vectorregnum.neoforge.progression.ManaCrystalNodeBlock;
 import vectorregnum.neoforge.progression.ManaDrawRules;
 import vectorregnum.neoforge.progression.ProgressionContent;
 import vectorregnum.neoforge.multiplayer.PlayerDataMigration;
+import vectorregnum.core.Element;
+import vectorregnum.core.ElementalAffinityMatrix;
+import vectorregnum.core.NaturalElementSelector;
 
 /** Server-authoritative, persistent mana. It intentionally has no regeneration. */
 public final class ManaData {
@@ -68,18 +71,59 @@ public final class ManaData {
         return true;
     }
 
-    public static ManaAffinity affinity(ServerPlayer player) {
+    public static ManaAffinity channelAffinity(ServerPlayer player) {
         String value = player.getData(PlayerAttachmentContent.MANA_AFFINITY);
-        try {
-            return ManaAffinity.valueOf(value);
-        } catch (IllegalArgumentException exception) {
+        ManaAffinity parsed = ManaAffinity.fromId(value).orElse(null);
+        if (parsed == null) {
             player.setData(PlayerAttachmentContent.MANA_AFFINITY, ManaAffinity.ARCANE.name());
             return ManaAffinity.ARCANE;
         }
+        if (!parsed.name().equals(value)) {
+            player.setData(PlayerAttachmentContent.MANA_AFFINITY, parsed.name());
+        }
+        return parsed;
     }
 
-    public static void setAffinity(ServerPlayer player, ManaAffinity affinity) {
+    public static void setChannelAffinity(ServerPlayer player, ManaAffinity affinity) {
         player.setData(PlayerAttachmentContent.MANA_AFFINITY, affinity.name());
+    }
+
+    /** Applies the permanent natural-to-spell affinity cost adjustment. */
+    public static double adjustedCost(ServerPlayer player, double base, Element spellElement) {
+        Element spell = spellElement == null ? Element.ARCANE : spellElement;
+        return ElementalAffinityMatrix.canonical().adjustedCost(
+                base, naturalElement(player), spell);
+    }
+
+    /** Scales a genuine fault's channel lock using the same deterministic stability band. */
+    public static long stabilityLockTicks(ServerPlayer player, long baseTicks, Element spellElement) {
+        if (baseTicks < 0L) throw new IllegalArgumentException("Lock duration cannot be negative");
+        Element spell = spellElement == null ? Element.ARCANE : spellElement;
+        double efficiency = ElementalAffinityMatrix.canonical().stabilityEfficiency(
+                naturalElement(player), spell);
+        return (long) Math.ceil(baseTicks / efficiency);
+    }
+
+    /** Compatibility aliases for the pre-priority-21 channel API. */
+    @Deprecated(forRemoval = false)
+    public static ManaAffinity affinity(ServerPlayer player) {
+        return channelAffinity(player);
+    }
+
+    @Deprecated(forRemoval = false)
+    public static void setAffinity(ServerPlayer player, ManaAffinity affinity) {
+        setChannelAffinity(player, affinity);
+    }
+
+    /** Returns the one permanent natural element, repairing legacy/corrupt state once. */
+    public static Element naturalElement(ServerPlayer player) {
+        String stored = player.getData(PlayerAttachmentContent.NATURAL_ELEMENT);
+        Element parsed = Element.fromId(stored).filter(Element::isNatural).orElse(null);
+        if (parsed != null) return parsed;
+        Element selected = NaturalElementSelector.select(player.getUUID());
+        player.setData(PlayerAttachmentContent.NATURAL_ELEMENT,
+                selected.id().toUpperCase(java.util.Locale.ROOT));
+        return selected;
     }
 
     public static void recordAttunedSource(ServerPlayer player, BlockPos source) {
@@ -102,26 +146,34 @@ public final class ManaData {
         if (!Double.isFinite(required) || required < 0.0) {
             throw new IllegalArgumentException("Required mana must be finite and non-negative");
         }
-        if (available(player) + 1.0e-9 >= required) return true;
+        double current = available(player);
+        if (current + 1.0e-9 >= required) return true;
+        double capacity = capacity(player);
+        if (capacity + 1.0e-9 < required) return false;
         BlockPos source = attunedSource(player);
         String dimension = player.serverLevel().dimension().location().toString();
         if (source == null || !dimension.equals(attunedDimension(player))) return false;
         var world = player.serverLevel();
         if (!world.hasChunkAt(source)) return false;
 
-        while (available(player) + 1.0e-9 < required) {
-            BlockState state = world.getBlockState(source);
-            if (!state.is(ProgressionContent.manaCrystalNode())) return false;
-            int charges = state.getValue(ManaCrystalNodeBlock.CHARGE);
-            if (charges <= 0) return false;
-            double distance = player.position().distanceTo(Vec3.atCenterOf(source));
-            int offered = ManaDrawRules.offeredMana(ManaCrystalNodeBlock.MANA_PER_CHARGE,
-                    distance, state.getValue(ManaCrystalNodeBlock.AFFINITY), affinity(player));
-            double accepted = Math.min(offered, capacity(player) - available(player));
-            if (accepted <= 0 || !tryCreditExact(player, accepted)) return false;
-            world.setBlock(source,
-                    state.setValue(ManaCrystalNodeBlock.CHARGE, charges - 1),
-                    Block.UPDATE_ALL);
+        BlockState state = world.getBlockState(source);
+        if (!state.is(ProgressionContent.manaCrystalNode())) return false;
+        int charges = state.getValue(ManaCrystalNodeBlock.CHARGE);
+        if (charges <= 0) return false;
+        double distance = player.position().distanceTo(Vec3.atCenterOf(source));
+        int offered = ManaDrawRules.offeredMana(ManaCrystalNodeBlock.MANA_PER_CHARGE,
+                distance, state.getValue(ManaCrystalNodeBlock.AFFINITY), channelAffinity(player));
+        if (offered <= 0) return false;
+        int chargesNeeded = (int) Math.ceil((required - current - 1.0e-9) / offered);
+        if (chargesNeeded <= 0 || chargesNeeded > charges) return false;
+        double accepted = Math.min((double) offered * chargesNeeded, capacity - current);
+        if (current + accepted + 1.0e-9 < required) return false;
+
+        BlockState depleted = state.setValue(ManaCrystalNodeBlock.CHARGE, charges - chargesNeeded);
+        if (!world.setBlock(source, depleted, Block.UPDATE_ALL)) return false;
+        if (!tryCreditExact(player, accepted)) {
+            world.setBlock(source, state, Block.UPDATE_ALL);
+            return false;
         }
         return true;
     }
@@ -184,13 +236,15 @@ public final class ManaData {
                         player.getData(PlayerAttachmentContent.MANA),
                         player.getData(PlayerAttachmentContent.MANA_CAPACITY),
                         player.getData(PlayerAttachmentContent.MANA_AFFINITY),
+                        player.getData(PlayerAttachmentContent.NATURAL_ELEMENT),
                         player.getData(PlayerAttachmentContent.ATTUNED_SOURCE),
                         player.getData(PlayerAttachmentContent.ATTUNED_DIMENSION),
                         player.getData(PlayerAttachmentContent.CHANNEL_LOCK_UNTIL)),
-                deathCopy, MAX_CAPACITY);
+                deathCopy, MAX_CAPACITY, player.getUUID());
         player.setData(PlayerAttachmentContent.MANA_CAPACITY, migrated.capacity());
         player.setData(PlayerAttachmentContent.MANA, migrated.mana());
         player.setData(PlayerAttachmentContent.MANA_AFFINITY, migrated.affinity());
+        player.setData(PlayerAttachmentContent.NATURAL_ELEMENT, migrated.naturalElement());
         player.setData(PlayerAttachmentContent.ATTUNED_SOURCE, migrated.sourcePosition());
         player.setData(PlayerAttachmentContent.ATTUNED_DIMENSION, migrated.sourceDimension());
         player.setData(PlayerAttachmentContent.CHANNEL_LOCK_UNTIL, migrated.channelLockUntil());

@@ -7,6 +7,7 @@ import net.minecraft.world.phys.Vec3;
 import vectorregnum.core.CastContext;
 import vectorregnum.core.CastResult;
 import vectorregnum.core.CompiledSpell;
+import vectorregnum.core.Element;
 import vectorregnum.core.EffectCommand;
 import vectorregnum.core.FaultCode;
 import vectorregnum.core.Sigil;
@@ -55,6 +56,7 @@ public final class CastService {
                 toCore(direction),
                 seed);
         CastResult result = ENGINE.cast(program, context);
+        Element spellElement = spellElement(sigils);
 
         if (result instanceof CastResult.EngineFailure failure) {
             VectorRegnumMod.LOGGER.error("Engine failure {}: {}", failure.code(), failure.message());
@@ -62,9 +64,10 @@ public final class CastService {
                     .withStyle(ChatFormatting.DARK_RED), false);
             return result;
         }
+        double adjustedCost = ManaData.adjustedCost(player, result.manaCost(), spellElement);
 
-        if (chargeMana && (!ManaData.ensureAvailable(player, result.manaCost())
-                || !ManaData.trySpend(player, result.manaCost()))) {
+        if (chargeMana && (!ManaData.ensureAvailable(player, adjustedCost)
+                || !ManaData.trySpend(player, adjustedCost))) {
             ManaData.drain(player);
             ManaData.lockChannel(player, 200L);
             EffectCommand.WildMagic starvation = new EffectCommand.WildMagic(
@@ -96,11 +99,11 @@ public final class CastService {
         if (result instanceof CastResult.Success) {
             String message = String.format(
                     "Spell executed • %.2f μ • %.2f μ remaining",
-                    result.manaCost(), ManaData.available(player));
+                    adjustedCost, ManaData.available(player));
             player.sendSystemMessage(Component.literal(message).withStyle(ChatFormatting.AQUA), true);
         } else if (result instanceof CastResult.SpellFailure failure) {
             if (chargeMana) {
-                ManaData.lockChannel(player, 100L);
+                ManaData.lockChannel(player, ManaData.stabilityLockTicks(player, 100L, spellElement));
             }
             player.sendSystemMessage(Component.literal(
                             "WILD MAGIC: " + failure.fault().wildMagicCategory()
@@ -124,5 +127,16 @@ public final class CastService {
 
     private static vectorregnum.core.Vec3 toCore(Vec3 vector) {
         return new vectorregnum.core.Vec3(vector.x, vector.y, vector.z);
+    }
+
+    private static Element spellElement(List<Sigil> sigils) {
+        return sigils.stream()
+                .map(Sigil::type)
+                .filter(type -> type.startsWith("ELEMENT_"))
+                .map(type -> type.substring("ELEMENT_".length()))
+                .map(Element::fromId)
+                .flatMap(Optional::stream)
+                .findFirst()
+                .orElse(Element.ARCANE);
     }
 }

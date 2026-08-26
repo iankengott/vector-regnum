@@ -65,14 +65,14 @@ class CompatibilityFixturesTest {
     @Test
     void frostNovaEmitsAuraWithoutRequiringDirection() {
         CastResult.Success result = castSuccess(
-                sigils("ORIGIN_SELF", "ELEMENT_FROST", "SHAPE_AURA",
+                sigils("ORIGIN_SELF", "ELEMENT_ICE", "SHAPE_AURA",
                         new Sigil("EXPAND", 5.0), "EXECUTE"));
 
         assertTrue(result.snapshot().direction().isEmpty());
         assertEquals(5.0, result.snapshot().radius());
         EffectCommand.Aura command = assertInstanceOf(
                 EffectCommand.Aura.class, result.effects().getFirst());
-        assertEquals(Element.FROST, command.element().orElseThrow());
+        assertEquals(Element.ICE, command.element().orElseThrow());
     }
 
     @Test
@@ -105,8 +105,8 @@ class CompatibilityFixturesTest {
                         sigils("ORIGIN_SELF", "ELEMENT_FIRE", "VECTOR_FORWARD", "SHAPE_PROJECTILE",
                                 new Sigil("EXPAND", 1.0), "EXECUTE"),
                         true, -1, null, 85.0, 16),
-                new Fixture("Frost Nova",
-                        sigils("ORIGIN_SELF", "ELEMENT_FROST", "SHAPE_AURA",
+                new Fixture("Ice Nova",
+                        sigils("ORIGIN_SELF", "ELEMENT_ICE", "SHAPE_AURA",
                                 new Sigil("EXPAND", 5.0), "EXECUTE"),
                         true, -1, null, 125.9, 14),
                 new Fixture("Ground Zero",

@@ -12,6 +12,7 @@ import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.Vec3;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
@@ -30,6 +31,9 @@ import vectorregnum.neoforge.multiplayer.ClaimLedger;
 import vectorregnum.neoforge.multiplayer.ClaimSavedData;
 import vectorregnum.neoforge.multiplayer.MultiplayerLifecycleService;
 import vectorregnum.neoforge.multiplayer.PlayerDataMigration;
+import vectorregnum.core.presentation.PresentationElement;
+import vectorregnum.core.presentation.PresentationParticleStyle;
+import vectorregnum.neoforge.presentation.ServerTraces;
 
 import java.util.HashMap;
 import java.util.Iterator;
@@ -39,6 +43,7 @@ import java.util.UUID;
 /** Makes NeoForge visual checks reproducible without enabling them in normal play. */
 public final class DevShowcaseController {
     private static final Map<UUID, Integer> PENDING = new HashMap<>();
+    private static final Map<UUID, Integer> PENDING_PALETTE = new HashMap<>();
     private static final java.util.List<StagedBlock> STAGED_BLOCKS = new java.util.ArrayList<>();
     private static boolean registered;
 
@@ -65,6 +70,7 @@ public final class DevShowcaseController {
     @SubscribeEvent
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         PENDING.remove(event.getEntity().getUUID());
+        PENDING_PALETTE.remove(event.getEntity().getUUID());
     }
 
     /** Restores only blocks that this controller placed, before levels close. */
@@ -77,6 +83,7 @@ public final class DevShowcaseController {
         }
         STAGED_BLOCKS.clear();
         PENDING.clear();
+        PENDING_PALETTE.clear();
         registered = false;
     }
 
@@ -99,6 +106,7 @@ public final class DevShowcaseController {
                 runShowcase(player);
             }
         }
+        tickPalette(server);
     }
 
     private static boolean visualCheckRequested() {
@@ -194,20 +202,26 @@ public final class DevShowcaseController {
         }
 
         CastService.cast(player, SpellPresets.FIREBOLT, false);
-        CastService.cast(player, SpellPresets.FROST_NOVA, false);
+        CastService.cast(player, SpellPresets.ICE_NOVA, false);
         LibrarySpellService.castForShowcase(player, "aegis_shell");
         LibrarySpellService.castForShowcase(player, "featherfall");
         LibrarySpellService.castForShowcase(player, "redstone_oracle");
-        player.sendSystemMessage(Component.literal("VECTOR-REGNUM • PRIORITIES 1–19 VISUAL CHECKPOINT")
+        // Let the bounded spell/circle cues finish before presenting the
+        // canonical grid. This makes the automated visual proof repeatable.
+        PENDING_PALETTE.put(player.getUUID(),
+                SpellVisualManager.DEV_SHOWCASE_DURATION_TICKS + 40);
+        player.sendSystemMessage(Component.literal("VECTOR-REGNUM • PRIORITY 21 ELEMENTAL CHECKPOINT")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
         int playerSchema = player.getData(PlayerAttachmentContent.PLAYER_DATA_SCHEMA);
         if (playerSchema != PlayerDataMigration.CURRENT_SCHEMA) {
             throw new IllegalStateException("player attachment schema did not persist migration");
         }
         VectorRegnumMod.LOGGER.info(
-                "VISUAL_CHECKPOINT_READY milestone=priorities_1_19 player={} circle_sigils={} "
+                "VISUAL_CHECKPOINT_READY milestone=priority_21 player={} circle_sigils={} "
                         + "library_spells={} automation_relay={} vm_status={} vm_cost={} duration_ticks={} "
-                        + "persistence_claim={} player_schema={} unlocks_added={} create_renderer_probe={}",
+                        + "persistence_claim={} player_schema={} unlocks_added={} create_renderer_probe={} "
+                        + "element_palette_count=14 affinity_matrix=100,75,50,25 opposed_floor=25 "
+                        + "natural_element=server_authoritative channel_attunement={}",
                 player.getGameProfile().getName(),
                 circle.sigils().size(),
                 ProgressionSpellLibrary.ALL.size(),
@@ -218,7 +232,56 @@ public final class DevShowcaseController {
                 persistenceClaim,
                 playerSchema,
                 unlocksAdded,
-                createRendererProbe);
+                createRendererProbe,
+                ManaData.channelAffinity(player).getSerializedName());
+    }
+
+    private static void tickPalette(MinecraftServer server) {
+        Iterator<Map.Entry<UUID, Integer>> iterator = PENDING_PALETTE.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, Integer> entry = iterator.next();
+            int ticks = entry.getValue() - 1;
+            if (ticks > 0) {
+                entry.setValue(ticks);
+                continue;
+            }
+            iterator.remove();
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            if (player != null) {
+                stageElementPalette(player);
+                VectorRegnumMod.LOGGER.info(
+                        "ELEMENT_PALETTE_READY player={} count=14 duration_ticks={}",
+                        player.getGameProfile().getName(),
+                        SpellVisualManager.DEV_SHOWCASE_DURATION_TICKS);
+            }
+        }
+    }
+
+    /** Stages every canonical element through the authoritative trace choke point. */
+    private static void stageElementPalette(ServerPlayer player) {
+        ServerLevel world = player.serverLevel();
+        Vec3 forward = player.getViewVector(1.0F).normalize();
+        Vec3 right = forward.cross(new Vec3(0.0, 1.0, 0.0));
+        if (right.lengthSqr() < 1.0e-6) right = new Vec3(1.0, 0.0, 0.0);
+        else right = right.normalize();
+        Vec3 up = right.cross(forward).normalize();
+        // Keep the proof grid in front of the fixed showcase wall and inside a
+        // normal field of view so all fourteen entries are inspectable at once.
+        Vec3 center = player.getEyePosition().add(forward.scale(1.5)).add(up.scale(0.25));
+        PresentationElement[] elements = {
+                PresentationElement.ARCANE, PresentationElement.FIRE, PresentationElement.ICE,
+                PresentationElement.VOID, PresentationElement.WATER, PresentationElement.AIR,
+                PresentationElement.EARTH, PresentationElement.LIGHTNING, PresentationElement.TIME,
+                PresentationElement.SPACE, PresentationElement.LIGHT, PresentationElement.DARK,
+                PresentationElement.NATURE, PresentationElement.SOUND};
+        for (int index = 0; index < elements.length; index++) {
+            double horizontal = (index % 7 - 3) * 0.28;
+            double vertical = index < 7 ? 0.22 : -0.22;
+            Vec3 point = center.add(right.scale(horizontal)).add(up.scale(vertical));
+            ServerTraces.motes(world, point, PresentationParticleStyle.MOTES,
+                    elements[index], 0.12F, 0.70F,
+                    SpellVisualManager.DEV_SHOWCASE_DURATION_TICKS);
+        }
     }
 
     private static void giveIfMissing(ServerPlayer player, Item item, ItemStack stack) {

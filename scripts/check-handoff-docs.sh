@@ -14,6 +14,8 @@ cd -- "$REPO_ROOT"
 
 grep -Fq '20a. [x] **Veil-backed modular presentation overhaul and compatibility gate.**' \
     ROADMAP.md || die 'ROADMAP.md does not mark priority 20a complete'
+grep -Fq '21. [x] **Elemental identity and affinity expansion.**' \
+    ROADMAP.md || die 'ROADMAP.md does not mark priority 21 complete'
 
 readonly -a LIVE_HANDOFF_DOCS=(
     AGENTS.md
@@ -40,6 +42,11 @@ readonly -a STALE_CLAIMS=(
     'next action: slice 5'
     'priority 20 ports its fabric migration baseline'
     'neoforge priority 20 must revalidate'
+    'priority 21 is the first unfinished'
+    'priority 21 remains unfinished'
+    'priority 21 is next'
+    'priority 21 elemental identity and affinity model is next'
+    'priorities 1–20a'
 )
 
 for stale_claim in "${STALE_CLAIMS[@]}"; do
@@ -50,5 +57,5 @@ for stale_claim in "${STALE_CLAIMS[@]}"; do
     fi
 done
 
-printf 'HANDOFF_DOCS_OK priority20a=complete checked_files=%d\n' \
+printf 'HANDOFF_DOCS_OK priority20a=complete priority21=complete checked_files=%d\n' \
     "${#LIVE_HANDOFF_DOCS[@]}"

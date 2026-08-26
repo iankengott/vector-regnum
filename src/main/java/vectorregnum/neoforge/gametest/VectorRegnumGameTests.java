@@ -95,15 +95,21 @@ public final class VectorRegnumGameTests {
         ServerPlayer second = connectedCreativePlayer(context);
 
         execute(context, first, "vectorregnum mana attune fire", 1);
-        execute(context, second, "vectorregnum mana attune frost", 1);
+        execute(context, second, "vectorregnum mana attune ice", 1);
         execute(context, first, "vectorregnum circle new multiplayer-alpha", 1);
         execute(context, second, "vectorregnum circle new multiplayer-beta", 1);
         execute(context, first, "vectorregnum circle place 0 0 VM_PUSH_SELF", 1);
+        var firstNatural = ManaData.naturalElement(first);
+        var secondNatural = ManaData.naturalElement(second);
 
-        context.assertValueEqual(ManaAffinity.FIRE, ManaData.affinity(first),
+        context.assertValueEqual(ManaAffinity.FIRE, ManaData.channelAffinity(first),
                 "the first command source should retain its own affinity");
-        context.assertValueEqual(ManaAffinity.FROST, ManaData.affinity(second),
+        context.assertValueEqual(ManaAffinity.ICE, ManaData.channelAffinity(second),
                 "the second command source should retain its own affinity");
+        context.assertValueEqual(firstNatural, ManaData.naturalElement(first),
+                "the first player's natural identity should be stable");
+        context.assertValueEqual(secondNatural, ManaData.naturalElement(second),
+                "the second player's natural identity should be stable");
         context.assertValueEqual("multiplayer-alpha", CircleAuthoringService.session(first).current().id(),
                 "the first command source should edit only its own attachment/session");
         context.assertValueEqual("multiplayer-beta", CircleAuthoringService.session(second).current().id(),
@@ -119,7 +125,7 @@ public final class VectorRegnumGameTests {
     public void playerAttachmentsSurviveMinecraftNbtRoundTrip(GameTestHelper context) {
         ServerPlayer original = connectedCreativePlayer(context);
         ManaData.setForTesting(original, 600.0, 425.0);
-        ManaData.setAffinity(original, ManaAffinity.VOID);
+        ManaData.setChannelAffinity(original, ManaAffinity.VOID);
         ManaData.recordAttunedSource(original, context.absolutePos(CRYSTAL_POS));
         ManaData.lockChannel(original, 77L);
         execute(context, original, "vectorregnum circle new persisted-circle", 1);
@@ -133,8 +139,10 @@ public final class VectorRegnumGameTests {
                 "capacity attachment should decode from player NBT");
         context.assertValueEqual(425.0, ManaData.available(reloaded),
                 "mana attachment should decode from player NBT");
-        context.assertValueEqual(ManaAffinity.VOID, ManaData.affinity(reloaded),
+        context.assertValueEqual(ManaAffinity.VOID, ManaData.channelAffinity(reloaded),
                 "affinity attachment should decode from player NBT");
+        context.assertValueEqual(ManaData.naturalElement(original), ManaData.naturalElement(reloaded),
+                "natural element attachment should decode from player NBT");
         context.assertValueEqual(ManaData.attunedSource(original), ManaData.attunedSource(reloaded),
                 "source position attachment should decode from player NBT");
         context.assertValueEqual(ManaData.attunedDimension(original), ManaData.attunedDimension(reloaded),
@@ -229,7 +237,7 @@ public final class VectorRegnumGameTests {
         consumer.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BLAZE_POWDER));
         context.useBlock(CRYSTAL_POS, consumer);
         context.assertBlockProperty(CRYSTAL_POS, ManaCrystalNodeBlock.AFFINITY, ManaAffinity.FIRE);
-        ManaData.setAffinity(consumer, ManaAffinity.FIRE);
+        ManaData.setChannelAffinity(consumer, ManaAffinity.FIRE);
         ManaData.setForTesting(consumer, 500.0, 0.0);
         consumer.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
         consumer.moveTo(context.absolutePos(CRYSTAL_POS).east(), 90.0F, 0.0F);
@@ -243,6 +251,26 @@ public final class VectorRegnumGameTests {
         context.assertValueEqual(context.absolutePos(CRYSTAL_POS), ManaData.attunedSource(consumer),
                 "successful draw should attach the exact source position");
         completeAfterCleanup(context, consumer, observer);
+    }
+
+    @GameTest(template = "empty")
+    public void insufficientRemoteSourceDrawIsAtomic(GameTestHelper context) {
+        ServerPlayer player = connectedCreativePlayer(context);
+        BlockState source = ProgressionContent.manaCrystalNode().defaultBlockState()
+                .setValue(ManaCrystalNodeBlock.CHARGE, 1)
+                .setValue(ManaCrystalNodeBlock.AFFINITY, ManaAffinity.ARCANE);
+        context.setBlock(CRYSTAL_POS, source);
+        ManaData.setForTesting(player, 500.0, 0.0);
+        ManaData.setChannelAffinity(player, ManaAffinity.ARCANE);
+        ManaData.recordAttunedSource(player, context.absolutePos(CRYSTAL_POS));
+        player.moveTo(context.absolutePos(CRYSTAL_POS).east(), 90.0F, 0.0F);
+
+        context.assertTrue(!ManaData.ensureAvailable(player, 150.0),
+                "a one-charge source must reject a request larger than its total offer");
+        context.assertValueEqual(0.0, ManaData.available(player),
+                "a rejected remote draw must not partially credit player mana");
+        context.assertBlockProperty(CRYSTAL_POS, ManaCrystalNodeBlock.CHARGE, 1);
+        completeAfterCleanup(context, player);
     }
 
     @GameTest(template = "empty")

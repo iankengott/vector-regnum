@@ -184,7 +184,7 @@ finish() {
 # Replace the example below. Set TOTAL_STAGES to match the stages you write.
 # ──────────────────────────────────────────────────────────────────────────
 
-TOTAL_STAGES=4
+TOTAL_STAGES=5
 
 readonly REPO_ROOT="/home/iank/Desktop/my mods/mods-editing/vector-regnum"
 readonly DESKTOP_LAUNCHER="/home/iank/Desktop/Vector-Regnum.desktop"
@@ -198,7 +198,7 @@ fail() {
   exit 1
 }
 
-banner "Vector-Regnum priorities 20 and 20a visual gate"
+banner "Vector-Regnum priority 21 local visual gate"
 
 stage "Isolated launcher preflight"
 say "This wizard never opens, focuses, types into, or closes a window."
@@ -225,13 +225,24 @@ step "Confirm there is no Connection refused, Disconnected, or incompatible-mod 
 confirm "Did the real desktop shortcut reach an in-world view?" ||
   fail "Visual gate not attested; nothing was marked complete."
 step "Press T, run /vectorregnum devkit, and close chat. This unlocks and refills the isolated test player."
-step "Run /vectorregnum showcase. Look for a circle or ring near you, a directed Firebolt gesture, and an expanding Frost Nova gesture."
+step "Run /vectorregnum showcase. Look for a circle or ring near you, a directed Firebolt gesture, and an expanding Ice Nova gesture."
 step "The effects should stay near their origin or path and fade within about 15 seconds. A brief bright flare is fine; a stuck full-screen layer, giant opaque rectangle, or magenta/black missing texture is not."
 step "Run /vectorregnum circle vm_starter, then /vectorregnum circle cast. Confirm the authored Vector Step has a readable origin/direction cue and moves you without leaving a permanent effect."
 step "Wait a few seconds between casts. Run /vectorregnum library cast aegis_shell, then /vectorregnum library cast mage_light. Look for a bounded ward/aura and a localized light effect."
 step "Veil adds colored motes, soft glow, and local spell lighting. The log proves which backend loaded; your job is only to reject obviously broken or unreadable rendering."
 confirm "Did the showcase, authored cast, and two library casts appear near their true locations, remain readable, and end without broken or stuck rendering?" ||
   fail "Veil presentation gate not attested; nothing was marked complete."
+
+stage "Verify elemental identity and guide"
+step "Run /vectorregnum mana. Record the permanent natural element and current mutable channel shown in chat."
+step "Run /vectorregnum mana attune ice, then /vectorregnum mana again. Confirm the channel is now ice and the natural element is unchanged."
+step "Run /vectorregnum mana attune arcane afterward so this isolated test player returns to neutral raw-mana tuning."
+confirm "Did channel attunement change independently while the natural element stayed fixed?" ||
+  fail "Natural-element permanence/channel-attunement gate not attested; nothing was marked complete."
+step "Run /vectorregnum guide, open the Vector-Regnum Field Manual, and open Elemental Identity."
+step "Confirm it explains one permanent natural element, mutable channel attunement, Arcane as neutral raw mana, rare Void, Ice terminology, and the 100/75/50/25% bands."
+confirm "Was the priority-21 elemental chapter present, legible, and free of stale Frost terminology?" ||
+  fail "Field Manual v7 gate not attested; nothing was marked complete."
 
 stage "Exercise reload, LOD, and accessibility fallbacks"
 step "Press F3+T, wait for the reload-complete message, then run /vectorregnum showcase again."
@@ -270,8 +281,8 @@ quasar_loaded="$(rg -o -m1 'Loaded ([0-9]+) quasar particles' -r '$1' "$CLIENT_L
 case "$quasar_loaded" in
   ''|*[!0-9]*) fail "The client log does not prove the bounded Quasar vocabulary loaded." ;;
 esac
-(( quasar_loaded >= 19 )) ||
-  fail "The client log proves only $quasar_loaded Quasar motifs loaded; the migrated priority-20a vocabulary has 19."
+(( quasar_loaded >= 59 )) ||
+  fail "The client log proves only $quasar_loaded Quasar motifs loaded; the priority-21 vocabulary has 59."
 if rg -i 'Veil presentation backend failed|Veil Quasar emitter did not load|quasar registry loading errors' "$CLIENT_LOG" >/dev/null; then
   fail "The client log records a Veil or Quasar failure."
 fi
@@ -288,7 +299,7 @@ grep -Fq 'Stopping!' "$CLIENT_LOG" ||
   fail "The client log does not show Minecraft's normal shutdown path."
 
 mkdir -p -- "$REPO_ROOT/visual-evidence"
-evidence_file="$REPO_ROOT/visual-evidence/main-pc-priority20a-visual-attestation.txt"
+evidence_file="$REPO_ROOT/visual-evidence/main-pc-priority21-visual-attestation.txt"
 {
   printf 'status=passed\n'
   printf 'checked_at_utc=%s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -297,11 +308,11 @@ evidence_file="$REPO_ROOT/visual-evidence/main-pc-priority20a-visual-attestation
   printf 'endpoint=127.0.0.1:%s\n' "$SERVER_PORT"
   printf 'renderer=veil-4.4.1\n'
   printf 'point_light_warnings=%s_before_reload;%s_after_reload\n' "$point_light_warning_before_reload" "$point_light_warning_after_reload"
-  printf 'observed=authored-spells; library-spells; resource-reload; low-lod; reduced-motion; photosensitive; truth-fallback; normal-cleanup\n'
+  printf 'observed=natural-element; mutable-channel; ice-nova; guide-v7; authored-spells; library-spells; resource-reload; low-lod; reduced-motion; photosensitive; truth-fallback; normal-cleanup\n'
   printf 'server_unit=not-found\n'
   printf 'port_%s=free\n' "$SERVER_PORT"
 } > "$evidence_file"
 printf '  %s✓ wrote attestation%s %s\n' "$GREEN" "$RESET" "$evidence_file"
 
 finish
-say "Priority 20a now has its required local human evidence. Give the result to the project agent so it can update ROADMAP.md and the handoff docs."
+say "Priority 21 now has its required local human evidence. Give the result to the project agent so it can update ROADMAP.md and the handoff docs."

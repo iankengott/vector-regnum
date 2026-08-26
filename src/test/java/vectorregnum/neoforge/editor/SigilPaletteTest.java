@@ -16,7 +16,10 @@ class SigilPaletteTest {
     void paletteIsDiscoverableByNameCategoryAndDescription() {
         assertTrue(palette.entries().size() >= 45);
         assertTrue(palette.search("element").stream().map(SigilPalette.Entry::id).toList()
-                .containsAll(List.of("ELEMENT_FIRE", "ELEMENT_FROST", "ELEMENT_ARCANE", "ELEMENT_VOID")));
+                .containsAll(List.of("ELEMENT_FIRE", "ELEMENT_ICE", "ELEMENT_ARCANE", "ELEMENT_VOID",
+                        "ELEMENT_WATER", "ELEMENT_AIR", "ELEMENT_EARTH", "ELEMENT_LIGHTNING",
+                        "ELEMENT_TIME", "ELEMENT_SPACE", "ELEMENT_LIGHT", "ELEMENT_DARK",
+                        "ELEMENT_NATURE", "ELEMENT_SOUND")));
         assertTrue(palette.search("entity list").stream()
                 .anyMatch(entry -> entry.id().equals("VM_SELECT_RADIUS")));
         assertEquals("EXECUTE", palette.search("finish the circle").getFirst().id());

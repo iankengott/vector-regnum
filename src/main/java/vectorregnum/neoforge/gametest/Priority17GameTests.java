@@ -40,6 +40,7 @@ public final class Priority17GameTests {
     @GameTest(template = "empty")
     public void deathMigrationKeepsManaProgressAndCancelsRunningVm(GameTestHelper context) {
         ServerPlayer player = connectedCreativePlayer(context, "lifecycle-owner");
+        var natural = ManaData.naturalElement(player);
         ManaData.setForTesting(player, 100, 80);
         ManaData.lockChannel(player, 200);
         ManaData.migrateAndSanitize(player, true, 1);
@@ -49,6 +50,8 @@ public final class Priority17GameTests {
                 "death copy should preserve held mana");
         context.assertTrue(!ManaData.isChannelLocked(player),
                 "death copy should clear transient channel lock");
+        context.assertValueEqual(natural, ManaData.naturalElement(player),
+                "death migration should preserve permanent natural identity");
         NeoForgeVmService.cancelOwner(player.getUUID(), "gametest death fixture");
         completeAfterCleanup(context, player);
     }

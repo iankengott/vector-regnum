@@ -123,9 +123,19 @@ public final class SemanticSpellExecutor {
                 case FILTER_LIVING -> filter = "living";
                 case FILTER_ORE -> filter = "ore";
                 case ELEMENT_FIRE -> element = "fire";
-                case ELEMENT_FROST -> element = "frost";
+                case ELEMENT_ICE -> element = "ice";
                 case ELEMENT_ARCANE -> element = "arcane";
                 case ELEMENT_VOID -> element = "void";
+                case ELEMENT_WATER -> element = "water";
+                case ELEMENT_AIR -> element = "air";
+                case ELEMENT_EARTH -> element = "earth";
+                case ELEMENT_LIGHTNING -> element = "lightning";
+                case ELEMENT_TIME -> element = "time";
+                case ELEMENT_SPACE -> element = "space";
+                case ELEMENT_LIGHT -> element = "light";
+                case ELEMENT_DARK -> element = "dark";
+                case ELEMENT_NATURE -> element = "nature";
+                case ELEMENT_SOUND -> element = "sound";
                 case SHAPE_PROJECTILE -> shape = "projectile";
                 case SHAPE_AURA -> shape = "aura";
                 case SHAPE_BARRIER -> shape = "barrier";
@@ -173,8 +183,16 @@ public final class SemanticSpellExecutor {
                         .filter(LivingEntity.class::isInstance).map(LivingEntity.class::cast)
                         .map(List::of).orElseGet(List::of);
             } else targets = livingTargets();
-            double elemental = element.equals("fire") ? 2 : element.equals("frost") ? 3
-                    : element.equals("arcane") ? 4 : element.equals("void") ? 5 : 0;
+            double elemental = switch (element) {
+                case "fire" -> 2;
+                case "ice" -> 3;
+                case "arcane" -> 4;
+                case "void" -> 5;
+                case "lightning", "space" -> 4;
+                case "earth", "dark", "nature" -> 3;
+                case "water", "air", "time", "light", "sound" -> 2;
+                default -> 0;
+            };
             float damage = (float) Math.clamp(magnitude * 3.0 + elemental, 1, 20);
             targets.stream().limit(repeat)
                     .filter(target -> SpellSecurityPolicy.canAffectEntity(player, target))

@@ -477,5 +477,5 @@ Priority 20a's initial optional Veil and target-pack gates passed on 2026-08-20,
 and its complete Veil ownership migration and repeated verification ladder
 passed on 2026-08-21. The final Main-PC attestation exercised authored and
 library casts, F3+T reload, accessible low LOD, and normal cleanup on the final
-artifact. Priority 20a is checked and priority 21 is next. No new gameplay lands
-on Fabric.
+artifact. Priorities 20a and 21 are checked, and priority 22 is next. No new
+gameplay lands on Fabric.

@@ -23,21 +23,22 @@ end-to-end alpha passes, but still need balance and hardening.
 
 ## Current handoff checkpoint
 
-As of 2026-08-21, priority 20a is checked. The current NeoForge 1.21.1 tree has
-212 passing JUnit tests and 18 passing production GameTests. Servers emit only
-compact `presentation_trace`/`circle_preview` payloads through the budgeted
-`ServerTraces` choke point; with Veil active, Quasar owns every Vector-Regnum
-particle animation except `ParticleTypes.ENCHANT`, enforced by
-`VanillaParticleAllowlist` at the single guarded client choke point and by
-`ParticleAllowlistSourceScanTest`. Hermes gates passed Veil-present (19 Quasar
-motifs loaded, checkpoint staged, live capture inspected) and Veil-absent
-(built-in backend), and both dev units stopped with port 25575 free. Ian then
-passed the human-controlled Main-PC desktop attestation through
-`scripts/priority20-local-visual-wizard.sh`: authored and library casts, F3+T,
-minimal LOD, reduced-motion/photosensitive fallbacks, normal shutdown, the
-unloaded owned unit, and free port 25575 all passed on the final artifact.
+As of 2026-08-22, priority 21 is checked. The current NeoForge 1.21.1 tree has
+235 passing JUnit tests and 19 passing production GameTests. Its schema-3
+elemental model separates permanent server-authored natural identity from
+mutable channel attunement, uses a data-driven symmetric 14-element
+100/75/50/25 affinity matrix, migrates Frost to Ice, and keeps remote source
+draws atomic. Veil loaded all 59 Quasar emitters during the final fresh Hermes
+checkpoint, and the inspected frame showed the authored circle and priority-21
+telemetry. The real Main-PC launcher then opened Field Manual v7; inspected
+before/after captures prove dark text has no duplicate shadow, complete source
+illustrations scale correctly, and compact screens fit the first plate in the
+opening viewport. Ian's explicit “all good” report covers the corrected
+priority-21 artifact; no wizard record was retroactively synthesized.
+Minecraft closed normally, both development stacks were
+inactive, the temporary test binding was restored, and port 25575 was free.
 
-Priority 21 is the first unfinished canonical item. Always re-read
+Priority 22 is the first unfinished canonical item. Always re-read
 `ROADMAP.md` before reporting or implementing work because it supersedes this
 dated checkpoint whenever the queue changes.
 
@@ -127,7 +128,7 @@ not complete without the full NeoForge ladder.
    git diff --check
    ```
 
-   The GameTest process must report all 18 required tests passed. Its live
+   The GameTest process must report all 19 required tests passed. Its live
    parity test validates registry IDs, attachments, payload directions,
    creative-tab membership, and the command root against
    `data/vector_regnum/registration_parity.json`.

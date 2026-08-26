@@ -46,6 +46,7 @@
     "vector_regnum:mana",
     "vector_regnum:mana_capacity",
     "vector_regnum:mana_affinity",
+    "vector_regnum:natural_element",
     "vector_regnum:attuned_source",
     "vector_regnum:attuned_dimension",
     "vector_regnum:channel_lock_until",

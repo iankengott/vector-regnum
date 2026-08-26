@@ -28,13 +28,26 @@ public record CirclePreviewPayload(long instanceId, boolean showcase,
     public static final int MAX_DURATION_TICKS = 1_200;
     /** Visual ordinals shared by the encoder and the client animator. */
     public static final int VISUAL_FAULT = -1;
-    public static final int VISUAL_DEFAULT = 0;
+    /** Arcane retains the historical default slot for wire compatibility. */
+    public static final int VISUAL_ARCANE = 0;
+    public static final int VISUAL_DEFAULT = VISUAL_ARCANE;
     public static final int VISUAL_FIRE = 1;
-    public static final int VISUAL_FROST = 2;
+    public static final int VISUAL_ICE = 2;
     public static final int VISUAL_VOID = 3;
     public static final int VISUAL_EXECUTE = 4;
     public static final int VISUAL_SHAPE = 5;
-    private static final int WIRE_VERSION = 1;
+    public static final int VISUAL_WATER = 6;
+    public static final int VISUAL_AIR = 7;
+    public static final int VISUAL_EARTH = 8;
+    public static final int VISUAL_LIGHTNING = 9;
+    public static final int VISUAL_TIME = 10;
+    public static final int VISUAL_SPACE = 11;
+    public static final int VISUAL_LIGHT = 12;
+    public static final int VISUAL_DARK = 13;
+    public static final int VISUAL_NATURE = 14;
+    public static final int VISUAL_SOUND = 15;
+    public static final int VISUAL_MAX = VISUAL_SOUND;
+    private static final int WIRE_VERSION = 2;
     public static final Type<CirclePreviewPayload> TYPE = new Type<>(
             ResourceLocation.fromNamespaceAndPath("vector_regnum", "circle_preview"));
     public static final StreamCodec<RegistryFriendlyByteBuf, CirclePreviewPayload> CODEC =
@@ -44,7 +57,7 @@ public record CirclePreviewPayload(long instanceId, boolean showcase,
     public record SigilDot(int ring, int slot, int visual) {
         public SigilDot {
             if (ring < 0 || ring >= MAX_RINGS || slot < 0 || slot >= MAX_SLOTS_PER_RING
-                    || visual < VISUAL_FAULT || visual > VISUAL_SHAPE) {
+                    || visual < VISUAL_FAULT || visual > VISUAL_MAX) {
                 throw new IllegalArgumentException("invalid circle preview sigil");
             }
         }
@@ -71,7 +84,9 @@ public record CirclePreviewPayload(long instanceId, boolean showcase,
     private static CirclePreviewPayload read(RegistryFriendlyByteBuf buffer) {
         long instanceId = buffer.readVarLong();
         int version = buffer.readUnsignedByte();
-        if (version != WIRE_VERSION) {
+        // Version 1 payloads used the same byte layout and their old visual
+        // ordinals remain valid. New clients can therefore read old servers.
+        if (version != 1 && version != WIRE_VERSION) {
             throw new IllegalArgumentException("unsupported circle preview wire version");
         }
         boolean showcase = buffer.readBoolean();
@@ -95,7 +110,7 @@ public record CirclePreviewPayload(long instanceId, boolean showcase,
             int slot = buffer.readUnsignedByte();
             int visual = buffer.readByte();
             if (ring < MAX_RINGS && slot < MAX_SLOTS_PER_RING
-                    && visual >= VISUAL_FAULT && visual <= VISUAL_SHAPE) {
+                    && visual >= VISUAL_FAULT && visual <= VISUAL_MAX) {
                 sigils.add(new SigilDot(ring, slot, visual));
             }
         }

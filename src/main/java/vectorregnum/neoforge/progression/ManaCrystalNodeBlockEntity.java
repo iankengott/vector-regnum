@@ -4,6 +4,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
 
 /** Persistent tick progress for a natural mana-crystal source. */
@@ -32,6 +33,20 @@ public final class ManaCrystalNodeBlockEntity extends BlockEntity {
         rechargeProgressTicks = state.rechargeProgressTicks();
         growthProgressTicks = state.growthProgressTicks();
         setChanged();
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && !level.isClientSide()) {
+            BlockState state = getBlockState();
+            ManaAffinity affinity = state.getValue(ManaCrystalNodeBlock.AFFINITY);
+            if (affinity != affinity.canonical()) {
+                level.setBlock(worldPosition,
+                        state.setValue(ManaCrystalNodeBlock.AFFINITY, affinity.canonical()),
+                        Block.UPDATE_ALL);
+            }
+        }
     }
 
     @Override

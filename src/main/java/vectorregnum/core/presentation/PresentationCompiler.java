@@ -69,13 +69,13 @@ public final class PresentationCompiler {
                 PresentationCueKind.PARTICLES, "sensory/gathering_motes",
                 PresentationBinding.CAST_ORIGIN, 1, 18, .34, false, parameters, MICRO));
         PresentationCueKind atmosphere = switch (style.element) {
-            case FIRE, VOID -> PresentationCueKind.DARKNESS;
-            case FROST -> PresentationCueKind.FOG;
-            case ARCANE -> PresentationCueKind.LIGHT;
+            case FIRE, VOID, DARK -> PresentationCueKind.DARKNESS;
+            case ICE, WATER, AIR, EARTH, NATURE, SOUND -> PresentationCueKind.FOG;
+            case ARCANE, LIGHT, LIGHTNING, TIME, SPACE -> PresentationCueKind.LIGHT;
         };
         String atmosphereRenderer = switch (atmosphere) {
             case DARKNESS -> "atmosphere/contrast_dimming";
-            case FOG -> "atmosphere/frost_haze";
+            case FOG -> "atmosphere/ice_haze";
             default -> "atmosphere/elemental_glow";
         };
         cues.add(cue(PresentationTrigger.cast(), PresentationPhase.GATHERING,
@@ -239,9 +239,19 @@ public final class PresentationCompiler {
             PresentationElement element = instructions.stream().map(SemanticInstruction::opcode)
                     .map(opcode -> switch (opcode) {
                         case ELEMENT_FIRE -> PresentationElement.FIRE;
-                        case ELEMENT_FROST -> PresentationElement.FROST;
+                        case ELEMENT_ICE -> PresentationElement.ICE;
                         case ELEMENT_VOID -> PresentationElement.VOID;
                         case ELEMENT_ARCANE -> PresentationElement.ARCANE;
+                        case ELEMENT_WATER -> PresentationElement.WATER;
+                        case ELEMENT_AIR -> PresentationElement.AIR;
+                        case ELEMENT_EARTH -> PresentationElement.EARTH;
+                        case ELEMENT_LIGHTNING -> PresentationElement.LIGHTNING;
+                        case ELEMENT_TIME -> PresentationElement.TIME;
+                        case ELEMENT_SPACE -> PresentationElement.SPACE;
+                        case ELEMENT_LIGHT -> PresentationElement.LIGHT;
+                        case ELEMENT_DARK -> PresentationElement.DARK;
+                        case ELEMENT_NATURE -> PresentationElement.NATURE;
+                        case ELEMENT_SOUND -> PresentationElement.SOUND;
                         default -> null;
                     }).filter(java.util.Objects::nonNull).findFirst()
                     .orElse(PresentationElement.ARCANE);

@@ -8,7 +8,9 @@ import vectorregnum.neoforge.progression.ProgressionSpellLibrary;
 import vectorregnum.neoforge.progression.ProgressionState;
 import vectorregnum.neoforge.progression.ProgressionUnlock;
 import vectorregnum.neoforge.progression.SpellDefinition;
+import vectorregnum.core.Element;
 import vectorregnum.core.semantic.LoweringContext;
+import vectorregnum.core.semantic.SemanticProgram;
 import vectorregnum.core.semantic.SemanticVmLowerer;
 
 import java.util.Locale;
@@ -17,7 +19,7 @@ import java.util.Set;
 /** Playable server-side effects for every bounded definition in the curated library. */
 public final class LibrarySpellService {
     private static final Set<String> IMPLEMENTED_SPELL_IDS = Set.of(
-            "ember_lance", "chain_frost", "gravity_slam",
+            "ember_lance", "chain_ice", "gravity_slam",
             "aegis_shell", "kinetic_ward",
             "vector_step", "featherfall",
             "mage_light", "excavate", "stoneweave",
@@ -47,6 +49,9 @@ public final class LibrarySpellService {
 
     private static boolean cast(
             ServerPlayer player, String id, boolean chargeMana, boolean ignoreUnlock) {
+        // Old saved commands remain accepted, but the legacy spelling is not
+        // part of the canonical library listing.
+        if ("chain_frost".equals(id)) id = "chain_ice";
         SpellDefinition spell = ProgressionSpellLibrary.BY_ID.get(id);
         if (spell == null || !IMPLEMENTED_SPELL_IDS.contains(id)) {
             player.sendSystemMessage(Component.literal("Unknown library spell: " + id)
@@ -70,15 +75,11 @@ public final class LibrarySpellService {
         if (!SemanticSpellExecutor.preflight(player, semantic.instructions())) return false;
         var program = SemanticVmLowerer.lowerChecked(semantic,
                 new LoweringContext(id, player.getUUID().getLeastSignificantBits(), java.util.Map.of()));
-        double quotedMana = program.manaCost().total();
-        if (chargeMana && !ManaData.ensureAvailable(player, quotedMana)) {
-            player.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
-                            "%s requires %.0f μ; you have %.1f / %.1f μ",
-                            spell.title(), quotedMana, ManaData.available(player),
-                            ManaData.capacity(player))).withStyle(ChatFormatting.RED), true);
-            return false;
-        }
-
+        double quotedMana = ManaData.adjustedCost(
+                player, program.manaCost().total(), spellElement(semantic));
+        // startSemantic owns admission, source draw, and the atomic spend in
+        // that order. Pre-drawing here would debit a crystal before a later
+        // rate/concurrency rejection.
         boolean applied = NeoForgeVmService.startSemantic(player, program, chargeMana, spell.title(),
                 (owner, steps) -> SemanticSpellExecutor.execute(owner, steps, ignoreUnlock));
         if (!applied) return false;
@@ -95,8 +96,10 @@ public final class LibrarySpellService {
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
         for (SpellDefinition spell : ProgressionSpellLibrary.ALL) {
             boolean unlocked = spell.isUnlocked(state);
-            double quoted = SemanticVmLowerer.lowerChecked(LibrarySemanticAdapter.adapt(spell),
+            SemanticProgram semantic = LibrarySemanticAdapter.adapt(spell);
+            double base = SemanticVmLowerer.lowerChecked(semantic,
                     new LoweringContext(spell.id(), 0L, java.util.Map.of())).manaCost().total();
+            double quoted = ManaData.adjustedCost(player, base, spellElement(semantic));
             player.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
                             "%s %-18s  T%d  %.0f μ  [%s]",
                             unlocked ? "✓" : "◇", spell.id(), spell.tier(), quoted,
@@ -125,6 +128,17 @@ public final class LibrarySpellService {
         }
         ProgressionData.unlock(player, unlock);
         return true;
+    }
+
+    private static Element spellElement(SemanticProgram semantic) {
+        return semantic.instructions().stream()
+                .map(instruction -> instruction.opcode().name())
+                .filter(opcode -> opcode.startsWith("ELEMENT_"))
+                .map(opcode -> opcode.substring("ELEMENT_".length()))
+                .map(Element::fromId)
+                .flatMap(java.util.Optional::stream)
+                .findFirst()
+                .orElse(Element.ARCANE);
     }
 
 }

@@ -1,10 +1,11 @@
 # Vector-Regnum
 
-> **Platform status (2026-08-21):** this is the active Vector-Regnum NeoForge
+> **Platform status (2026-08-22):** this is the active Vector-Regnum NeoForge
 > 1.21.1 repository. The Fabric implementation is deprecated and frozen in its
-> own archived repository. Priority 20a's Veil particle migration, automated
-> suite, Hermes gates, and human-controlled Main-PC desktop attestation passed;
-> priority 21 is the first unfinished item.
+> own archived repository. Priorities 20a and 21 passed their automated and
+> guarded Hermes gates; Ian attested the corrected priority-21 artifact “all
+> good,” and the final guide fix was directly inspected through the Main-PC
+> desktop launcher. Priority 22 is the first unfinished item.
 > The frozen Fabric repository and all companion projects are listed in
 > [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
@@ -15,7 +16,7 @@ effects; invalid programs fault at an exact physical sigil and may collapse into
 Wild Magic.
 
 The current build is a substantial playable alpha, not a finished release. It
-implements the first coherent working pass of priorities 1–20a: typed/ticked
+implements the first coherent working pass of priorities 1–21: typed/ticked
 execution, authoring and diagnostics,
 safety-bounded control flow, perception, physics, cost accounting, three spell
 media, finite crystal progression, Ponders, the visual Field Manual, the
@@ -37,7 +38,7 @@ development unit inactive and port free. The repeatable visual workflow is
 |---|---|
 | Build | NeoForge 21.1.248, ModDevGradle 2.0.141, Mojang official mappings |
 | Loader surface | NeoForge `@Mod`, deferred registries, attachments, SavedData, payloads, events, custom-feature worldgen, client subscribers |
-| Automated suite | 212 JUnit tests and 18 production NeoForge GameTests |
+| Automated suite | 235 JUnit tests and 19 production NeoForge GameTests |
 | Live parity | Registries, payload directions, attachments, creative tab, and command root checked against a manifest |
 | Launch workflow | Guarded NixOS launcher and guarded Hermes server/client mirror on loopback port 25575 |
 
@@ -49,7 +50,7 @@ the parity GameTest before the source was restored.
 
 The priority-20a implementation pins Veil 4.4.1 as an optional client-only
 dependency. One reflectively loaded adapter maps the bounded presentation
-program and compact authoritative world traces into nineteen Quasar emitter
+program and compact authoritative world traces into 59 Quasar emitter
 motifs (element motes, torus rings, cylinder beams, bursts, sparks, smoke, and
 light), at most 8 deferred lights, at most 16 emitters, and optional bloom.
 Every mapped visual geometry family receives a capped Quasar motif. The
@@ -91,11 +92,12 @@ closed normally, the owned unit unloaded, and port 25575 was free.
 
 - NeoForge 21.1.248, ModDevGradle 2.0.141, official/Parchment mappings,
   Gradle 9.2.1, and Java 21.
-- **212 passing JUnit tests** covering the compatibility engine, typed VM,
+- **235 passing JUnit tests** covering the compatibility engine, typed VM,
   static stack analysis, semantics/presentation, circle authoring, media,
   guide/Ponder models, geology, transport, multiplayer policy, automation
-  ownership, progression, spell-library contracts, and the priority-20a
-  particle allowlist/trace wire/Quasar vocabulary checks, plus **18 passing
+  ownership, progression, spell-library contracts, priority-20a particle
+  allowlist/trace wire/Quasar vocabulary, and priority-21 elemental matrix,
+  migration, tuning, guide, and presentation checks, plus **19 passing
   production NeoForge GameTests** on an isolated headless server, including a
   real Vector Step follow-up-VM regression. The separate
   frozen Fabric alpha at `c7371ca` retains its 170-test/16-GameTest record.
@@ -124,11 +126,15 @@ closed normally, the owned unit unloaded, and port 25575 was free.
   shards; finite source nodes hold eight charges; the last used same-dimension
   node can feed a cast while its chunk remains loaded. Draw strength uses
   inverse-square distance and source/channel elemental compatibility.
-- Source nodes can be tuned Arcane, Fire, Frost, or Void with amethyst shard,
-  blaze powder, snowball, or ender pearl. Player channel affinity is selected
-  with `/vectorregnum mana attune ...`.
+- Source nodes can be tuned to every canonical element with fourteen explicit
+  vanilla tuning items. Player channel affinity remains mutable through
+  `/vectorregnum mana attune ...` and controls source-conversion efficiency.
+- Every character has one deterministic permanent natural element persisted in
+  schema 3. Natural identity governs spell affinity cost/stability; the separate
+  channel does not rewrite identity. The JSON-backed symmetric matrix admits
+  only 100/75/50/25% bands, with Arcane neutral, rare Void, and a 25% floor.
 - Crystal/media recipes, seven persistent research discoveries, advancement
-  guidance, and a versioned first-join Field Manual v6. The v6 book opens a
+  guidance, and a versioned first-join Field Manual v7. The v7 book opens a
   searchable, scrollable, progression-aware visual manual with three original
   illustrated plates, contextual links, tooltips, live shaped/shapeless recipe
   grids, bounded recipe-alternative cycling, and item icons. Its Ponder cards
@@ -171,7 +177,7 @@ closed normally, the owned unit unloaded, and port 25575 was free.
   spatial sound, material response, screen treatment, and aftermath with
   distance/quality LODs. Press `O` for independent particle, darkness/fog,
   flash, chromatic, camera, audio, reduced-motion, and photosensitivity controls.
-- The original Sigil Tome, Firebolt, Frost Nova, collision/damage/status
+- The original Sigil Tome, Firebolt, Ice Nova, collision/damage/status
   effects, mana starvation, and context-sensitive Wild Magic remain available.
 
 The full NeoForge workflow has been exercised on Hermes: remote Java 21
@@ -196,6 +202,28 @@ geometry and particles with Veil absent. The Veil capture
 scene with Quasar motes, bloom, and local lighting. Both clients reached
 `VISUAL_CHECKPOINT_READY`; both remote units were stopped afterward.
 
+Priority 21's final Hermes runs reached `VISUAL_CHECKPOINT_READY` with player
+schema 3 and the four affinity bands, then logged
+`ELEMENT_PALETTE_READY ... count=14` after the earlier cues expired. The
+inspected Veil frame
+`visual-evidence/hermes-window-20260822T065044Z.png` showed the clean bounded
+Quasar scene with no missing textures; the built-in frame
+`visual-evidence/hermes-window-20260822T065259Z.png` showed the distinct
+canonical fallback motifs. Veil loaded all 59 emitter definitions. Both owned
+Hermes units were stopped and port 25575 was free afterward.
+
+The final post-guide-fix Hermes frame
+`visual-evidence/hermes-window-20260822T175002Z.png` visibly retained the
+authored circle and priority-21 checkpoint while Veil loaded all 59 Quasar
+emitters. The Main-PC guide audit compared
+`visual-evidence/guide-audit/00-inventory.png` with
+`visual-evidence/guide-audit/05-final-guide.png`: dark text no longer has a
+duplicate shadow, the complete source illustration is scaled rather than
+cropped, and compact layouts fit the whole plate inside the opening viewport.
+The live search overlay was also inspected. Minecraft then closed normally,
+the temporary input binding was restored, the local unit became inactive, and
+port 25575 was free.
+
 ## Build and test
 
 Java 21 is required. Run the full build and the real NeoForge GameTest server:
@@ -217,7 +245,7 @@ JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
 ```
 
 `scripts/verify-port.sh` runs the clean build plus JSON, shell-syntax, and diff
-checks. The GameTest task must separately report all 18 required tests passed.
+checks. The GameTest task must separately report all 19 required tests passed.
 
 ## Play on the main PC
 
@@ -283,7 +311,7 @@ booleans, and `text:<value>` becomes text (for example an entity UUID).
 Progression and spells:
 
 ```text
-/vectorregnum mana attune arcane|fire|frost|void
+/vectorregnum mana attune water|fire|air|earth|lightning|time|space|light|dark|nature|ice|sound|void|arcane
 /vectorregnum research combat_weaving
 /vectorregnum library cast <spell-id>
 /vectorregnum vm probe
@@ -303,7 +331,7 @@ Multiplayer security and automation:
 /vectorregnum automation inspect <x> <y> <z>
 ```
 
-The library IDs are `ember_lance`, `chain_frost`, `gravity_slam`,
+The library IDs are `ember_lance`, `chain_ice`, `gravity_slam`,
 `aegis_shell`, `kinetic_ward`, `vector_step`, `featherfall`, `mage_light`,
 `excavate`, `stoneweave`, `life_sense`, `ore_resonance`, `sentry_pulse`,
 `harvest_cycle`, and `redstone_oracle`.
@@ -390,8 +418,8 @@ small versioned API. See [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
 ## Still not finished
 
-Priority 21's elemental identity and affinity model is next. The reagent
-economy, persistent upkeep and conclusions, shared-memory branching,
+Priority 22's casting-media, reagent, and resource-escrow work is next.
+Persistent upkeep and conclusions, shared-memory branching,
 explicitly approved cooperative rituals, security and accessibility hardening,
 and the optional SMP integration API follow. Configuration, balancing,
 profiling, full playtests, NeoForge/modpack compatibility, final art,
@@ -407,9 +435,10 @@ the machine boundaries, canonical priority queue, required NixOS and Hermes
 verification ladder, visual-inspection requirement, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
-[ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priority 20a's
-migration and every automated, remote, compatibility, and human visual gate are
-complete; priority 21 is the first unfinished item.
+[ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priorities 20a
+and 21 have coherent end-to-end alpha passes with every required automated,
+remote, and human visual gate complete; priority 22 is the first unfinished
+item.
 `AGENTS.md` also records Ian's subagent ladder — the temporary free ox-alpha
 first while it lasts, then opencode deepseekflash, then Luna max, then Sol
 xhigh or Opus 5 medium — plus the delegation rules, so no earlier chat context

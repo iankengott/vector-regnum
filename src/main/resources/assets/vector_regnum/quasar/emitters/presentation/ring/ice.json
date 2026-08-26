@@ -1,0 +1,11 @@
+{
+  "max_lifetime": 12,
+  "rate": 6,
+  "count": 4,
+  "max_particles": 48,
+  "emitter_settings": {
+    "shape": "vector_regnum:presentation/torus",
+    "particle_settings": "vector_regnum:presentation/motes"
+  },
+  "particle_data": "vector_regnum:presentation/ice"
+}
