@@ -14,12 +14,13 @@
   "scenes": [
     { "id": "circle_compilation", "phases": ["COMPILATION", "FAULT"], "source": "circle_compilation", "shows": ["clockwise_trace", "inward_transition", "exact_source"] },
     { "id": "spell_cast_success", "phases": ["COMPILATION", "MANA", "EXECUTION"], "source": "live_authoritative_vm_events", "shows": ["execution_cursor", "wait", "budget_yield", "world_effect"] },
-    { "id": "mana_breakdown", "phases": ["MANA"], "source": "program_mana_cost", "shows": ["named_dimensions", "crystal_to_scroll_flow"] },
+    { "id": "mana_breakdown", "phases": ["MANA"], "source": "program_and_reagent_quote", "shows": ["undiscounted_dimensions", "reagent_contributions", "bounded_final_quote", "escrow_flow"] },
     { "id": "compiler_fault", "phases": ["COMPILATION", "FAULT"], "source": "authored_reconstruction", "shows": ["missing_terminal", "exact_physical_sigil"] },
     { "id": "runtime_fault", "phases": ["EXECUTION", "FAULT"], "source": "authoritative_vm_or_authored_reconstruction", "shows": ["type_mismatch", "bounded_stop"] },
     { "id": "internal_mana_detonation", "phases": ["FAULT"], "source": "actual_result_or_authored_reconstruction", "category": "INTERNAL_MANA_DETONATION" },
     { "id": "unstructured_element_burst", "phases": ["FAULT"], "source": "actual_result_or_authored_reconstruction", "category": "UNSTRUCTURED_ELEMENT_BURST" },
     { "id": "violent_miscast", "phases": ["FAULT"], "source": "actual_result_or_authored_reconstruction", "category": "VIOLENT_MISCAST" },
-    { "id": "scroll_lifecycle", "phases": ["COMPILATION", "MANA", "EXECUTION", "FAULT"], "source": "artifact_transition", "shows": ["accepted_consumption", "failure_retention"] }
+    { "id": "scroll_lifecycle", "phases": ["COMPILATION", "MANA", "EXECUTION", "FAULT"], "source": "artifact_and_escrow_transition", "shows": ["success_consumption", "genuine_fault_consumption", "refundable_failure_restoration"] },
+    { "id": "casting_methods", "phases": ["COMPILATION", "MANA", "EXECUTION", "FAULT"], "source": "casting_method_and_escrow", "shows": ["bare", "ritual", "engraving", "spellbook", "scroll", "installed_circle"] }
   ]
 }

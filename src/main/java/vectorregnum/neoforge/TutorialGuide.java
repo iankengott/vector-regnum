@@ -16,8 +16,8 @@ import java.util.List;
 /** Gives each player a persistent first-join field manual and starter tome. */
 public final class TutorialGuide {
     public static final String FIELD_MANUAL_TITLE_PREFIX = "Vector-Regnum Field Manual v";
-    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "7";
-    private static final int CURRENT_GUIDE_VERSION = 7;
+    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "8";
+    private static final int CURRENT_GUIDE_VERSION = 9;
     private TutorialGuide() {
     }
 
@@ -90,11 +90,20 @@ public final class TutorialGuide {
                         + "/vectorregnum circle undo\n"
                         + "/vectorregnum circle cast\n\n"
                         + "Compiler feedback names the exact physical ring and slot. Saved circles are versioned and checksummed."),
-                page("SPELL MEDIA\n\n"
+                page("CASTING METHODS\n\n"
+                        + "Six methods share one server quote: bare, ritual, engraving, spellbook, scroll, and installed circle.\n\n"
                         + "/vectorregnum circle bind scroll\n"
                         + "/vectorregnum circle bind book\n"
+                        + "/vectorregnum circle bind engraving\n"
                         + "/vectorregnum circle bind tablet\n\n"
-                        + "Craft blanks first: scroll = paper+ink+amethyst; book = book+lapis+amethyst; tablet = chiseled deepslate+lapis+amethyst. Scrolls burn once, books reuse, tablets anchor permanently."),
+                        + "Scrolls are single-use. Books reuse. Engravings consume their construction when accepted and remain reusable while placed. Tablets become permanent installed circles."),
+                page("REAGENTS & ESCROW\n\n"
+                        + "Stage optional reagents with /vectorregnum reagents stage <kind> <count>. Amethyst reduces mana, sugar casting time, glowstone upkeep, and fermented spider eye instability. Use /vectorregnum reagents clear to take them back.\n\n"
+                        + "Stage quartz separately with /vectorregnum reagents stage offering <count>. It satisfies a solo ritual offering but grants no discount.\n\n"
+                        + "/vectorregnum circle quote <method> shows requested and applied discounts, clipping, and the bounded final quote. /vectorregnum circle ritual requires the staged offering."),
+                page("SETTLEMENT\n\n"
+                        + "After admission, mana, staged reagents, and a scroll enter server escrow. Success and genuine spell faults or Wild Magic consume them. Policy, unloaded-target, rate, shutdown, owner-lifecycle, and internal failures refund or never withdraw them.\n\n"
+                        + "Books and world media remain reusable. Cooperative contributor approval belongs to the later ritual system."),
                 page("THE TICKED VM\n\n"
                         + "The new runtime has typed numbers, booleans, points, vectors, entities, and lists; Push/Pop memory; delay/duration; branches; and bounded loops.\n\n"
                         + "Load an editable typed example with /vectorregnum circle vm_starter. Use circle params for comma-separated vector/list/control parameters. VM_CREATE_FORM adds bounded material forms. It yields safely at per-tick limits."),

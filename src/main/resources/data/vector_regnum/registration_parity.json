@@ -11,6 +11,7 @@
       "vector_regnum:created_light",
       "vector_regnum:created_arcane_force",
       "vector_regnum:carved_spell_tablet",
+      "vector_regnum:engraved_spell_circle",
       "vector_regnum:mana_crystal_node",
       "vector_regnum:raw_crystal_conduit",
       "vector_regnum:runed_conduit",
@@ -25,6 +26,7 @@
       "vector_regnum:spell_scroll",
       "vector_regnum:spell_book",
       "vector_regnum:carved_spell_tablet",
+      "vector_regnum:engraved_spell_circle",
       "vector_regnum:mana_crystal_shard",
       "vector_regnum:mana_crystal_node",
       "vector_regnum:raw_crystal_conduit",
@@ -52,6 +54,7 @@
     "vector_regnum:channel_lock_until",
     "vector_regnum:progression_unlocks",
     "vector_regnum:authored_circle",
+    "vector_regnum:staged_reagents",
     "vector_regnum:received_tutorial_guide",
     "vector_regnum:tutorial_guide_version",
     "vector_regnum:player_data_schema"
@@ -76,7 +79,8 @@
       "vector_regnum:sigil_tome",
       "vector_regnum:spell_scroll",
       "vector_regnum:spell_book",
-      "vector_regnum:carved_spell_tablet"
+      "vector_regnum:carved_spell_tablet",
+      "vector_regnum:engraved_spell_circle"
     ],
     "minecraft:ingredients": [
       "vector_regnum:mana_crystal_shard"

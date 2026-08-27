@@ -16,12 +16,15 @@ import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.item.ItemStack;
 import vectorregnum.core.automation.AutomationDataFrame;
 import vectorregnum.core.automation.AutomationInvocation;
 import vectorregnum.core.automation.AutomationRule;
 import vectorregnum.core.circle.CirclePersistence;
 import vectorregnum.core.circle.MagicCircle;
 import vectorregnum.neoforge.CircleAuthoringService;
+import vectorregnum.core.casting.CastingMethod;
+import vectorregnum.core.casting.ResourceEscrow;
 import vectorregnum.neoforge.VectorRegnumMod;
 
 /** Persistent program/configuration; all mutation happens on its server tick. */
@@ -109,10 +112,13 @@ public final class AutomationRelayBlockEntity extends BlockEntity {
         }
         try {
             MagicCircle circle = CirclePersistence.decode(program);
-            boolean succeeded = CircleAuthoringService.activateCircleAt(player, circle, true,
-                    Vec3.atCenterOf(worldPosition).add(0.0, 0.55, 0.0));
-            recordOutcome(succeeded, succeeded ? "cast accepted" : "cast rejected",
-                    invocation.data());
+            boolean accepted = CircleAuthoringService.activateCircleAt(player, circle, true,
+                    Vec3.atCenterOf(worldPosition).add(0.0, 0.55, 0.0),
+                    CastingMethod.INSTALLED_CIRCLE, false, ItemStack.EMPTY,
+                    outcome -> recordOutcome(outcome == ResourceEscrow.Outcome.SUCCESS,
+                            "cast settled " + outcome.name().toLowerCase(java.util.Locale.ROOT),
+                            invocation.data()));
+            if (!accepted) recordOutcome(false, "cast rejected before escrow", invocation.data());
         } catch (RuntimeException exception) {
             VectorRegnumMod.LOGGER.warn("Rejected corrupt automation relay at {}", worldPosition, exception);
             recordOutcome(false, "stored program is corrupt", invocation.data());

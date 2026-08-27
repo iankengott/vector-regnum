@@ -52,7 +52,8 @@ public final class ManaData {
         }
         double current = available(player);
         double capacity = capacity(player);
-        if (current + amount > capacity + 1.0e-9) {
+        double heldForRefund = CastingResourceService.reservedMana(player.getUUID());
+        if (current + amount + heldForRefund > capacity + 1.0e-9) {
             return false;
         }
         player.setData(PlayerAttachmentContent.MANA, Math.min(capacity, current + amount));
@@ -95,6 +96,18 @@ public final class ManaData {
                 base, naturalElement(player), spell);
     }
 
+    public static double adjustedUpkeep(ServerPlayer player, double base, Element spellElement) {
+        Element spell = spellElement == null ? Element.ARCANE : spellElement;
+        return ElementalAffinityMatrix.canonical().upkeepCost(base, naturalElement(player), spell);
+    }
+
+    /** Affinity-derived instability units. Aligned casts are 1.0 and opposed casts are 4.0. */
+    public static double instability(ServerPlayer player, Element spellElement) {
+        Element spell = spellElement == null ? Element.ARCANE : spellElement;
+        return 1.0 / ElementalAffinityMatrix.canonical().stabilityEfficiency(
+                naturalElement(player), spell);
+    }
+
     /** Scales a genuine fault's channel lock using the same deterministic stability band. */
     public static long stabilityLockTicks(ServerPlayer player, long baseTicks, Element spellElement) {
         if (baseTicks < 0L) throw new IllegalArgumentException("Lock duration cannot be negative");
@@ -102,6 +115,14 @@ public final class ManaData {
         double efficiency = ElementalAffinityMatrix.canonical().stabilityEfficiency(
                 naturalElement(player), spell);
         return (long) Math.ceil(baseTicks / efficiency);
+    }
+
+    /** Applies the bounded final instability value already shown in the priority-22 quote. */
+    public static long stabilityLockTicks(long baseTicks, double quotedInstability) {
+        if (baseTicks < 0L || !Double.isFinite(quotedInstability) || quotedInstability < 0.0) {
+            throw new IllegalArgumentException("Invalid quoted stability lock input");
+        }
+        return (long) Math.ceil(baseTicks * quotedInstability);
     }
 
     /** Compatibility aliases for the pre-priority-21 channel API. */

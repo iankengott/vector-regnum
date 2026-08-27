@@ -199,7 +199,8 @@ acceptance scope.
     schema-3 implementation gives each player one server-authored permanent
     natural element and a separate mutable channel, migrates legacy Frost data
     and block states to Ice, and drives source conversion, spell quotes,
-    instability, all 14 tuning items, Field Manual v7, and the complete
+    instability, all 14 tuning items, the then-current Field Manual v7 (now
+    v9), and the complete
     59-emitter Quasar palette from the canonical data. Remote source draws are
     atomic even when insufficient. The final ladder passed 235 JUnit tests,
     all 19 production GameTests, the focused verifier, JSON/shell/diff checks,
@@ -208,12 +209,22 @@ acceptance scope.
     full-source image scaling, and proportionally fitted compact illustrations;
     before/after screenshots were directly inspected. Both development stacks
     stopped normally with port 25575 free.
-22. [ ] **Casting media, reagents, and resource escrow.** Distinguish bare
+22. [x] **Casting media, reagents, and resource escrow.** Distinguish bare
     casting, rituals, engravings, spellbooks, scrolls, and installed circles.
     Optional reagents may reduce mana, casting time, upkeep, and instability
     within server-configured floors. Genuine miscasts consume committed
     resources; policy/unloaded/rate/shutdown/internal failures refund or never
-    withdraw them.
+    withdraw them. The schema-2 checksummed staging contract separates four
+    discount-bearing vanilla reagents from quartz ritual offerings; all six
+    methods use one server-owned quote and escrow boundary. Quotes show
+    requested versus applied clipping. Exact mana, reagent, offering, and
+    scroll settlement survives owner lifecycle loss and shutdown, with missing
+    execution targets classified as refundable rather than genuine faults.
+    The final Hermes-only ladder (per Ian's machine instruction) passed 254
+    JUnit tests, all 23 production GameTests, focused/JSON/shell/diff checks,
+    guarded build/client launch, a Veil 59-emitter checkpoint, live ritual
+    quote inspection, and direct screenshot inspection. Both Hermes units were
+    stopped and port 25575 was free.
 23. [ ] **Persistent upkeep and natural conclusions.** Give every continuing
     effect a versioned owner, endpoint/deadline or termination predicate,
     upkeep payer/escrow, offline and unloaded-chunk policy, restart recovery,
@@ -269,7 +280,7 @@ acceptance scope.
 - [x] Command-based server-authoritative editor and persistent draft.
 - [x] Save, inspect, validate, copy into media, and recover via checksums.
 - [x] Animated actual circle topology with compiler order/error highlighting.
-- [x] Versioned Field Manual v7 with exact crystal/media/infrastructure recipes and commands,
+- [x] Versioned Field Manual v9 with exact crystal/media/infrastructure recipes and commands,
   data-driven visual elements, search/history/bookmarks/scaling/scrolling,
   progression gating, live recipe/item rendering, and a native Ponder action.
 - [x] Illustrated custom Field Manual inspired by Patchouli/Lexica Botania and

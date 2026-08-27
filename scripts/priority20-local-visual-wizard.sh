@@ -242,7 +242,7 @@ confirm "Did channel attunement change independently while the natural element s
 step "Run /vectorregnum guide, open the Vector-Regnum Field Manual, and open Elemental Identity."
 step "Confirm it explains one permanent natural element, mutable channel attunement, Arcane as neutral raw mana, rare Void, Ice terminology, and the 100/75/50/25% bands."
 confirm "Was the priority-21 elemental chapter present, legible, and free of stale Frost terminology?" ||
-  fail "Field Manual v7 gate not attested; nothing was marked complete."
+  fail "Field Manual v9 gate not attested; nothing was marked complete."
 
 stage "Exercise reload, LOD, and accessibility fallbacks"
 step "Press F3+T, wait for the reload-complete message, then run /vectorregnum showcase again."

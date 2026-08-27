@@ -1,6 +1,6 @@
 # Field Manual artwork
 
-The current Field Manual v7 retains three original 256×256 raster plates first
+The current Field Manual v9 retains three original 256×256 raster plates first
 introduced in v5 and generated for Vector-Regnum with Codex's built-in
 image-generation tool on 2026-08-11. They are checked in under
 `src/main/resources/assets/vector_regnum/textures/gui/guide/` and referenced by

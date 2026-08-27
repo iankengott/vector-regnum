@@ -72,6 +72,13 @@ public final class PlayerAttachmentContent {
                     .copyOnDeath()
                     .build());
 
+    /** Vanilla-backed reagent units removed from inventory and staged for the next accepted cast. */
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> STAGED_REAGENTS =
+            ATTACHMENTS.register("staged_reagents", () -> AttachmentType.<String>builder(() -> "")
+                    .serialize(Codec.STRING)
+                    .copyOnDeath()
+                    .build());
+
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> RECEIVED_TUTORIAL_GUIDE =
             ATTACHMENTS.register("received_tutorial_guide", () -> AttachmentType.<Boolean>builder(() -> false)
                     .serialize(Codec.BOOL)

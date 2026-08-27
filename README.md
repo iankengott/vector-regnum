@@ -1,11 +1,11 @@
 # Vector-Regnum
 
-> **Platform status (2026-08-22):** this is the active Vector-Regnum NeoForge
+> **Platform status (2026-08-27):** this is the active Vector-Regnum NeoForge
 > 1.21.1 repository. The Fabric implementation is deprecated and frozen in its
-> own archived repository. Priorities 20a and 21 passed their automated and
-> guarded Hermes gates; Ian attested the corrected priority-21 artifact “all
-> good,” and the final guide fix was directly inspected through the Main-PC
-> desktop launcher. Priority 22 is the first unfinished item.
+> own archived repository. Priorities 20a–22 have coherent end-to-end alpha
+> passes. Priority 22 passed its complete automated and guarded Hermes gates;
+> at Ian's direction, its final runtime and visual checks ran on Hermes only.
+> Priority 23 is the first unfinished item.
 > The frozen Fabric repository and all companion projects are listed in
 > [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
@@ -16,10 +16,11 @@ effects; invalid programs fault at an exact physical sigil and may collapse into
 Wild Magic.
 
 The current build is a substantial playable alpha, not a finished release. It
-implements the first coherent working pass of priorities 1–21: typed/ticked
+implements the first coherent working pass of priorities 1–22: typed/ticked
 execution, authoring and diagnostics,
 safety-bounded control flow, perception, physics, cost accounting, three spell
-media, finite crystal progression, Ponders, the visual Field Manual, the
+media, six quoted casting methods, bounded reagents and escrow, finite crystal
+progression, Ponders, the visual Field Manual, the
 server-backed circle editor, natural crystal progression, GameTests,
 multiplayer/security policy, programmable automation, and compiler-driven
 client presentation.
@@ -38,7 +39,7 @@ development unit inactive and port free. The repeatable visual workflow is
 |---|---|
 | Build | NeoForge 21.1.248, ModDevGradle 2.0.141, Mojang official mappings |
 | Loader surface | NeoForge `@Mod`, deferred registries, attachments, SavedData, payloads, events, custom-feature worldgen, client subscribers |
-| Automated suite | 235 JUnit tests and 19 production NeoForge GameTests |
+| Automated suite | 254 JUnit tests and 23 production NeoForge GameTests |
 | Live parity | Registries, payload directions, attachments, creative tab, and command root checked against a manifest |
 | Launch workflow | Guarded NixOS launcher and guarded Hermes server/client mirror on loopback port 25575 |
 
@@ -92,12 +93,13 @@ closed normally, the owned unit unloaded, and port 25575 was free.
 
 - NeoForge 21.1.248, ModDevGradle 2.0.141, official/Parchment mappings,
   Gradle 9.2.1, and Java 21.
-- **235 passing JUnit tests** covering the compatibility engine, typed VM,
+- **254 passing JUnit tests** covering the compatibility engine, typed VM,
   static stack analysis, semantics/presentation, circle authoring, media,
   guide/Ponder models, geology, transport, multiplayer policy, automation
   ownership, progression, spell-library contracts, priority-20a particle
   allowlist/trace wire/Quasar vocabulary, and priority-21 elemental matrix,
-  migration, tuning, guide, and presentation checks, plus **19 passing
+  migration, tuning, guide, presentation, casting-method, reagent-quote, and
+  escrow checks, plus **23 passing
   production NeoForge GameTests** on an isolated headless server, including a
   real Vector Step follow-up-VM regression. The separate
   frozen Fabric alpha at `c7371ca` retains its 170-test/16-GameTest record.
@@ -119,9 +121,14 @@ closed normally, the owned unit unloaded, and port 25575 was free.
   the original compatibility sigils and direct `VM_` bytecode circles.
 - Exact ring/slot compiler feedback. Ring `0` is outermost; slot `0` is north;
   slots increase clockwise; execution then advances inward.
-- Bound media: a scroll is consumed by its first accepted successful cast, a
-  spellbook is reusable, and a carved tablet becomes an unbreakable permanent
-  block whose cast origin is its verified dimension/position anchor.
+- Six server-quoted casting methods: bare, ritual, engraving, spellbook,
+  scroll, and installed circle. Spellbooks and anchored media are reusable;
+  scrolls enter escrow and are consumed on success or genuine spell fault.
+  Four optional vanilla reagents reduce mana, casting time, upkeep, or
+  instability within server-configured floors and caps. Quartz is a separate
+  ritual offering and never grants a discount. Escrow refunds exact mana,
+  items, offerings, and scrolls on policy, unloaded-target, owner-lifecycle,
+  shutdown, and internal failure, including absent-owner fallback settlement.
 - Players begin with **0 mana and 0 capacity**. Capacity grows from crystal
   shards; finite source nodes hold eight charges; the last used same-dimension
   node can feed a cast while its chunk remains loaded. Draw strength uses
@@ -134,7 +141,7 @@ closed normally, the owned unit unloaded, and port 25575 was free.
   channel does not rewrite identity. The JSON-backed symmetric matrix admits
   only 100/75/50/25% bands, with Arcane neutral, rare Void, and a 25% floor.
 - Crystal/media recipes, seven persistent research discoveries, advancement
-  guidance, and a versioned first-join Field Manual v7. The v7 book opens a
+  guidance, and a versioned first-join Field Manual v9. The v9 book opens a
   searchable, scrollable, progression-aware visual manual with three original
   illustrated plates, contextual links, tooltips, live shaped/shapeless recipe
   grids, bounded recipe-alternative cycling, and item icons. Its Ponder cards
@@ -418,8 +425,8 @@ small versioned API. See [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
 ## Still not finished
 
-Priority 22's casting-media, reagent, and resource-escrow work is next.
-Persistent upkeep and conclusions, shared-memory branching,
+Priority 23's persistent-upkeep and natural-conclusion work is next.
+Shared-memory branching,
 explicitly approved cooperative rituals, security and accessibility hardening,
 and the optional SMP integration API follow. Configuration, balancing,
 profiling, full playtests, NeoForge/modpack compatibility, final art,
@@ -435,10 +442,10 @@ the machine boundaries, canonical priority queue, required NixOS and Hermes
 verification ladder, visual-inspection requirement, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
-[ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priorities 20a
-and 21 have coherent end-to-end alpha passes with every required automated,
-remote, and human visual gate complete; priority 22 is the first unfinished
-item.
+[ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priorities
+20a–22 have coherent end-to-end alpha passes. Priority 22 passed its automated
+and Hermes visual gates under Ian's Hermes-only instruction; priority 23 is the
+first unfinished item.
 `AGENTS.md` also records Ian's subagent ladder — the temporary free ox-alpha
 first while it lasts, then opencode deepseekflash, then Luna max, then Sol
 xhigh or Opus 5 medium — plus the delegation rules, so no earlier chat context

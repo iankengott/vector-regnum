@@ -66,7 +66,7 @@ class PonderTimelineBuilderTest {
     }
 
     @Test
-    void actualVmFaultAndCompatibilityMiscastRetainTheirSources() {
+    void actualVmFaultAndCompatibilityMiscastRetainSourcesAndConsumeEscrow() {
         List<PlacedSigil> vmOrder = List.of(sigil(0, 0, "VM_PUSH_BOOLEAN"),
                 sigil(0, 1, "VM_PUSH_NUMBER"), sigil(0, 2, "VM_ADD"));
         Program faulty = new Program(List.of(
@@ -92,6 +92,9 @@ class PonderTimelineBuilderTest {
                 .anyMatch(cue -> cue.type() == PonderTimeline.CueType.WILD_MAGIC
                         && WildMagicCategory.UNSTRUCTURED_ELEMENT_BURST.name()
                                 .equals(cue.data().get("category"))));
+        assertTrue(miscast.steps().stream().flatMap(step -> step.cues().stream())
+                .anyMatch(cue -> cue.type() == PonderTimeline.CueType.ESCROW_STATE
+                        && "consumed".equals(cue.data().get("state"))));
     }
 
     @Test

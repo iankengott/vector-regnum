@@ -1,7 +1,7 @@
 {
   "id": "field_manual",
   "title": "Vector-Regnum Field Manual",
-  "version": 7,
+  "version": 9,
   "theme": "brass_ink_and_amethyst",
   "chapters": [
     {
@@ -266,7 +266,7 @@
         {
           "id": "spell_media",
           "title": "Scroll, Book, and Tablet",
-          "body": "Bind a compiled circle into a scroll, spellbook, or carved tablet. A scroll burns only after its first accepted successful cast. A book is reusable. A tablet is permanent and casts from its verified world anchor.",
+          "body": "Choose one of six casting methods. BARE casts use no medium. RITUAL casts use a staged offering pool. ENGRAVING accepts construction materials into an anchored spell circle. SPELLBOOK is reusable portable media. SCROLL is committed at activation and burns on a successful cast or genuine spell fault. INSTALLED_CIRCLE is anchored and reusable. Success and genuine spell fault/Wild Magic consume escrow and scroll; policy, unloaded-target, rate, shutdown, and internal failures refund escrow or never withdraw it. Books and both anchored forms, an engraved spell circle and an installed circle, remain reusable. Engraving materials are committed at accepted binding with /vectorregnum circle bind engraving. Solo ritual offerings can be staged now; cooperative consent remains priority 25.",
           "required_unlocks": ["crystal_harvest"],
           "elements": [
             {
@@ -300,10 +300,54 @@
               "metadata": { "recipe": "vector_regnum:carved_spell_tablet", "display": "live_grid", "context": "vector_regnum:carved_spell_tablet" }
             },
             {
+              "type": "RECIPE",
+              "label": "Engraved spell circle",
+              "alt": "A shaped amethyst and redstone circuit around chiseled deepslate makes an expendable engraved spell circle.",
+              "metadata": { "recipe": "vector_regnum:engraved_spell_circle", "display": "live_grid", "context": "vector_regnum:engraved_spell_circle" }
+            },
+            {
+              "type": "DIAGRAM",
+              "label": "Six casting methods",
+              "alt": "Bare, ritual, engraving, spellbook, scroll, and installed-circle methods pass through quote, escrow, execution, and settlement.",
+              "metadata": { "diagram": "casting_methods_and_escrow", "methods": "BARE,RITUAL,ENGRAVING,SPELLBOOK,SCROLL,INSTALLED_CIRCLE", "resource_flow": "quote,reserve,execute,settle" }
+            },
+            {
+              "type": "EXAMPLE",
+              "label": "Stage optional reagents",
+              "alt": "Stage bounded reagent contributions, inspect a method quote, or clear the staged selection before casting.",
+              "metadata": { "example": "priority_22_reagents", "stage_command": "/vectorregnum reagents stage mana|casting_time|upkeep|instability <count>", "offering_command": "/vectorregnum reagents stage offering <count>", "clear_command": "/vectorregnum reagents clear", "quote_command": "/vectorregnum circle quote <method>", "ritual_command": "/vectorregnum circle ritual", "engraving_command": "/vectorregnum circle bind engraving" }
+            },
+            {
               "type": "PONDER",
               "label": "Ponder scroll consumption",
-              "alt": "The scroll remains through rejected casts and burns after the first accepted success.",
+              "alt": "The scroll and staged reagents settle only after the server reports a committed outcome.",
               "metadata": { "scene": "scroll_lifecycle", "trace": "artifact_transition" }
+            }
+          ]
+        },
+        {
+          "id": "resource_escrow",
+          "title": "Quotes, reagents, and escrow",
+          "body": "The compiler shows the undiscounted quote, each reagent contribution, requested and applied discounts, clipping, and the final bounded quote before approval. Stage discount reagents with /vectorregnum reagents stage mana|casting_time|upkeep|instability <count>. Stage quartz separately with /vectorregnum reagents stage offering <count>; quartz=ritual_offering and grants no discount. Use /vectorregnum reagents clear to remove both pools. The discount mappings are amethyst_shard=mana, sugar=casting_time (casting time), glowstone_dust=upkeep, and fermented_spider_eye=instability. /vectorregnum circle quote <method> inspects BARE, RITUAL, ENGRAVING, SPELLBOOK, SCROLL, or INSTALLED_CIRCLE, while /vectorregnum circle ritual requires the staged solo offering. Bind accepted construction materials with /vectorregnum circle bind engraving. Escrow reserves resources before execution. Success and genuine spell fault/Wild Magic consume escrow and scroll. Policy, unloaded-target, rate, shutdown, owner-lifecycle, and internal failures refund or never withdraw it. A SPELLBOOK and both anchored forms remain reusable; cooperative ritual consent waits for priority 25.",
+          "required_unlocks": ["crystal_harvest"],
+          "elements": [
+            {
+              "type": "DIAGRAM",
+              "label": "Bounded resource quote",
+              "alt": "The server compares the undiscounted quote with reagent contributions, then clamps the final quote before reservation.",
+              "metadata": { "diagram": "resource_quote_and_settlement", "stages": "undiscounted,contributions,bounded,reserved,settled", "failure_policy": "fault_consumes;policy_unloaded_rate_shutdown_engine_refund" }
+            },
+            {
+              "type": "EXAMPLE",
+              "label": "Vanilla reagent mappings",
+              "alt": "Amethyst shard lowers mana, sugar lowers casting time, glowstone dust lowers upkeep, fermented spider eye lowers instability, and quartz is an offering-only ritual resource.",
+              "metadata": { "example": "vanilla_reagent_mappings", "mana": "amethyst_shard", "casting_time": "sugar", "upkeep": "glowstone_dust", "instability": "fermented_spider_eye", "ritual_offering": "quartz" }
+            },
+            {
+              "type": "LINK",
+              "label": "Return to spell media",
+              "alt": "Return to the six casting methods and the engraved-circle recipe.",
+              "metadata": { "target": "spell_media" }
             }
           ]
         }

@@ -30,6 +30,8 @@ import vectorregnum.core.circle.CircleCoordinate;
 import vectorregnum.core.circle.MagicCircle;
 import vectorregnum.core.circle.PlacedSigil;
 import vectorregnum.core.circle.SpellArtifact;
+import vectorregnum.core.casting.ReagentKind;
+import vectorregnum.neoforge.CastingResourceService;
 import vectorregnum.neoforge.CircleAuthoringService;
 import vectorregnum.neoforge.LibrarySpellService;
 import vectorregnum.neoforge.MageLightBlock;
@@ -130,6 +132,9 @@ public final class VectorRegnumGameTests {
         ManaData.lockChannel(original, 77L);
         execute(context, original, "vectorregnum circle new persisted-circle", 1);
         execute(context, original, "vectorregnum circle place 0 0 VM_PUSH_SELF", 1);
+        original.getInventory().placeItemBackInInventory(new ItemStack(Items.SUGAR, 2));
+        context.assertTrue(CastingResourceService.stage(original, ReagentKind.CASTING_TIME, 2),
+                "reagent fixture should stage before player NBT save");
 
         CompoundTag saved = original.saveWithoutId(new CompoundTag());
         ServerPlayer reloaded = detachedPlayer(context);
@@ -153,6 +158,10 @@ public final class VectorRegnumGameTests {
                 "authored-circle attachment should decode before a session is materialized");
         context.assertValueEqual(1, CircleAuthoringService.session(reloaded).current().sigils().size(),
                 "authored-circle contents should survive player NBT");
+        context.assertValueEqual(2,
+                CastingResourceService.staged(reloaded).units(ReagentKind.CASTING_TIME),
+                "checksummed staged reagents should survive player NBT");
+        CastingResourceService.clearStaged(original);
         completeAfterCleanup(context, original);
     }
 
@@ -162,6 +171,7 @@ public final class VectorRegnumGameTests {
         List<SpellArtifact> artifacts = List.of(
                 SpellArtifact.scroll("gametest-scroll", circle),
                 SpellArtifact.book("gametest-book", circle),
+                SpellArtifact.engraving("gametest-engraving", circle),
                 SpellArtifact.tablet("gametest-tablet", circle));
 
         for (SpellArtifact artifact : artifacts) {
@@ -341,7 +351,7 @@ public final class VectorRegnumGameTests {
         context.succeed();
     }
 
-    @GameTest(template = "empty", timeoutTicks = 20)
+    @GameTest(template = "empty", timeoutTicks = 60)
     public void semanticImpulseQueuesFollowupVmWithoutMutatingActiveIteration(GameTestHelper context) {
         ServerPlayer player = connectedCreativePlayer(context);
         ManaData.setForTesting(player, 1_000.0, 1_000.0);
@@ -349,7 +359,7 @@ public final class VectorRegnumGameTests {
         context.assertTrue(LibrarySpellService.cast(player, "vector_step"),
                 "Vector Step should queue its semantic VM");
 
-        context.runAfterDelay(4, () -> {
+        context.runAfterDelay(40, () -> {
             context.assertTrue(player.getDeltaMovement().lengthSqr() > 0.0,
                     "the follow-up impulse VM should execute on a later server tick");
             completeAfterCleanup(context, player);

@@ -220,7 +220,11 @@ public final class PonderTimelineBuilder {
                                     "category", failure.fault().wildMagicCategory().name())),
                     cue(PonderTimeline.CueType.FAULT_FRACTURE, at,
                             Map.of("kind", "wild_magic",
-                                    "severity", failure.fault().wildMagicCategory().name())));
+                                    "severity", failure.fault().wildMagicCategory().name())),
+                    cue(PonderTimeline.CueType.SCROLL_STATE, null,
+                            Map.of("state", "genuine_fault_consumed", "medium", "scroll")),
+                    cue(PonderTimeline.CueType.ESCROW_STATE, null,
+                            Map.of("state", "consumed", "reason", "genuine_spell_fault")));
             return;
         }
         PonderTimeline.CueType type = result.effects().stream().anyMatch(EffectCommand.WildMagic.class::isInstance)
@@ -233,8 +237,13 @@ public final class PonderTimelineBuilder {
                         "effects", Integer.toString(result.effects().size()))),
                 cue(PonderTimeline.CueType.SCROLL_STATE, null,
                         Map.of("state", result.status() == CastResult.Status.SUCCESS
-                                ? "accepted_and_consumed" : "retained_after_failure",
-                                "medium", "scroll")));
+                                ? "accepted_and_consumed" : "refunded_after_failure",
+                                "medium", "scroll")),
+                cue(PonderTimeline.CueType.ESCROW_STATE, null,
+                        Map.of("state", result.status() == CastResult.Status.SUCCESS
+                                ? "consumed" : "refunded",
+                                "reason", result.status() == CastResult.Status.SUCCESS
+                                        ? "success" : "engine_failure")));
     }
 
     private PonderTimeline finish() {

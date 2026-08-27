@@ -36,15 +36,27 @@ public final class SpellMediaContent {
                     .lightLevel(state -> 4)
                     .noLootTable()));
 
+    public static final DeferredBlock<SpellTabletBlock> ENGRAVED_SPELL_CIRCLE = BLOCKS.register(
+            "engraved_spell_circle",
+            () -> new SpellTabletBlock(BlockBehaviour.Properties.ofFullCopy(Blocks.CHISELED_DEEPSLATE)
+                    .strength(2.5F, 12.0F)
+                    .lightLevel(state -> 3)
+                    .noLootTable()));
+
     public static final DeferredItem<BlockItem> CARVED_TABLET_ITEM = ITEMS.register(
             "carved_spell_tablet",
             () -> new BlockItem(CARVED_TABLET.get(),
                     new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
+    public static final DeferredItem<BlockItem> ENGRAVED_SPELL_CIRCLE_ITEM = ITEMS.register(
+            "engraved_spell_circle",
+            () -> new BlockItem(ENGRAVED_SPELL_CIRCLE.get(),
+                    new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
+
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SpellTabletBlockEntity>> TABLET_BLOCK_ENTITY =
             BLOCK_ENTITIES.register("carved_spell_tablet",
                     () -> BlockEntityType.Builder.of(SpellTabletBlockEntity::new,
-                            CARVED_TABLET.get()).build(null));
+                            CARVED_TABLET.get(), ENGRAVED_SPELL_CIRCLE.get()).build(null));
 
     private SpellMediaContent() {
     }
@@ -61,6 +73,7 @@ public final class SpellMediaContent {
         if (event.getTabKey().equals(CreativeModeTabs.TOOLS_AND_UTILITIES)) {
             event.accept(SPELL_SCROLL);
             event.accept(SPELL_BOOK);
+            event.accept(ENGRAVED_SPELL_CIRCLE_ITEM);
             event.accept(CARVED_TABLET_ITEM);
         }
     }
@@ -80,6 +93,14 @@ public final class SpellMediaContent {
 
     public static Item carvedTabletItem() {
         return CARVED_TABLET_ITEM.get();
+    }
+
+    public static Block engravedSpellCircle() {
+        return ENGRAVED_SPELL_CIRCLE.get();
+    }
+
+    public static Item engravedSpellCircleItem() {
+        return ENGRAVED_SPELL_CIRCLE_ITEM.get();
     }
 
     public static BlockEntityType<SpellTabletBlockEntity> tabletBlockEntity() {

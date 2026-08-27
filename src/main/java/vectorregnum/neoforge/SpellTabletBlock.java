@@ -12,7 +12,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 
-/** An authored tablet becomes a permanent, reusable world-anchored spell. */
+/** A placed engraving or tablet becomes a reusable world-anchored spell. */
 public final class SpellTabletBlock extends BaseEntityBlock {
     public static final MapCodec<SpellTabletBlock> CODEC = simpleCodec(SpellTabletBlock::new);
 

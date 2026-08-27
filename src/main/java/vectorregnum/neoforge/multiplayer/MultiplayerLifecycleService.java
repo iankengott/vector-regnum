@@ -11,6 +11,8 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import vectorregnum.neoforge.NeoForgeVmService;
+import vectorregnum.neoforge.CastingResourceService;
+import vectorregnum.core.casting.ResourceEscrow;
 import vectorregnum.neoforge.ManaData;
 import vectorregnum.neoforge.PlayerAttachmentContent;
 import vectorregnum.neoforge.VectorRegnumMod;
@@ -32,6 +34,7 @@ public final class MultiplayerLifecycleService {
     @SubscribeEvent
     public static void onLogout(PlayerEvent.PlayerLoggedOutEvent event) {
         if (!(event.getEntity() instanceof ServerPlayer player)) return;
+        CastingResourceService.refundOwner(player, ResourceEscrow.Outcome.OWNER_LIFECYCLE);
         NeoForgeVmService.cancelOwner(player.getUUID(), "owner disconnected");
         PonderTraceNetworking.onDisconnect(player);
     }
@@ -40,6 +43,7 @@ public final class MultiplayerLifecycleService {
     public static void onClone(PlayerEvent.Clone event) {
         if (!(event.getOriginal() instanceof ServerPlayer oldPlayer)
                 || !(event.getEntity() instanceof ServerPlayer newPlayer)) return;
+        CastingResourceService.refundOwner(newPlayer, ResourceEscrow.Outcome.OWNER_LIFECYCLE);
         NeoForgeVmService.cancelOwner(oldPlayer.getUUID(), event.isWasDeath()
                 ? "owner died" : "player instance changed");
         String originalNatural = oldPlayer.getData(PlayerAttachmentContent.NATURAL_ELEMENT);
@@ -54,6 +58,7 @@ public final class MultiplayerLifecycleService {
     @SubscribeEvent
     public static void onChangedDimension(PlayerEvent.PlayerChangedDimensionEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            CastingResourceService.refundOwner(player, ResourceEscrow.Outcome.OWNER_LIFECYCLE);
             NeoForgeVmService.cancelOwner(player.getUUID(), "owner changed dimension");
         }
     }

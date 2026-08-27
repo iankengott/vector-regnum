@@ -37,7 +37,8 @@ scripts/priority21-local-visual-wizard.sh
 The wizard does not open, focus, type into, or close Minecraft. It preflights
 the isolated launcher, gives the human an explicit in-game checklist, and then
 verifies permanent natural identity versus mutable channel attunement, Ice
-terminology and visuals, Field Manual v7, authored/library casts, resource
+terminology and visuals, the then-current Field Manual v7 (the repository now
+ships v9), authored/library casts, resource
 reload, accessible low LOD, the IPv4 endpoint, owned-unit cleanup, and free
 port after the human closes Minecraft normally. It writes the ignored evidence
 record `visual-evidence/main-pc-priority21-visual-attestation.txt` only after
@@ -53,6 +54,24 @@ wizard attestation file was retroactively synthesized. That split evidence and
 the normal shutdown/port checks are recorded in
 `docs/PRIORITY_21_DECISIONS.tsv`. Future human roadmap gates should use the
 wizard so their complete checklist is captured in one record.
+
+## Priority 22 casting checks
+
+Run the focused casting-method, reagent, escrow, guide, Ponder, JSON, and shell
+gate with:
+
+```bash
+scripts/verify-priority22.sh
+```
+
+Priority 22's final runtime gate was run entirely on Hermes at Ian's direction.
+The guarded client must log Veil loading 59 Quasar emitters and
+`VISUAL_CHECKPOINT_READY milestone=priority_22 ... ritual_offering=quartz
+field_manual=9`. Its live chat log must show a ritual quote with separate
+`requested` and `applied` reagent values plus `Nether Quartz committed as
+ritual offering (no discount)`. Inspect the captured window rather than
+treating the file as evidence by itself, then stop both development units and
+confirm Hermes loopback port 25575 is free.
 
 ## Priority 21 elemental checks
 

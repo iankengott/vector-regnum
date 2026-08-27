@@ -26,6 +26,10 @@ class PonderLessonLibraryTest {
         assertTrue(hasCue(primer, PonderTimeline.CueType.COMPILER_FAULT));
         assertTrue(hasCue(primer, PonderTimeline.CueType.RUNTIME_FAULT));
         assertTrue(hasCue(primer, PonderTimeline.CueType.SCROLL_STATE));
+        assertTrue(hasCue(primer, PonderTimeline.CueType.CASTING_METHOD));
+        assertTrue(hasCue(primer, PonderTimeline.CueType.CAST_QUOTE));
+        assertTrue(hasCue(primer, PonderTimeline.CueType.REAGENT_CONTRIBUTION));
+        assertTrue(hasCue(primer, PonderTimeline.CueType.ESCROW_STATE));
 
         Set<String> categories = primer.steps().stream().flatMap(step -> step.cues().stream())
                 .filter(cue -> cue.type() == PonderTimeline.CueType.WILD_MAGIC)

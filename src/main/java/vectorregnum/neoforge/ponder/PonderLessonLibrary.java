@@ -37,6 +37,31 @@ public final class PonderLessonLibrary {
                         Map.of("from", "crystal", "to", "scroll", "amount", "16")),
                 cue(PonderTimeline.CueType.CAMERA_FOCUS, null,
                         Map.of("target", "mana_conduit", "motion", "track")));
+        add(steps, 34, PonderTimeline.Phase.MANA, "Choose the casting method",
+                "Bare, ritual, engraving, spellbook, scroll, and installed-circle casts share one server quote, but keep distinct media and settlement rules.",
+                cue(PonderTimeline.CueType.CASTING_METHOD, null,
+                        Map.of("methods", "bare,ritual,engraving,spellbook,scroll,installed_circle",
+                                "selected", "scroll")),
+                cue(PonderTimeline.CueType.CAST_QUOTE, null,
+                        Map.of("undiscounted_mana", "27.5", "undiscounted_ticks", "20",
+                                "undiscounted_upkeep", "4", "undiscounted_instability", "1")));
+        add(steps, 32, PonderTimeline.Phase.MANA, "Reagents lower bounded dimensions",
+                "Amethyst, sugar, glowstone, and fermented spider eye reduce mana, casting time, upkeep, and instability. Server floors keep every final quote bounded.",
+                cue(PonderTimeline.CueType.REAGENT_CONTRIBUTION, null,
+                        Map.of("kind", "mana", "item", "minecraft:amethyst_shard",
+                                "reduction", "4.125")),
+                cue(PonderTimeline.CueType.REAGENT_CONTRIBUTION, null,
+                        Map.of("kind", "casting_time", "item", "minecraft:sugar",
+                                "reduction", "4")),
+                cue(PonderTimeline.CueType.CAST_QUOTE, null,
+                        Map.of("final_mana", "23.375", "final_ticks", "16",
+                                "final_upkeep", "4", "final_instability", "1")));
+        add(steps, 26, PonderTimeline.Phase.MANA, "Escrow reserves before execution",
+                "Only an admitted cast moves mana, staged reagents, and a single-use scroll into server escrow.",
+                cue(PonderTimeline.CueType.ESCROW_STATE, null,
+                        Map.of("state", "reserved", "owner", "server", "medium", "scroll")),
+                cue(PonderTimeline.CueType.MANA_FLOW, null,
+                        Map.of("from", "caster", "to", "escrow", "amount", "23.375")));
         add(steps, 26, PonderTimeline.Phase.EXECUTION, "The server executes",
                 "The authoritative VM advances its cursor and emits a bounded world effect. The teaching scene only replays that result.",
                 cue(PonderTimeline.CueType.EXECUTION_CURSOR, source(4, 1, 2, "VM_IMPULSE"),
@@ -48,9 +73,11 @@ public final class PonderLessonLibrary {
                 cue(PonderTimeline.CueType.CAMERA_FOCUS, null,
                         Map.of("target", "training_dummy", "motion", "impact")));
         add(steps, 26, PonderTimeline.Phase.EXECUTION, "A successful scroll is consumed",
-                "Consumption happens only after the server accepts the first successful cast. Rejected and faulted attempts retain the scroll.",
+                "Success and genuine spell faults consume committed reagents and a scroll. Policy, unloaded-target, rate, shutdown, and internal failures refund or never withdraw them.",
                 cue(PonderTimeline.CueType.SCROLL_STATE, null,
                         Map.of("state", "accepted_and_consumed", "medium", "scroll")),
+                cue(PonderTimeline.CueType.ESCROW_STATE, null,
+                        Map.of("state", "consumed", "reason", "success")),
                 cue(PonderTimeline.CueType.SET_PIECE, null,
                         Map.of("stage", "scribe_workshop", "artifact", "scroll")));
         add(steps, 34, PonderTimeline.Phase.FAULT, "Compiler fault reconstruction",
@@ -60,12 +87,20 @@ public final class PonderLessonLibrary {
                 cue(PonderTimeline.CueType.FAULT_FRACTURE, source(5, 1, 4, "VM_PUSH_VECTOR"),
                         Map.of("kind", "compiler", "severity", "ERROR")));
         add(steps, 34, PonderTimeline.Phase.FAULT, "Runtime fault reconstruction",
-                "A bounded VM can still reject an invalid runtime value. Execution stops at the responsible source; no client can override it.",
+                "A genuine bounded VM fault stops at the responsible source and consumes its committed escrow. No client can override that result.",
                 cue(PonderTimeline.CueType.RUNTIME_FAULT, source(3, 1, 1, "VM_ADD"),
                         Map.of("code", "TYPE_MISMATCH", "message", "ADD requires two numbers",
                                 "instruction_pointer", "3")),
                 cue(PonderTimeline.CueType.FAULT_FRACTURE, source(3, 1, 1, "VM_ADD"),
-                        Map.of("kind", "runtime", "severity", "ERROR")));
+                        Map.of("kind", "runtime", "severity", "ERROR")),
+                cue(PonderTimeline.CueType.ESCROW_STATE, null,
+                        Map.of("state", "consumed", "reason", "genuine_spell_fault")));
+        add(steps, 28, PonderTimeline.Phase.FAULT, "Refundable cancellation reconstruction",
+                "A policy, unloaded-target, rate, shutdown, owner-lifecycle, or internal failure returns every reserved resource exactly once.",
+                cue(PonderTimeline.CueType.ESCROW_STATE, null,
+                        Map.of("state", "refunded", "reason", "engine_or_policy_failure")),
+                cue(PonderTimeline.CueType.SCROLL_STATE, null,
+                        Map.of("state", "refunded_after_failure", "medium", "scroll")));
         wildMagic(steps, "Internal mana detonation", "INTERNAL_MANA_DETONATION",
                 "An early structural collapse vents mana inside the ward. The reconstruction marks the inward implosion without applying damage.",
                 "implosion");

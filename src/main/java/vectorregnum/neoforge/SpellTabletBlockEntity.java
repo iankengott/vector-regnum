@@ -9,10 +9,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.item.ItemStack;
+import vectorregnum.core.casting.CastingMethod;
+import vectorregnum.core.casting.ResourceEscrow;
 import vectorregnum.core.circle.SpellArtifact;
 import vectorregnum.core.circle.SpellArtifactPersistence;
 
-/** Server-persisted payload for a placed carved tablet. */
+/** Server-persisted payload for an engraving or permanent carved tablet. */
 public final class SpellTabletBlockEntity extends BlockEntity {
     static final String PAYLOAD_KEY = "vector_regnum_artifact";
     private String payload = "";
@@ -29,6 +32,15 @@ public final class SpellTabletBlockEntity extends BlockEntity {
         }
         try {
             SpellArtifact artifact = SpellArtifactPersistence.decode(payload);
+            boolean expectedBlock = artifact.medium() == vectorregnum.core.circle.SpellMedium.ENGRAVING
+                    ? getBlockState().is(SpellMediaContent.engravedSpellCircle())
+                    : artifact.medium() == vectorregnum.core.circle.SpellMedium.TABLET
+                            && getBlockState().is(SpellMediaContent.carvedTablet());
+            if (!expectedBlock) {
+                player.sendSystemMessage(Component.literal("Installed medium and carving do not match")
+                        .withStyle(ChatFormatting.DARK_RED), true);
+                return;
+            }
             if (artifact.state() != SpellArtifact.State.INSTALLED) {
                 String dimension = player.serverLevel().dimension().location().toString();
                 SpellArtifact.Transition installation = artifact.install(new SpellArtifact.WorldAnchor(
@@ -50,18 +62,32 @@ public final class SpellTabletBlockEntity extends BlockEntity {
                 return;
             }
             Vec3 origin = Vec3.atCenterOf(worldPosition).add(0.0, 0.45, 0.0);
-            if (CircleAuthoringService.activateCircleAt(player, artifact.circle(), true, origin)) {
-                artifact = artifact.recordSuccessfulActivation().artifact();
-                payload = SpellArtifactPersistence.encode(artifact);
-                setChanged();
-                player.sendSystemMessage(Component.literal("Permanent tablet activated • "
-                                + artifact.successfulActivations() + " successful casts")
-                        .withStyle(ChatFormatting.GOLD), false);
-            }
+            CastingMethod method = artifact.medium().permanentInstallation()
+                    ? CastingMethod.INSTALLED_CIRCLE : CastingMethod.ENGRAVING;
+            CircleAuthoringService.activateCircleAt(player, artifact.circle(), true, origin,
+                    method, true, ItemStack.EMPTY,
+                    outcome -> completeActivation(player, outcome));
         } catch (RuntimeException exception) {
             VectorRegnumMod.LOGGER.error("Rejected malformed carved tablet at {}", worldPosition, exception);
             player.sendSystemMessage(Component.literal("The tablet's carving is corrupt")
                     .withStyle(ChatFormatting.DARK_RED), true);
+        }
+    }
+
+    private void completeActivation(ServerPlayer player, ResourceEscrow.Outcome outcome) {
+        if (outcome != ResourceEscrow.Outcome.SUCCESS) return;
+        try {
+            SpellArtifact updated = SpellArtifactPersistence.decode(payload)
+                    .recordSuccessfulActivation().artifact();
+            payload = SpellArtifactPersistence.encode(updated);
+            setChanged();
+            player.sendSystemMessage(Component.literal((updated.medium().permanentInstallation()
+                            ? "Permanent circle" : "Engraving") + " activated • "
+                            + updated.successfulActivations() + " successful casts")
+                    .withStyle(ChatFormatting.GOLD), false);
+        } catch (RuntimeException exception) {
+            VectorRegnumMod.LOGGER.error("Could not persist completed installed cast at {}",
+                    worldPosition, exception);
         }
     }
 

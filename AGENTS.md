@@ -23,22 +23,20 @@ end-to-end alpha passes, but still need balance and hardening.
 
 ## Current handoff checkpoint
 
-As of 2026-08-22, priority 21 is checked. The current NeoForge 1.21.1 tree has
-235 passing JUnit tests and 19 passing production GameTests. Its schema-3
-elemental model separates permanent server-authored natural identity from
-mutable channel attunement, uses a data-driven symmetric 14-element
-100/75/50/25 affinity matrix, migrates Frost to Ice, and keeps remote source
-draws atomic. Veil loaded all 59 Quasar emitters during the final fresh Hermes
-checkpoint, and the inspected frame showed the authored circle and priority-21
-telemetry. The real Main-PC launcher then opened Field Manual v7; inspected
-before/after captures prove dark text has no duplicate shadow, complete source
-illustrations scale correctly, and compact screens fit the first plate in the
-opening viewport. Ian's explicit “all good” report covers the corrected
-priority-21 artifact; no wizard record was retroactively synthesized.
-Minecraft closed normally, both development stacks were
-inactive, the temporary test binding was restored, and port 25575 was free.
+As of 2026-08-27, priority 22 is checked. The current NeoForge 1.21.1 tree has
+254 passing JUnit tests and 23 passing production GameTests. Its six casting
+methods share one bounded server quote and escrow contract; four typed vanilla
+reagents reduce individual cost dimensions, while separately staged quartz is
+an offering-only ritual resource. Exact refunds cover missing targets, owner
+lifecycle loss, absent owners, shutdown, policy, and engine failures. Field
+Manual v9 teaches the corrected commands and requested-versus-applied quote.
+The final fresh Hermes checkpoint loaded all 59 Quasar emitters, logged the
+quartz ritual quote and priority-22 marker, and the inspected frame showed the
+authored scene and casting telemetry. Ian directed that no further builds or
+launches run on NixOS, so the final runtime/visual closeout was Hermes-only.
+Both Hermes development units stopped and port 25575 was free.
 
-Priority 22 is the first unfinished canonical item. Always re-read
+Priority 23 is the first unfinished canonical item. Always re-read
 `ROADMAP.md` before reporting or implementing work because it supersedes this
 dated checkpoint whenever the queue changes.
 

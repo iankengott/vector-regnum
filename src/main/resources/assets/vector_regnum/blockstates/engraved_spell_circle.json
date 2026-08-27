@@ -1,0 +1,5 @@
+{
+  "variants": {
+    "": { "model": "vector_regnum:block/engraved_spell_circle" }
+  }
+}

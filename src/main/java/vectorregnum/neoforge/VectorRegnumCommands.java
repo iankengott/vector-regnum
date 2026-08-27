@@ -14,6 +14,8 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import vectorregnum.core.Sigil;
 import vectorregnum.core.circle.SpellMedium;
+import vectorregnum.core.casting.CastingMethod;
+import vectorregnum.core.casting.ReagentKind;
 import vectorregnum.core.automation.AutomationRule;
 import vectorregnum.neoforge.automation.AutomationContent;
 import vectorregnum.neoforge.automation.AutomationRelayBlockEntity;
@@ -75,6 +77,7 @@ public final class VectorRegnumCommands {
         root.then(Commands.literal("guide")
                 .executes(context -> giveGuide(context.getSource())));
         root.then(circleCommands());
+        root.then(reagentCommands());
         root.then(libraryCommands());
         root.then(researchCommands());
         root.then(vmCommands());
@@ -111,6 +114,14 @@ public final class VectorRegnumCommands {
                 .executes(context -> compileCircle(context.getSource())));
         circle.then(Commands.literal("cast")
                 .executes(context -> castCircle(context.getSource())));
+        circle.then(Commands.literal("ritual")
+                .executes(context -> ritualCircle(context.getSource())));
+        var quote = Commands.literal("quote");
+        for (CastingMethod method : CastingMethod.values()) {
+            quote.then(Commands.literal(method.stableId())
+                    .executes(context -> quoteCircle(context.getSource(), method)));
+        }
+        circle.then(quote);
         circle.then(Commands.literal("undo")
                 .executes(context -> undoCircle(context.getSource())));
         circle.then(Commands.literal("place")
@@ -150,6 +161,27 @@ public final class VectorRegnumCommands {
         }
         circle.then(bind);
         return circle;
+    }
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack>
+            reagentCommands() {
+        var reagents = Commands.literal("reagents")
+                .executes(context -> reagentStatus(context.getSource()))
+                .then(Commands.literal("clear")
+                        .executes(context -> clearReagents(context.getSource())));
+        var stage = Commands.literal("stage");
+        for (ReagentKind kind : ReagentKind.values()) {
+            stage.then(Commands.literal(kind.stableId())
+                    .then(Commands.argument("count", IntegerArgumentType.integer(1, 64))
+                            .executes(context -> stageReagent(context.getSource(), kind,
+                                    IntegerArgumentType.getInteger(context, "count")))));
+        }
+        stage.then(Commands.literal("offering")
+                .then(Commands.argument("count", IntegerArgumentType.integer(1, 64))
+                        .executes(context -> stageOffering(context.getSource(),
+                                IntegerArgumentType.getInteger(context, "count")))));
+        reagents.then(stage);
+        return reagents;
     }
 
     private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack>
@@ -344,6 +376,44 @@ public final class VectorRegnumCommands {
     private static int castCircle(CommandSourceStack source) {
         ServerPlayer player = targetPlayer(source);
         return player != null && CircleAuthoringService.cast(player) ? 1 : noPlayerIfNull(source, player);
+    }
+
+    private static int ritualCircle(CommandSourceStack source) {
+        ServerPlayer player = targetPlayer(source);
+        return player != null && CircleAuthoringService.ritual(player)
+                ? 1 : noPlayerIfNull(source, player);
+    }
+
+    private static int quoteCircle(CommandSourceStack source, CastingMethod method) {
+        ServerPlayer player = targetPlayer(source);
+        return player != null && CircleAuthoringService.quote(player, method).isPresent()
+                ? 1 : noPlayerIfNull(source, player);
+    }
+
+    private static int reagentStatus(CommandSourceStack source) {
+        ServerPlayer player = targetPlayer(source);
+        if (player == null) return noPlayer(source);
+        CastingResourceService.reportStaged(player);
+        return 1;
+    }
+
+    private static int stageReagent(CommandSourceStack source, ReagentKind kind, int count) {
+        ServerPlayer player = targetPlayer(source);
+        return player != null && CastingResourceService.stage(player, kind, count)
+                ? 1 : noPlayerIfNull(source, player);
+    }
+
+    private static int stageOffering(CommandSourceStack source, int count) {
+        ServerPlayer player = targetPlayer(source);
+        return player != null && CastingResourceService.stageOffering(player, count)
+                ? 1 : noPlayerIfNull(source, player);
+    }
+
+    private static int clearReagents(CommandSourceStack source) {
+        ServerPlayer player = targetPlayer(source);
+        if (player == null) return noPlayer(source);
+        CastingResourceService.clearStaged(player);
+        return 1;
     }
 
     private static int undoCircle(CommandSourceStack source) {
@@ -544,8 +614,15 @@ public final class VectorRegnumCommands {
         CircleAuthoringService.loadStarter(player);
         CircleAuthoringService.giveMedium(player, SpellMedium.SCROLL);
         CircleAuthoringService.giveMedium(player, SpellMedium.BOOK);
+        CircleAuthoringService.giveMedium(player, SpellMedium.ENGRAVING);
         CircleAuthoringService.giveMedium(player, SpellMedium.TABLET);
-        player.sendSystemMessage(Component.literal("Vector-Regnum 1–10 development kit equipped")
+        for (ReagentKind kind : ReagentKind.values()) {
+            player.getInventory().placeItemBackInInventory(
+                    new ItemStack(CastingResourceService.reagentItem(kind), 16));
+        }
+        player.getInventory().placeItemBackInInventory(
+                new ItemStack(CastingResourceService.offeringItem(), 16));
+        player.sendSystemMessage(Component.literal("Vector-Regnum priority-22 development kit equipped")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
         return 1;
     }

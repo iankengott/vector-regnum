@@ -184,8 +184,25 @@ public final class DevShowcaseController {
                 CircleAuthoringService.createArtifactStack(SpellArtifact.scroll("showcase-scroll", mediaCircle)));
         giveIfMissing(player, SpellMediaContent.spellBook(),
                 CircleAuthoringService.createArtifactStack(SpellArtifact.book("showcase-book", mediaCircle)));
+        giveIfMissing(player, SpellMediaContent.engravedSpellCircleItem(),
+                CircleAuthoringService.createArtifactStack(
+                        SpellArtifact.engraving("showcase-engraving", mediaCircle)));
         giveIfMissing(player, SpellMediaContent.carvedTabletItem(),
                 CircleAuthoringService.createArtifactStack(SpellArtifact.tablet("showcase-tablet", mediaCircle)));
+        for (vectorregnum.core.casting.ReagentKind kind
+                : vectorregnum.core.casting.ReagentKind.values()) {
+            giveIfMissing(player, CastingResourceService.reagentItem(kind),
+                    new ItemStack(CastingResourceService.reagentItem(kind), 8));
+        }
+        giveIfMissing(player, CastingResourceService.offeringItem(),
+                new ItemStack(CastingResourceService.offeringItem(), 8));
+        if (!CastingResourceService.stageOffering(player, 1)
+                || !CastingResourceService.stage(player,
+                        vectorregnum.core.casting.ReagentKind.MANA, 1)) {
+            throw new IllegalStateException("priority-22 ritual resource staging failed");
+        }
+        CircleAuthoringService.quote(player, vectorregnum.core.casting.CastingMethod.RITUAL);
+        CastingResourceService.clearStaged(player);
 
         CircleAuthoringService.loadVmStarter(player);
         var circle = CircleAuthoringService.session(player).current();
@@ -210,18 +227,19 @@ public final class DevShowcaseController {
         // canonical grid. This makes the automated visual proof repeatable.
         PENDING_PALETTE.put(player.getUUID(),
                 SpellVisualManager.DEV_SHOWCASE_DURATION_TICKS + 40);
-        player.sendSystemMessage(Component.literal("VECTOR-REGNUM • PRIORITY 21 ELEMENTAL CHECKPOINT")
+        player.sendSystemMessage(Component.literal("VECTOR-REGNUM • PRIORITY 22 CASTING CHECKPOINT")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
         int playerSchema = player.getData(PlayerAttachmentContent.PLAYER_DATA_SCHEMA);
         if (playerSchema != PlayerDataMigration.CURRENT_SCHEMA) {
             throw new IllegalStateException("player attachment schema did not persist migration");
         }
         VectorRegnumMod.LOGGER.info(
-                "VISUAL_CHECKPOINT_READY milestone=priority_21 player={} circle_sigils={} "
+                "VISUAL_CHECKPOINT_READY milestone=priority_22 player={} circle_sigils={} "
                         + "library_spells={} automation_relay={} vm_status={} vm_cost={} duration_ticks={} "
                         + "persistence_claim={} player_schema={} unlocks_added={} create_renderer_probe={} "
                         + "element_palette_count=14 affinity_matrix=100,75,50,25 opposed_floor=25 "
-                        + "natural_element=server_authoritative channel_attunement={}",
+                        + "natural_element=server_authoritative channel_attunement={} "
+                        + "casting_methods=6 reagent_kinds=4 ritual_offering=quartz field_manual=9",
                 player.getGameProfile().getName(),
                 circle.sigils().size(),
                 ProgressionSpellLibrary.ALL.size(),

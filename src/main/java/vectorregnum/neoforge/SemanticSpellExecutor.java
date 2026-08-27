@@ -29,6 +29,7 @@ import net.minecraft.world.phys.Vec3;
 import vectorregnum.core.semantic.SemanticInstruction;
 import vectorregnum.core.semantic.SemanticOpcode;
 import vectorregnum.core.semantic.SemanticSchema;
+import vectorregnum.core.casting.ResourceEscrow;
 import vectorregnum.core.presentation.PresentationElement;
 import vectorregnum.core.presentation.PresentationParticleStyle;
 import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
@@ -37,6 +38,23 @@ import vectorregnum.neoforge.presentation.ServerTraces;
 /** Opcode-driven server adapter for every curated semantic operation. */
 public final class SemanticSpellExecutor {
     private SemanticSpellExecutor() { }
+
+    /** Typed execution refusal so the escrow adapter can distinguish refunds from spell faults. */
+    public static final class ExecutionRejection extends RuntimeException {
+        private final ResourceEscrow.Outcome outcome;
+
+        private ExecutionRejection(ResourceEscrow.Outcome outcome, String message) {
+            super(message);
+            if (outcome.consumesResources()) {
+                throw new IllegalArgumentException("execution rejection must be refundable");
+            }
+            this.outcome = outcome;
+        }
+
+        public ResourceEscrow.Outcome outcome() {
+            return outcome;
+        }
+    }
 
     public static java.util.Set<SemanticOpcode> supportedOpcodes() {
         return java.util.Set.copyOf(java.util.EnumSet.allOf(SemanticOpcode.class));
@@ -95,6 +113,10 @@ public final class SemanticSpellExecutor {
 
     public static void execute(ServerPlayer player,
             List<SemanticInstruction> steps, boolean force) {
+        if (!preflight(player, steps)) {
+            throw new ExecutionRejection(ResourceEscrow.Outcome.UNLOADED_TARGET,
+                    "required target disappeared during cast wind-up");
+        }
         State state = new State(player, force);
         for (SemanticInstruction instruction : steps) state.accept(instruction);
     }
@@ -183,6 +205,10 @@ public final class SemanticSpellExecutor {
                         .filter(LivingEntity.class::isInstance).map(LivingEntity.class::cast)
                         .map(List::of).orElseGet(List::of);
             } else targets = livingTargets();
+            requireTarget(targets, "damage target disappeared during cast wind-up");
+            List<? extends LivingEntity> permitted = targets.stream()
+                    .filter(target -> SpellSecurityPolicy.canAffectEntity(player, target)).toList();
+            if (permitted.isEmpty()) rejectPolicy("damage target is protected by server policy");
             double elemental = switch (element) {
                 case "fire" -> 2;
                 case "ice" -> 3;
@@ -194,8 +220,7 @@ public final class SemanticSpellExecutor {
                 default -> 0;
             };
             float damage = (float) Math.clamp(magnitude * 3.0 + elemental, 1, 20);
-            targets.stream().limit(repeat)
-                    .filter(target -> SpellSecurityPolicy.canAffectEntity(player, target))
+            permitted.stream().limit(repeat)
                     .forEach(target -> target.hurt(world.damageSources().magic(), damage));
         }
 
@@ -204,7 +229,12 @@ public final class SemanticSpellExecutor {
                 NeoForgeVmService.launchVectorStep(player, false, 0, magnitude);
                 return;
             }
-            for (LivingEntity target : livingTargets().stream().limit(repeat).toList()) {
+            List<LivingEntity> targets = livingTargets().stream().limit(repeat).toList();
+            requireTarget(targets, "impulse target disappeared during cast wind-up");
+            List<LivingEntity> permitted = targets.stream()
+                    .filter(target -> SpellSecurityPolicy.canAffectEntity(player, target)).toList();
+            if (permitted.isEmpty()) rejectPolicy("impulse target is protected by server policy");
+            for (LivingEntity target : permitted) {
                 Vec3 vector = direction.equals("down") ? new Vec3(0, -magnitude, 0)
                         : target.position().subtract(player.position()).normalize().scale(magnitude).add(0, .2, 0);
                 NeoForgeVmService.launchKineticWard(player, target, vector, false);
@@ -218,7 +248,7 @@ public final class SemanticSpellExecutor {
         }
 
         private void placeLight() {
-            if (block == null) return;
+            if (block == null) rejectUnloaded("block target disappeared during cast wind-up");
             BlockPos pos = block.getBlockPos().relative(block.getDirection());
             if (world.isEmptyBlock(pos) && SpellSecurityPolicy.canModifyBlock(player, pos,
                     world.getBlockState(pos))) {
@@ -238,7 +268,7 @@ public final class SemanticSpellExecutor {
                 }
                 return;
             }
-            if (block == null) return;
+            if (block == null) rejectUnloaded("block target disappeared during cast wind-up");
             BlockPos center = block.getBlockPos(); int maximum = Math.min(64, (int) Math.pow(radius + 1, 3));
             int broken = 0; int r = Math.min(3, (int) Math.ceil(radius / 2));
             for (BlockPos pos : BlockPos.betweenClosed(center.offset(-r, -r, -r), center.offset(r, r, r))) {
@@ -249,7 +279,8 @@ public final class SemanticSpellExecutor {
         }
 
         private void transmute(String into) {
-            if (block == null || !into.equals("minecraft:stone")) return;
+            if (block == null) rejectUnloaded("block target disappeared during cast wind-up");
+            if (!into.equals("minecraft:stone")) return;
             BlockPos pos = block.getBlockPos(); BlockState old = world.getBlockState(pos);
             if (!old.isAir() && old.getDestroySpeed(world, pos) >= 0 && world.getBlockEntity(pos) == null
                     && canModify(pos, old)) world.setBlock(pos, Blocks.STONE.defaultBlockState(), Block.UPDATE_ALL);
@@ -289,6 +320,18 @@ public final class SemanticSpellExecutor {
 
         private boolean canModify(BlockPos pos, BlockState state) {
             return SpellSecurityPolicy.canModifyBlock(player, pos, state);
+        }
+
+        private static void requireTarget(List<?> targets, String message) {
+            if (targets.isEmpty()) rejectUnloaded(message);
+        }
+
+        private static void rejectUnloaded(String message) {
+            throw new ExecutionRejection(ResourceEscrow.Outcome.UNLOADED_TARGET, message);
+        }
+
+        private static void rejectPolicy(String message) {
+            throw new ExecutionRejection(ResourceEscrow.Outcome.POLICY_REJECTED, message);
         }
     }
 

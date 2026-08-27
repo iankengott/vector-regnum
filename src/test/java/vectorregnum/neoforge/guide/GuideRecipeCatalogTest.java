@@ -17,7 +17,7 @@ class GuideRecipeCatalogTest {
         GuideRecipeCatalog catalog = GuideRecipeCatalog.load(
                 GuideDataLoader.loadDefault(loader), loader);
 
-        assertEquals(9, catalog.size());
+        assertEquals(10, catalog.size());
         GuideRecipe node = catalog.recipe("vector_regnum:mana_crystal_node").orElseThrow();
         assertEquals(GuideRecipe.Kind.SHAPED, node.kind());
         assertEquals(List.of("minecraft:amethyst_block"), node.ingredient(0, 0).choices());
@@ -42,6 +42,12 @@ class GuideRecipeCatalogTest {
         assertEquals("vector_regnum:crystal_vial", vial.result());
         assertTrue(catalog.recipe("vector_regnum:runed_mana_cell").isPresent());
         assertTrue(catalog.recipe("vector_regnum:resonant_vault").isPresent());
+
+        GuideRecipe engraved = catalog.recipe("vector_regnum:engraved_spell_circle").orElseThrow();
+        assertEquals(GuideRecipe.Kind.SHAPED, engraved.kind());
+        assertEquals(List.of("minecraft:amethyst_shard"), engraved.ingredient(0, 0).choices());
+        assertEquals(List.of("minecraft:chiseled_deepslate"), engraved.ingredient(1, 1).choices());
+        assertEquals("vector_regnum:engraved_spell_circle", engraved.result());
     }
 
     @Test
