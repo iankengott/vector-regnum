@@ -233,36 +233,33 @@ port 25575 was free.
 
 ## Build and test
 
-Java 21 is required. Run the full build and the real NeoForge GameTest server:
+Java 21 is required. Hermes is the default execution host. From the canonical
+checkout, use the guarded transport/build wrappers, then run the real NeoForge
+GameTest server on Hermes:
 
 ```bash
-./gradlew --no-daemon clean test build
-./gradlew --no-daemon runGameTestServer
+scripts/hermes-sync.sh
+scripts/hermes-build.sh
+ssh ian-kengott@100.88.229.63 \
+  'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-On the main NixOS PC, use the declared JDK without installing an imperative
-profile:
+The automated suite must report 254 JUnit tests and the GameTest server must
+report all 23 production tests passed at the priority-22 checkpoint.
+`scripts/hermes-build.sh` also validates every checked-in JSON file and shell
+script on Hermes. Run `scripts/hermes-diff-check.sh` in the guarded Hermes
+mirror for the overlaid Git whitespace check documented in
+`scripts/README.md`. Counts must be updated whenever the suite changes.
 
-```bash
-task_jdk=$(nix eval --raw nixpkgs#jdk21.outPath)
-JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
-  ./gradlew --no-daemon clean test build
-JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
-  ./gradlew --no-daemon runGameTestServer
-```
+## Main-PC play is approval-only
 
-`scripts/verify-port.sh` runs the clean build plus JSON, shell-syntax, and diff
-checks. The GameTest task must separately report all 19 required tests passed.
-
-## Play on the main PC
-
-The executable `/home/iank/Desktop/Vector-Regnum.desktop` runs
-`scripts/local-play.sh`, which resolves Java 21,
-stages only this mod in an isolated flat world on `127.0.0.1:25575`, launches
-Minecraft through `steam-run`, and stops the private server when the client
-closes. It does not touch the normal Minecraft launcher, saves, modpacks, or
-port 25565. Before starting anything, the launcher validates that the checked-in
-EULA, server port, and IPv4 loopback bind are unique and exact.
+Do not open the executable
+`/home/iank/Desktop/Vector-Regnum.desktop`, Minecraft, or a visual artifact on
+NixOS unless Hermes cannot prove a required fact. Tell Ian exactly what must
+run or open and wait for explicit approval. After approval, the desktop
+launcher runs `scripts/local-play.sh`, stages only this mod on loopback port
+25575, and cleans up its private server when the client closes. It never touches
+the normal launcher, saves, modpacks, or port 25565.
 
 ## Hermes development workflow
 
@@ -438,18 +435,18 @@ See [ROADMAP.md](ROADMAP.md) for the detailed status.
 ## Continuing development
 
 A fresh AI or developer should begin with [AGENTS.md](AGENTS.md). It records
-the machine boundaries, canonical priority queue, required NixOS and Hermes
-verification ladder, visual-inspection requirement, regression invariants, and
+the machine boundaries, canonical priority queue, Hermes-first verification
+ladder, approval-gated NixOS opening rule, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
 [ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priorities
 20a–22 have coherent end-to-end alpha passes. Priority 22 passed its automated
 and Hermes visual gates under Ian's Hermes-only instruction; priority 23 is the
 first unfinished item.
-`AGENTS.md` also records Ian's subagent ladder — the temporary free ox-alpha
-first while it lasts, then opencode deepseekflash, then Luna max, then Sol
-xhigh or Opus 5 medium — plus the delegation rules, so no earlier chat context
-is required.
+`AGENTS.md` also records Ian's current subagent rule: use OpenAI Codex Luna at
+max reasoning only. If Luna max is unavailable, keep the work in the parent
+unless Ian explicitly approves another profile. The parent owns integration,
+documentation, and the complete verification ladder.
 
 ---
 

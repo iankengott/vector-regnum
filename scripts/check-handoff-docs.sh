@@ -21,6 +21,14 @@ grep -Fq '22. [x] **Casting media, reagents, and resource escrow.**' \
 grep -Fq '"version": 9' src/main/resources/assets/vector_regnum/guide/field_manual.json \
     || die 'Field Manual is not at the priority-22 version'
 
+grep -Fq '**Execution-host policy (Ian, 2026-08-27):** Hermes is the default' \
+    AGENTS.md || die 'AGENTS.md lost the Hermes-first, approval-gated NixOS policy'
+grep -Fq 'Use OpenAI Codex subagents only' AGENTS.md \
+    || die 'AGENTS.md lost the OpenAI Luna-max subagent policy'
+
+[[ -x scripts/hermes-diff-check.sh ]] \
+    || die 'Hermes overlay diff checker is missing or not executable'
+
 readonly -a LIVE_HANDOFF_DOCS=(
     AGENTS.md
     README.md
@@ -56,6 +64,14 @@ readonly -a STALE_CLAIMS=(
     'priority 22 casting media, reagents, and resource escrow is next'
     'priorities 1–20a'
     'priorities 1–21 are checked'
+    '1. On NixOS, use Java 21'
+    'the 19 production neoforge gametests'
+    'all 19 required tests passed'
+    'on the main NixOS PC, use the declared JDK'
+    '## Play on the main PC'
+    'temporary free ox-alpha'
+    'opencode deepseekflash'
+    'sol xhigh or opus 5 medium'
 )
 
 for stale_claim in "${STALE_CLAIMS[@]}"; do
@@ -66,5 +82,5 @@ for stale_claim in "${STALE_CLAIMS[@]}"; do
     fi
 done
 
-printf 'HANDOFF_DOCS_OK priority20a=complete priority21=complete priority22=complete checked_files=%d\n' \
+printf 'HANDOFF_DOCS_OK priority20a=complete priority21=complete priority22=complete hermes_first=true luna_max=true checked_files=%d\n' \
     "${#LIVE_HANDOFF_DOCS[@]}"

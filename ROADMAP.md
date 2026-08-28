@@ -16,8 +16,8 @@ art, UX, or production hardening is complete.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Ice Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 235 JUnit/contract tests, 19 production NeoForge GameTests, plus real
-  local/Hermes server boots and direct visual inspection.
+- [x] 254 JUnit/contract tests, 23 production NeoForge GameTests, plus real
+  Hermes server/client boots and direct visual inspection.
 
 ## Priorities 1–10 milestone
 

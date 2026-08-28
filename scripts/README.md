@@ -27,8 +27,8 @@ listeners; the verifier exercises those negative fixtures too. The desktop entry
 not a versioned `/nix/store` system path, so weekly Nix garbage collection
 cannot break it.
 
-For a release or roadmap visual gate that must be performed by a person on the
-Main PC, run:
+The Main-PC release or roadmap visual gate is approval-only. Ask Ian before
+opening anything on NixOS. After he approves this NixOS-only gate, run:
 
 ```bash
 scripts/priority21-local-visual-wizard.sh
@@ -96,13 +96,15 @@ two-row canonical palette and logs `ELEMENT_PALETTE_READY ... count=14`.
 Capture after the second marker. Exercise both the default Veil client and the
 dependency-free fallback with `VR_CLIENT_RENDERER=builtin`.
 
-The final Main-PC guide gate must open the real desktop launcher and inspect
-the manual itself, not infer rendering from tests. At compact scale, confirm
-dark text has no duplicate shadow, illustrations show the complete source and
-preserve aspect ratio, the first plate fits the opening viewport, and search
-results remain readable. Keep screenshots under the ignored
-`visual-evidence/guide-audit/` directory, close Minecraft normally, and confirm
-the local unit is inactive and port 25575 is free.
+Use Hermes for guide inspection by default. If a final Main-PC guide gate is
+genuinely necessary, stop and ask Ian before opening the real desktop launcher
+or a NixOS visual artifact. After approval, inspect the manual itself rather
+than inferring rendering from tests. At compact scale, confirm dark text has no
+duplicate shadow, illustrations show the complete source and preserve aspect
+ratio, the first plate fits the opening viewport, and search results remain
+readable. Keep screenshots under the ignored `visual-evidence/guide-audit/`
+directory, close Minecraft normally, and confirm the local unit is inactive
+and port 25575 is free.
 
 ## Priority 20a renderer checks
 
@@ -126,7 +128,12 @@ gate with:
 scripts/verify-priority20a.sh
 ```
 
-On the Main PC, `scripts/priority20a-compat-matrix.sh run` stages exact
+The priority-20a compatibility matrix currently depends on the Main-PC Prism
+instance at `/home/iank/.local/share/PrismLauncher/instances/1.21.1`. Do not
+run it on NixOS without Ian's explicit approval. If a future change needs this
+gate, first determine whether the verified artifacts can be staged on Hermes;
+otherwise stop and explain why Main-PC execution is necessary before asking.
+After approval, `scripts/priority20a-compat-matrix.sh run` stages exact
 SHA-256-verified Veil 4.4.1, Create 6.0.10, Sodium 0.8.13-beta.2, Iris
 1.8.14-beta.1, and Bliss 2.1.2 artifacts from the target Prism pack into
 ignored isolated run directories. It never changes the live pack. The run
@@ -168,27 +175,39 @@ VR_CLIENT_RENDERER=builtin scripts/hermes-client.sh restart
 
 ## Production NeoForge GameTests
 
-The ordinary Gradle `test` task runs JUnit and contract tests. The 19 production
+The ordinary Gradle `test` task runs JUnit and contract tests. The 23 production
 NeoForge GameTests must additionally run inside the real isolated GameTest
-server when their integration surface changes:
+server on Hermes when their integration surface changes:
 
 ```bash
-task_jdk=$(nix eval --raw nixpkgs#jdk21.outPath)
-JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
-  ./gradlew --no-daemon runGameTestServer
+ssh ian-kengott@100.88.229.63 \
+  'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-The runner exits after the matrix completes and must report all 19 required
+The runner exits after the matrix completes and must report all 23 required
 tests passed. The tests cover live registration parity, commands, players,
 attachments, media/tablet and crystal block entities, scheduled expiry,
 serialized tick-queue reload, claim/death migration, relay persistence, remote
-ownership, redstone/data automation, and safe follow-up VM queueing from a real
-Vector Step cast. The parity test reads
+ownership, redstone/data automation, safe follow-up VM queueing from a real
+Vector Step cast, and priority-22 casting/escrow behavior. The parity test reads
 `data/vector_regnum/registration_parity.json` and queries the running registry,
 payload, attachment, creative-tab, and command state; update that manifest when
-an intentional registration changes.
-A true OS-process stop/start remains part of the Hermes and local launcher
-ladder below.
+an intentional registration changes. A true OS-process stop/start remains part
+of the Hermes ladder below.
+
+## Hermes-side diff check
+
+The guarded Hermes mirror intentionally has no `.git`. Validate the exact
+candidate through a temporary public-clone overlay on Hermes:
+
+```bash
+scripts/hermes-diff-check.sh
+```
+
+The script refuses non-Hermes hosts, excludes generated runtime/build/evidence
+directories, applies intent-to-add for new source files, runs
+`git diff --check`, rejects remaining untracked files, and removes its
+temporary clone. It never syncs the clone back into the guarded mirror.
 
 The first real sync may create the destination only when it is absent or empty.
 It writes `.vector-regnum-hermes-worktree`; every later rsync deletion requires

@@ -43,48 +43,15 @@ dated checkpoint whenever the queue changes.
 ## Subagent collaboration
 
 Ian wants implementation work delegated into bounded independent subtasks when
-concurrency is available. Choose a subagent by walking this ladder in order and
-taking the first available profile:
+concurrency is useful. Use OpenAI Codex subagents only, with model
+`gpt-5.6-luna` at `max` reasoning. If Luna max is unavailable, keep the work
+in the parent unless Ian explicitly approves another profile. Do not use a
+non-OpenAI agent for this repository.
 
-1. **ox-alpha (preferred while it lasts).** Model `opencode/x-preview-f-free`:
-
-   ```bash
-   opencode run -m opencode/x-preview-f-free \
-     --dir "/home/iank/Desktop/my mods/mods-editing/vector-regnum" "<task>"
-   ```
-
-   Added 2026-08-21. Smart, fast, and free, so use it first for inventory,
-   mechanical refactors, mapping renames, test scaffolding, and any task whose
-   result the compiler or the verification ladder can check. It is a temp model
-   that is only free for a bit: confirm it is still offered before delegating,
-   never build a plan around its presence, and fall through to deepseekflash
-   the moment it is gone.
-2. **opencode deepseekflash (stable free fallback).** Model
-   `opencode/deepseek-v4-flash-free` driven at maximum reasoning:
-
-   ```bash
-   opencode run -m opencode/deepseek-v4-flash-free --variant max \
-     --dir "/home/iank/Desktop/my mods/mods-editing/vector-regnum" "<task>"
-   ```
-
-   It is free, so prefer it whenever ox-alpha is unavailable, and always pass
-   `--variant max`. Same task fit as above.
-   `~/.config/opencode/opencode.jsonc` already pins opencode's own `explore` and
-   `general` agents to this model.
-3. **Luna max.** Escalate here for cross-cutting design, loader-semantics
-   judgment, integration reasoning, and difficult review — work where being
-   confidently wrong is expensive and no compiler will catch it.
-4. **Sol xhigh or Opus 5 medium.** Only when a task is extremely demanding and
-   both profiles above have proven insufficient. Justify the escalation in the
-   handoff notes.
-
-Never substitute a model outside this ladder; if none is available, keep the
-work in the parent. Do not assign multiple agents overlapping files. Give an
-ox-alpha or deepseekflash subagent explicit file lists rather than asking it to
-search, and
-state read-only when it must not write. The parent agent owns final
-integration, documentation, and the complete verification ladder, and must
-independently verify subagent output rather than trusting a summary.
+Do not assign agents overlapping files. Give each agent a concrete scope and
+state read-only when it must not write. The parent owns final integration,
+documentation, and the complete verification ladder, and must independently
+verify agent output rather than trusting a summary.
 
 ## Repository and machine boundaries
 
@@ -95,6 +62,13 @@ independently verify subagent output rather than trusting a summary.
 - Current NeoForge Hermes guarded mirror:
   `ian-kengott@100.88.229.63:/home/ian-kengott/projects/vector-regnum`
 - Main-PC launcher: `/home/iank/Desktop/Vector-Regnum.desktop`
+- **Execution-host policy (Ian, 2026-08-27):** Hermes is the default for all
+  builds, tests, Minecraft launches, screenshots, and visual inspection. Do not
+  open Minecraft, a launcher, another GUI, or a visual artifact on NixOS unless
+  it is necessary. Before doing so, tell Ian exactly what must run or open and
+  wait for his explicit approval. Canonical source-file edits in the shared
+  Main-PC checkout do not authorize local execution; inspect and test through
+  the guarded Hermes mirror whenever possible.
 - Development port: loopback `25575` only.
 - Hermes owns only `vector-regnum-dev-server.service` and
   `vector-regnum-dev-client.service`. The local launcher owns only
@@ -112,21 +86,22 @@ independently verify subagent output rather than trusting a summary.
 Use verification proportionate to the change, but gameplay or visual work is
 not complete without the full NeoForge ladder.
 
-1. On NixOS, use Java 21 and run the complete automated suite and the real
-   NeoForge GameTest server.
+1. On Hermes, use Java 21 and run the complete automated suite and the real
+   NeoForge GameTest server. Sync through the guarded script first; do not run
+   this ladder on NixOS without Ian's explicit approval.
 
    ```bash
-   task_jdk=$(nix eval --raw nixpkgs#jdk21.outPath)
-   JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
-     ./gradlew --no-daemon clean test build
-   JAVA_HOME="$task_jdk" PATH="$task_jdk/bin:$PATH" \
-     ./gradlew --no-daemon runGameTestServer
-   find src -type f -name '*.json' -print0 | xargs -0 -n1 jq empty
-   find scripts -type f -name '*.sh' -print0 | xargs -0 -n1 bash -n
-   git diff --check
+   scripts/hermes-sync.sh
+   scripts/hermes-build.sh
+   ssh ian-kengott@100.88.229.63 \
+     'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
    ```
 
-   The GameTest process must report all 19 required tests passed. Its live
+   The Hermes runtime mirror has no `.git`. Run the Hermes-side overlay diff
+   check from `scripts/README.md`; it uses a fresh public clone so
+   `git diff --check` covers the candidate tree without running on NixOS.
+
+   The GameTest process must report all 23 required tests passed. Its live
    parity test validates registry IDs, attachments, payload directions,
    creative-tab membership, and the command root against
    `data/vector_regnum/registration_parity.json`.
@@ -148,15 +123,18 @@ not complete without the full NeoForge ladder.
    Always stop the two Hermes development units afterward unless the user asks
    to keep them open.
 
-3. Before handing a playable milestone to Ian, launch the real
-   `/home/iank/Desktop/Vector-Regnum.desktop`, visually inspect the local
-   client, close Minecraft normally, and confirm the local server unit is
-   inactive and loopback port 25575 is free.
+3. A Main-PC playable gate is approval-only. If it is genuinely necessary,
+   stop and ask Ian before opening `/home/iank/Desktop/Vector-Regnum.desktop`
+   or any NixOS visual artifact. State what Hermes could not prove. After Ian
+   approves, inspect the requested behavior, close Minecraft normally, and
+   confirm the local server unit is inactive and loopback port 25575 is free.
+   Without approval, finish the runtime and visual ladder on Hermes and record
+   that the closeout was Hermes-only.
 
 Pure documentation changes do not require Minecraft launches. Pure core logic
-normally requires step 1 and Hermes build parity; any player-visible,
-rendering, command, persistence, or NeoForge integration change requires steps
-1–3 and direct visual inspection.
+normally requires step 1; any player-visible, rendering, command, persistence,
+or NeoForge integration change requires steps 1–2 and direct Hermes visual
+inspection. Step 3 applies only after Ian explicitly approves a NixOS gate.
 
 ## Regression invariants
 
