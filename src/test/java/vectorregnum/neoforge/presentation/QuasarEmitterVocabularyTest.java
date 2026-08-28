@@ -15,6 +15,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 /**
  * Every Quasar emitter id the Veil backend can request must resolve to a
@@ -23,15 +24,26 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 class QuasarEmitterVocabularyTest {
     private static final Path QUASAR_ROOT = locateQuasarRoot();
-    private static final List<String> ELEMENTS = List.of("fire", "frost", "void", "arcane");
+    private static final List<String> ELEMENTS = List.of("arcane", "fire", "ice", "void",
+            "water", "air", "earth", "lightning", "time", "space", "light", "dark",
+            "nature", "sound");
     private static final Set<String> REQUIRED_EMITTERS = buildRequiredEmitters();
 
     @Test
-    void everyRequestableEmitterExists() {
+    void everyRequestableEmitterExistsAndNoUnboundedExtrasArePresent() throws IOException {
         for (String emitter : REQUIRED_EMITTERS) {
             assertTrue(Files.isRegularFile(QUASAR_ROOT.resolve(
                             "emitters/presentation/" + emitter + ".json")),
                     "missing required Quasar emitter: presentation/" + emitter);
+        }
+        try (Stream<Path> files = Files.walk(QUASAR_ROOT.resolve("emitters/presentation"))) {
+            Set<String> actual = files.filter(entry -> entry.toString().endsWith(".json"))
+                    .map(QUASAR_ROOT.resolve("emitters/presentation")::relativize)
+                    .map(Path::toString)
+                    .map(id -> id.substring(0, id.length() - ".json".length()))
+                    .collect(java.util.stream.Collectors.toSet());
+            assertEquals(59, actual.size());
+            assertEquals(REQUIRED_EMITTERS, actual);
         }
     }
 
@@ -51,11 +63,24 @@ class QuasarEmitterVocabularyTest {
                                 || shape.equals("veil:cylinder")
                                 || shape.startsWith("vector_regnum:presentation/"),
                         file + " uses an uncurated shape: " + shape);
+                assertReferenceExists(file, shape, "modules/emitter/shape/");
+                assertReferenceExists(file, settings.get("particle_settings").getAsString(),
+                        "modules/emitter/particle/");
+                assertReferenceExists(file, json.get("particle_data").getAsString(),
+                        "modules/particle_data/");
                 Matcher cap = maxParticles.matcher(source);
                 assertTrue(cap.find() && Integer.parseInt(cap.group(1)) <= 64,
                         file + " exceeds the 64-particle motif cap");
             }
         }
+    }
+
+    private static void assertReferenceExists(Path emitter, String id, String resourceFolder) {
+        if (!id.startsWith("vector_regnum:")) return;
+        Path resource = QUASAR_ROOT.resolve(resourceFolder
+                + id.substring("vector_regnum:".length()) + ".json");
+        assertTrue(Files.isRegularFile(resource),
+                emitter + " references missing Quasar asset: " + id);
     }
 
     private static Set<String> buildRequiredEmitters() {
@@ -68,7 +93,7 @@ class QuasarEmitterVocabularyTest {
         }
         ids.add("smoke");
         ids.add("spark");
-        ids.add("light");
+        ids.add("light_motif");
         return java.util.Collections.unmodifiableSet(ids);
     }
 

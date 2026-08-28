@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "ARA",
+    "RCR",
+    "ARA"
+  ],
+  "key": {
+    "A": { "item": "minecraft:amethyst_shard" },
+    "R": { "item": "minecraft:redstone" },
+    "C": { "item": "minecraft:chiseled_deepslate" }
+  },
+  "result": {
+    "id": "vector_regnum:engraved_spell_circle",
+    "count": 1
+  }
+}

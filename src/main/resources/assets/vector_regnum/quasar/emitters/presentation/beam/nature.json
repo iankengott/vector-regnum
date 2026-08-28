@@ -7,5 +7,5 @@
     "shape": "vector_regnum:presentation/cylinder",
     "particle_settings": "vector_regnum:presentation/motes"
   },
-  "particle_data": "vector_regnum:presentation/frost"
+  "particle_data": "vector_regnum:presentation/nature"
 }

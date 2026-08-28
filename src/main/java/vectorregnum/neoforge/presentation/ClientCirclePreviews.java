@@ -127,9 +127,15 @@ final class ClientCirclePreviews {
 
     private static PresentationParticleStyle styleFor(int visual) {
         return switch (visual) {
-            case CirclePreviewPayload.VISUAL_FIRE -> PresentationParticleStyle.MOTES;
-            case CirclePreviewPayload.VISUAL_FROST -> PresentationParticleStyle.MOTES;
-            case CirclePreviewPayload.VISUAL_VOID -> PresentationParticleStyle.MOTES;
+            case CirclePreviewPayload.VISUAL_ARCANE, CirclePreviewPayload.VISUAL_FIRE ->
+                    PresentationParticleStyle.MOTES;
+            case CirclePreviewPayload.VISUAL_ICE, CirclePreviewPayload.VISUAL_VOID,
+                    CirclePreviewPayload.VISUAL_WATER, CirclePreviewPayload.VISUAL_AIR,
+                    CirclePreviewPayload.VISUAL_EARTH, CirclePreviewPayload.VISUAL_LIGHTNING,
+                    CirclePreviewPayload.VISUAL_TIME, CirclePreviewPayload.VISUAL_SPACE,
+                    CirclePreviewPayload.VISUAL_LIGHT, CirclePreviewPayload.VISUAL_DARK,
+                    CirclePreviewPayload.VISUAL_NATURE, CirclePreviewPayload.VISUAL_SOUND
+                    -> PresentationParticleStyle.MOTES;
             case CirclePreviewPayload.VISUAL_EXECUTE -> PresentationParticleStyle.TOTEM;
             case CirclePreviewPayload.VISUAL_SHAPE -> PresentationParticleStyle.SPARK;
             case CirclePreviewPayload.VISUAL_FAULT -> PresentationParticleStyle.LARGE_SMOKE;
@@ -139,9 +145,20 @@ final class ClientCirclePreviews {
 
     private static PresentationElement elementFor(int visual) {
         return switch (visual) {
+            case CirclePreviewPayload.VISUAL_ARCANE -> PresentationElement.ARCANE;
             case CirclePreviewPayload.VISUAL_FIRE -> PresentationElement.FIRE;
-            case CirclePreviewPayload.VISUAL_FROST -> PresentationElement.FROST;
+            case CirclePreviewPayload.VISUAL_ICE -> PresentationElement.ICE;
             case CirclePreviewPayload.VISUAL_VOID -> PresentationElement.VOID;
+            case CirclePreviewPayload.VISUAL_WATER -> PresentationElement.WATER;
+            case CirclePreviewPayload.VISUAL_AIR -> PresentationElement.AIR;
+            case CirclePreviewPayload.VISUAL_EARTH -> PresentationElement.EARTH;
+            case CirclePreviewPayload.VISUAL_LIGHTNING -> PresentationElement.LIGHTNING;
+            case CirclePreviewPayload.VISUAL_TIME -> PresentationElement.TIME;
+            case CirclePreviewPayload.VISUAL_SPACE -> PresentationElement.SPACE;
+            case CirclePreviewPayload.VISUAL_LIGHT -> PresentationElement.LIGHT;
+            case CirclePreviewPayload.VISUAL_DARK -> PresentationElement.DARK;
+            case CirclePreviewPayload.VISUAL_NATURE -> PresentationElement.NATURE;
+            case CirclePreviewPayload.VISUAL_SOUND -> PresentationElement.SOUND;
             default -> PresentationElement.ARCANE;
         };
     }

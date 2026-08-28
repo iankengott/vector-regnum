@@ -12,7 +12,7 @@ public enum LibraryOpcode {
     FILTER_LIVING,
     FILTER_ORE,
     ELEMENT_FIRE,
-    ELEMENT_FROST,
+    ELEMENT_ICE,
     ELEMENT_ARCANE,
     SHAPE_PROJECTILE,
     SHAPE_AURA,

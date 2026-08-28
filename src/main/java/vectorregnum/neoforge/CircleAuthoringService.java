@@ -12,6 +12,7 @@ import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
@@ -20,6 +21,11 @@ import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import vectorregnum.core.CastResult;
+import vectorregnum.core.Element;
+import vectorregnum.core.casting.CastCost;
+import vectorregnum.core.casting.CastQuote;
+import vectorregnum.core.casting.CastingMethod;
+import vectorregnum.core.casting.ResourceEscrow;
 import vectorregnum.core.circle.CircleAuthoringCompiler;
 import vectorregnum.core.circle.CircleCompilation;
 import vectorregnum.core.circle.CircleCoordinate;
@@ -44,6 +50,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /** Player-facing, server-authoritative editor and spell-media integration. */
 public final class CircleAuthoringService {
@@ -202,7 +209,40 @@ public final class CircleAuthoringService {
     }
 
     public static boolean cast(ServerPlayer player) {
-        return activateCircleAt(player, session(player).current(), true, player.getEyePosition());
+        return activateCircleAt(player, session(player).current(), true, player.getEyePosition(),
+                CastingMethod.BARE, true, ItemStack.EMPTY, ignored -> { });
+    }
+
+    public static boolean ritual(ServerPlayer player) {
+        return activateCircleAt(player, session(player).current(), true, player.getEyePosition(),
+                CastingMethod.RITUAL, true, ItemStack.EMPTY, ignored -> { });
+    }
+
+    public static Optional<CastQuote> quote(ServerPlayer player, CastingMethod method) {
+        MagicCircle circle = session(player).current();
+        if (Vm2CircleCompiler.isVm2Circle(circle)) {
+            Vm2CircleCompilation compilation = Vm2CircleCompiler.compile(circle,
+                    vmContext(player, editorOrigin(player)));
+            sendVmCompilation(player, compilation);
+            if (compilation.hasErrors()) return Optional.empty();
+            var program = compilation.compiledProgram().orElseThrow();
+            Element element = spellElement(compilation.executionOrder());
+            CastCost baseline = CastingResourceService.baseline(method,
+                    ManaData.adjustedCost(player, program.manaCost().total(), element),
+                    program.instructions().size(),
+                    ManaData.adjustedUpkeep(player, program.manaCost().duration(), element),
+                    ManaData.instability(player, element));
+            return Optional.of(CastingResourceService.quoteAndReport(player, method, baseline, true));
+        }
+        CircleCompilation compilation = CircleAuthoringCompiler.compile(circle);
+        sendCompilation(player, compilation);
+        if (compilation.hasErrors()) return Optional.empty();
+        Element element = spellElement(compilation.executionOrder());
+        CastCost baseline = CastingResourceService.baseline(method,
+                ManaData.adjustedCost(player, compilation.compiledSpell().totalManaCost(), element),
+                compilation.compiledSpell().instructionCount(), 0.0,
+                ManaData.instability(player, element));
+        return Optional.of(CastingResourceService.quoteAndReport(player, method, baseline, true));
     }
 
     public static void show(ServerPlayer player) {
@@ -234,6 +274,7 @@ public final class CircleAuthoringService {
         ItemStack blank = new ItemStack(switch (medium) {
             case SCROLL -> SpellMediaContent.spellScroll();
             case BOOK -> SpellMediaContent.spellBook();
+            case ENGRAVING -> SpellMediaContent.engravedSpellCircleItem();
             case TABLET -> SpellMediaContent.carvedTabletItem();
         });
         if (!player.isCreative() && !consumeBlank(player, blank)) {
@@ -242,13 +283,11 @@ public final class CircleAuthoringService {
                     .withStyle(ChatFormatting.RED));
             return false;
         }
-        long identity = player.getUUID().getMostSignificantBits()
-                ^ player.getUUID().getLeastSignificantBits();
-        String id = "artifact-" + Long.toUnsignedString(identity, 36) + "-"
-                + Long.toUnsignedString(player.serverLevel().getGameTime(), 36);
+        String id = "artifact-" + UUID.randomUUID();
         SpellArtifact artifact = switch (medium) {
             case SCROLL -> SpellArtifact.scroll(id, circle);
             case BOOK -> SpellArtifact.book(id, circle);
+            case ENGRAVING -> SpellArtifact.engraving(id, circle);
             case TABLET -> SpellArtifact.tablet(id, circle);
         };
         ItemStack stack = createArtifactStack(artifact);
@@ -280,28 +319,42 @@ public final class CircleAuthoringService {
             return InteractionResultHolder.fail(stack);
         }
         SpellArtifact artifact = decoded.orElseThrow();
+        Item mediumItem = stack.getItem();
         if (artifact.state() == SpellArtifact.State.CONSUMED) {
             serverPlayer.sendSystemMessage(Component.literal("This scroll has already been consumed")
                     .withStyle(ChatFormatting.RED), true);
             return InteractionResultHolder.fail(stack);
         }
-        if (activateCircleAt(serverPlayer, artifact.circle(), true, serverPlayer.getEyePosition())) {
-            SpellArtifact.Transition transition = artifact.recordSuccessfulActivation();
-            if (artifact.medium() == SpellMedium.SCROLL) {
-                // Single-use is a spell-medium rule, not a survival inventory rule.
-                stack.shrink(1);
-                serverPlayer.sendSystemMessage(Component.literal("The successful scroll burns into silver ash")
-                        .withStyle(ChatFormatting.GOLD));
-            } else {
-                writeArtifact(stack, transition.artifact());
+        CastingMethod method = artifact.medium() == SpellMedium.SCROLL
+                ? CastingMethod.SCROLL : CastingMethod.SPELLBOOK;
+        Consumer<ResourceEscrow.Outcome> terminal = outcome -> {
+            if (outcome == ResourceEscrow.Outcome.SUCCESS && artifact.medium() == SpellMedium.BOOK) {
+                writeArtifact(stack, artifact.recordSuccessfulActivation().artifact());
             }
-            player.getCooldowns().addCooldown(stack.getItem(), 20);
+            if (outcome.consumesResources() && artifact.medium() == SpellMedium.SCROLL) {
+                serverPlayer.sendSystemMessage(Component.literal(
+                                outcome == ResourceEscrow.Outcome.SUCCESS
+                                        ? "The successful scroll burns into silver ash"
+                                        : "The fault consumes the committed scroll")
+                        .withStyle(ChatFormatting.GOLD));
+            }
+        };
+        if (activateCircleAt(serverPlayer, artifact.circle(), true, serverPlayer.getEyePosition(),
+                method, true, stack, terminal)) {
+            player.getCooldowns().addCooldown(mediumItem, 20);
         }
         return InteractionResultHolder.sidedSuccess(stack, false);
     }
 
     public static boolean activateCircleAt(ServerPlayer player, MagicCircle circle,
             boolean chargeMana, Vec3 origin) {
+        return activateCircleAt(player, circle, chargeMana, origin,
+                CastingMethod.BARE, true, ItemStack.EMPTY, ignored -> { });
+    }
+
+    public static boolean activateCircleAt(ServerPlayer player, MagicCircle circle,
+            boolean chargeMana, Vec3 origin, CastingMethod method, boolean useStaged,
+            ItemStack mediumStack, Consumer<ResourceEscrow.Outcome> terminal) {
         if (Vm2CircleCompiler.isVm2Circle(circle)) {
             Vm2CircleCompilation compilation = Vm2CircleCompiler.compile(circle, vmContext(player, origin));
             sendVmCompilation(player, compilation);
@@ -311,33 +364,50 @@ public final class CircleAuthoringService {
                         circle.name() + " — compiler fault", compilation);
             }
             return !compilation.hasErrors() && NeoForgeVmService.startAuthored(player,
-                    compilation, chargeMana, circle.name());
+                    compilation, chargeMana, circle.name(), method, useStaged,
+                    mediumStack, terminal);
         }
         CircleCompilation compilation = CircleAuthoringCompiler.compile(circle);
         sendCompilation(player, compilation);
         SpellVisualManager.showAuthoredCircleAt(player, circle, compilation.diagnostics(), origin);
         if (compilation.hasErrors()) return false;
         CastResult result = CastService.castAt(player, compilation.compatibilitySource(), chargeMana,
-                origin, player.getViewVector(1.0F));
+                origin, player.getViewVector(1.0F), method, useStaged, mediumStack);
         PonderTraceNetworking.publishCompatibility(player, "server-authored-compatibility-trace",
                 circle.name() + " — authoritative result", compilation, result);
-        return result instanceof CastResult.Success;
+        ResourceEscrow.Outcome outcome = result instanceof CastResult.Success
+                ? ResourceEscrow.Outcome.SUCCESS
+                : result instanceof CastResult.SpellFailure
+                        ? ResourceEscrow.Outcome.GENUINE_SPELL_FAULT
+                        : ResourceEscrow.Outcome.ENGINE_FAILURE;
+        terminal.accept(outcome);
+        return !(result instanceof CastResult.EngineFailure);
+    }
+
+    private static Element spellElement(List<PlacedSigil> sigils) {
+        return sigils.stream().map(PlacedSigil::type)
+                .filter(type -> type.startsWith("ELEMENT_"))
+                .map(type -> type.substring("ELEMENT_".length()))
+                .map(Element::fromId).flatMap(Optional::stream).findFirst()
+                .orElse(Element.ARCANE);
     }
 
     public static ItemStack createArtifactStack(SpellArtifact artifact) {
         ItemStack stack = switch (artifact.medium()) {
             case SCROLL -> new ItemStack(SpellMediaContent.spellScroll());
             case BOOK -> new ItemStack(SpellMediaContent.spellBook());
+            case ENGRAVING -> new ItemStack(SpellMediaContent.engravedSpellCircleItem());
             case TABLET -> new ItemStack(SpellMediaContent.carvedTabletItem());
         };
         stack.set(DataComponents.CUSTOM_NAME, Component.literal(artifact.circle().name() + " "
                 + switch (artifact.medium()) {
                     case SCROLL -> "Scroll";
                     case BOOK -> "Spellbook";
+                    case ENGRAVING -> "Engraving";
                     case TABLET -> "Tablet";
                 }).withStyle(ChatFormatting.LIGHT_PURPLE));
         writeArtifact(stack, artifact);
-        if (artifact.medium() == SpellMedium.TABLET) {
+        if (artifact.medium().installationRequired()) {
             CompoundTag blockData = new CompoundTag();
             blockData.putString(SpellTabletBlockEntity.PAYLOAD_KEY,
                     SpellArtifactPersistence.encode(artifact));
@@ -359,6 +429,11 @@ public final class CircleAuthoringService {
         }
     }
 
+    private static boolean hasArtifactData(ItemStack stack) {
+        return stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY)
+                .contains(ARTIFACT_KEY);
+    }
+
     private static void writeArtifact(ItemStack stack, SpellArtifact artifact) {
         CustomData.update(DataComponents.CUSTOM_DATA, stack,
                 nbt -> nbt.putString(ARTIFACT_KEY, SpellArtifactPersistence.encode(artifact)));
@@ -367,7 +442,7 @@ public final class CircleAuthoringService {
     private static boolean consumeBlank(ServerPlayer player, ItemStack expected) {
         for (int slot = 0; slot < player.getInventory().getContainerSize(); slot++) {
             ItemStack candidate = player.getInventory().getItem(slot);
-            if (candidate.is(expected.getItem()) && readArtifact(candidate).isEmpty()) {
+            if (candidate.is(expected.getItem()) && !hasArtifactData(candidate)) {
                 candidate.shrink(1);
                 return true;
             }

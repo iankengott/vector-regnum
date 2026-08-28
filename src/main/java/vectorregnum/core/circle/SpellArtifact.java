@@ -4,7 +4,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
 
-/** Immutable persisted lifecycle for a scroll, book, or carved tablet. */
+/** Immutable persisted lifecycle for portable and world-installed spell media. */
 public record SpellArtifact(
         int schemaVersion,
         String id,
@@ -33,12 +33,12 @@ public record SpellArtifact(
         if (successfulActivations < 0) {
             throw new IllegalArgumentException("successfulActivations must be non-negative");
         }
-        if (medium == SpellMedium.TABLET) {
+        if (medium.installationRequired()) {
             if ((state == State.INSTALLED) != (anchor != null)) {
-                throw new IllegalArgumentException("an installed tablet requires exactly one world anchor");
+                throw new IllegalArgumentException("installed media requires exactly one world anchor");
             }
             if (state == State.CONSUMED) {
-                throw new IllegalArgumentException("tablets cannot be consumed");
+                throw new IllegalArgumentException("installed media cannot be consumed");
             }
         } else if (anchor != null || state == State.INSTALLED) {
             throw new IllegalArgumentException("only tablets can be installed");
@@ -69,9 +69,14 @@ public record SpellArtifact(
                 circle, State.READY, null, 0);
     }
 
+    public static SpellArtifact engraving(String id, MagicCircle circle) {
+        return new SpellArtifact(CURRENT_SCHEMA_VERSION, id, SpellMedium.ENGRAVING,
+                circle, State.READY, null, 0);
+    }
+
     public Transition install(WorldAnchor worldAnchor) {
-        if (medium != SpellMedium.TABLET) {
-            return rejected("Only a tablet can be installed");
+        if (!medium.installationRequired()) {
+            return rejected("Only world media can be installed");
         }
         if (state == State.INSTALLED) {
             return rejected("This tablet is already permanently installed");
@@ -86,8 +91,8 @@ public record SpellArtifact(
         if (state == State.CONSUMED) {
             return rejected("This scroll has already been consumed");
         }
-        if (medium == SpellMedium.TABLET && state != State.INSTALLED) {
-            return rejected("Install this tablet before activating it");
+        if (medium.installationRequired() && state != State.INSTALLED) {
+            return rejected("Install this medium before activating it");
         }
         State nextState = medium == SpellMedium.SCROLL ? State.CONSUMED : state;
         SpellArtifact next = new SpellArtifact(schemaVersion, id, medium, circle,
@@ -97,7 +102,7 @@ public record SpellArtifact(
     }
 
     public boolean canBeRemovedFromWorld() {
-        return medium != SpellMedium.TABLET || state != State.INSTALLED;
+        return !medium.permanentInstallation() || state != State.INSTALLED;
     }
 
     public Optional<WorldAnchor> installedAt() {

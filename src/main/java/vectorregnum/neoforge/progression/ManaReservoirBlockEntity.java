@@ -2,7 +2,6 @@ package vectorregnum.neoforge.progression;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
 
 import net.minecraft.core.BlockPos;
@@ -62,8 +61,23 @@ public final class ManaReservoirBlockEntity extends BlockEntity {
     }
 
     public void setAffinity(ManaAffinity affinity) {
-        reservoir = new ManaReservoir(reservoir.tier(), affinity, reservoir.stored());
+        reservoir = new ManaReservoir(reservoir.tier(), affinity.canonical(), reservoir.stored());
         setChanged();
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && !level.isClientSide()) {
+            BlockState state = getBlockState();
+            ManaAffinity affinity = state.getValue(ManaReservoirBlock.AFFINITY);
+            if (affinity != affinity.canonical()) {
+                level.setBlock(worldPosition,
+                        state.setValue(ManaReservoirBlock.AFFINITY, affinity.canonical()),
+                        Block.UPDATE_ALL);
+                setAffinity(affinity.canonical());
+            }
+        }
     }
 
     public static void tick(Level level, BlockPos pos, BlockState state,
@@ -191,11 +205,7 @@ public final class ManaReservoirBlockEntity extends BlockEntity {
     }
 
     private static ManaAffinity parseAffinity(String value) {
-        try {
-            return ManaAffinity.valueOf(value.toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException exception) {
-            return ManaAffinity.ARCANE;
-        }
+        return ManaAffinity.fromId(value).orElse(ManaAffinity.ARCANE);
     }
 
     static PendingTransfer restorePending(int input, String affinity, int distance,

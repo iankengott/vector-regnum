@@ -14,6 +14,8 @@ import vectorregnum.core.semantic.SemanticOpcode;
 import vectorregnum.core.semantic.SemanticVmLowerer;
 import java.util.EnumSet;
 import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 class LibrarySpellIntegrationContractTest {
     @Test
@@ -62,5 +64,28 @@ class LibrarySpellIntegrationContractTest {
         assertEquals(8, multiplicities.get(breakIndex));
         assertTrue(harvest.instructions().stream().anyMatch(step ->
                 step.opcode() == SemanticOpcode.WAIT_TICKS));
+    }
+
+    @Test
+    void libraryCastingLeavesAdmissionAndManaMutationInTheVmService() throws Exception {
+        Path source = locateSource();
+        String text = Files.readString(source);
+        int castStart = text.indexOf("private static boolean cast(");
+        int listStart = text.indexOf("public static void list(", castStart);
+        String castBody = text.substring(castStart, listStart);
+        assertTrue(castBody.contains("NeoForgeVmService.startSemantic"));
+        assertTrue(!castBody.contains("ManaData.ensureAvailable"),
+                "library code must not draw source charges before VM admission");
+    }
+
+    private static Path locateSource() {
+        Path candidate = Path.of("").toAbsolutePath();
+        while (candidate != null) {
+            Path source = candidate.resolve(
+                    "src/main/java/vectorregnum/neoforge/LibrarySpellService.java");
+            if (Files.isRegularFile(source)) return source;
+            candidate = candidate.getParent();
+        }
+        throw new IllegalStateException("could not locate LibrarySpellService.java");
     }
 }

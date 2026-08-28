@@ -195,7 +195,9 @@ public final class PonderScreen extends Screen {
         context.fill(x - 20, y + 8, x + 21, y + 15, 0xff2c2730);
         context.fill(x - 15, y - 2, x + 16, y + 9, 0xff65576b);
         boolean consumed = cueData(step, PonderTimeline.CueType.SCROLL_STATE, "state")
-                .filter("accepted_and_consumed"::equals).isPresent();
+                .filter(state -> state.equals("accepted_and_consumed")
+                        || state.equals("genuine_fault_consumed"))
+                .isPresent();
         if (!consumed || controller.tickInStep() < step.durationTicks() / 2) {
             context.fill(x - 12, y - 8, x + 13, y, 0xffd7c28e);
             context.fill(x - 13, y - 9, x - 9, y + 1, 0xff8d6843);
@@ -203,7 +205,7 @@ public final class PonderScreen extends Screen {
             context.fill(x - 5, y - 6, x + 6, y - 5, 0xff844f88);
             context.renderItem(new ItemStack(SpellMediaContent.spellScroll()), x - 8, y - 17);
         } else {
-            context.drawCenteredString(font, "ACCEPTED", x, y - 8, 0xff76c993);
+            context.drawCenteredString(font, "CONSUMED", x, y - 8, 0xff76c993);
         }
     }
 

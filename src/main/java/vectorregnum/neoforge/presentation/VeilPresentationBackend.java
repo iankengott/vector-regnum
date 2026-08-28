@@ -253,7 +253,9 @@ final class VeilPresentationBackend implements ClientPresentationBackend {
         } else if (style == PresentationParticleStyle.SPARK) {
             name = "presentation/spark";
         } else if (style == PresentationParticleStyle.END_ROD) {
-            name = "presentation/light";
+            // `light` is now a canonical elemental palette; keep the generic
+            // END_ROD motif on a distinct resource id.
+            name = "presentation/light_motif";
         } else {
             name = "presentation/" + element.name().toLowerCase(java.util.Locale.ROOT);
         }
@@ -295,9 +297,19 @@ final class VeilPresentationBackend implements ClientPresentationBackend {
         float mix = (float) Math.clamp(chromaticIntensity, 0.0, 1.0);
         float[] color = switch (element) {
             case FIRE -> new float[]{1.0F, 0.24F, 0.04F};
-            case FROST -> new float[]{0.38F, 0.82F, 1.0F};
+            case ICE -> new float[]{0.38F, 0.82F, 1.0F};
             case VOID -> new float[]{0.52F, 0.08F, 0.72F};
             case ARCANE -> new float[]{0.68F, 0.30F, 1.0F};
+            case WATER -> new float[]{0.10F, 0.72F, 1.0F};
+            case AIR -> new float[]{0.72F, 0.92F, 1.0F};
+            case EARTH -> new float[]{0.70F, 0.43F, 0.20F};
+            case LIGHTNING -> new float[]{0.95F, 0.90F, 0.20F};
+            case TIME -> new float[]{0.95F, 0.56F, 0.88F};
+            case SPACE -> new float[]{0.34F, 0.18F, 0.72F};
+            case LIGHT -> new float[]{1.0F, 0.92F, 0.42F};
+            case DARK -> new float[]{0.20F, 0.15F, 0.32F};
+            case NATURE -> new float[]{0.28F, 0.80F, 0.22F};
+            case SOUND -> new float[]{0.86F, 0.38F, 0.92F};
         };
         for (int index = 0; index < color.length; index++) {
             color[index] = 0.72F + (color[index] - 0.72F) * mix;

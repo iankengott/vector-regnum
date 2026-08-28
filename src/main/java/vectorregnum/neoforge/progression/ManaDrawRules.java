@@ -1,5 +1,7 @@
 package vectorregnum.neoforge.progression;
 
+import vectorregnum.core.ElementalAffinityMatrix;
+
 /** Pure rules for finite remote draws; suitable for both the current bridge and vm2. */
 public final class ManaDrawRules {
     public static final int DEFAULT_BASE_DRAW = 100;
@@ -19,20 +21,11 @@ public final class ManaDrawRules {
     }
 
     public static double compatibility(ManaAffinity source, ManaAffinity requested) {
-        if (source == requested) {
-            return 1.0;
+        if (source == null || requested == null) {
+            throw new IllegalArgumentException("Source and requested affinity are required");
         }
-        if (source == ManaAffinity.ARCANE || requested == ManaAffinity.ARCANE) {
-            return 0.75;
-        }
-        if ((source == ManaAffinity.FIRE && requested == ManaAffinity.FROST)
-                || (source == ManaAffinity.FROST && requested == ManaAffinity.FIRE)) {
-            return 0.25;
-        }
-        if (source == ManaAffinity.VOID || requested == ManaAffinity.VOID) {
-            return 0.4;
-        }
-        return 0.6;
+        return ElementalAffinityMatrix.canonical().efficiency(
+                source.element(), requested.element());
     }
 
     public static int capacityAfterShard(int currentCapacity, int maximumCapacity) {

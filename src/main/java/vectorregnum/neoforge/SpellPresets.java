@@ -14,9 +14,9 @@ public final class SpellPresets {
             new Sigil("EXPAND", 1.0),
             new Sigil("EXECUTE"));
 
-    public static final List<Sigil> FROST_NOVA = List.of(
+    public static final List<Sigil> ICE_NOVA = List.of(
             new Sigil("ORIGIN_SELF"),
-            new Sigil("ELEMENT_FROST"),
+            new Sigil("ELEMENT_ICE"),
             new Sigil("SHAPE_AURA"),
             new Sigil("EXPAND", 5.0),
             new Sigil("EXECUTE"));
@@ -52,7 +52,7 @@ public final class SpellPresets {
 
     public static final Map<String, List<Sigil>> CASTABLE = Map.of(
             "firebolt", FIREBOLT,
-            "frost_nova", FROST_NOVA,
+            "ice_nova", ICE_NOVA,
             "amplified_firebolt", AMPLIFIED_FIREBOLT);
 
     public static final Map<String, List<Sigil>> MISCASTS = Map.of(

@@ -24,7 +24,7 @@ class ManaTransportRulesTest {
     @Test
     void affinityAndDestinationCapacityBoundExtraction() {
         var source = new ManaReservoir(ManaReservoir.Tier.RUNED_CELL, ManaAffinity.FIRE, 500);
-        var target = new ManaReservoir(ManaReservoir.Tier.CRYSTAL_VIAL, ManaAffinity.FROST, 195);
+        var target = new ManaReservoir(ManaReservoir.Tier.CRYSTAL_VIAL, ManaAffinity.ICE, 195);
 
         var result = ManaTransportRules.transfer(source, target, 100, 4,
                 ManaTransportRules.ConduitTier.RESONANT);

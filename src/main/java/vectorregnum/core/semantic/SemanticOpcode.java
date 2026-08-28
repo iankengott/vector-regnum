@@ -12,7 +12,7 @@ public enum SemanticOpcode {
     FILTER_LIVING,
     FILTER_ORE,
     ELEMENT_FIRE,
-    ELEMENT_FROST,
+    ELEMENT_ICE,
     ELEMENT_ARCANE,
     ELEMENT_VOID,
     SHAPE_PROJECTILE,
@@ -33,5 +33,16 @@ public enum SemanticOpcode {
     EMIT_REDSTONE,
     REPEAT_BOUNDED,
     WAIT_TICKS,
-    EXECUTE
+    EXECUTE,
+    // Appended so the legacy ordinals of non-element operations remain stable.
+    ELEMENT_WATER,
+    ELEMENT_AIR,
+    ELEMENT_EARTH,
+    ELEMENT_LIGHTNING,
+    ELEMENT_TIME,
+    ELEMENT_SPACE,
+    ELEMENT_LIGHT,
+    ELEMENT_DARK,
+    ELEMENT_NATURE,
+    ELEMENT_SOUND
 }

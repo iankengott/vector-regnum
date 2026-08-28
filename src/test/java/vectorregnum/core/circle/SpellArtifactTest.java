@@ -47,6 +47,17 @@ class SpellArtifactTest {
     }
 
     @Test
+    void engravingIsInstalledButExpendable() {
+        SpellArtifact engraving = SpellArtifact.engraving("engraving-1", circle);
+        assertFalse(engraving.recordSuccessfulActivation().accepted());
+        SpellArtifact installed = engraving.install(
+                new SpellArtifact.WorldAnchor("minecraft:overworld", 4, 64, 8)).artifact();
+        assertTrue(installed.canBeRemovedFromWorld());
+        assertTrue(installed.recordSuccessfulActivation().accepted());
+        assertEquals(SpellArtifact.State.INSTALLED, installed.state());
+    }
+
+    @Test
     void invalidCrossMediumStatesAreRejected() {
         assertThrows(IllegalArgumentException.class, () -> new SpellArtifact(1, "bad", SpellMedium.BOOK,
                 circle, SpellArtifact.State.CONSUMED, null, 1));

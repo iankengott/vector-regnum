@@ -181,12 +181,33 @@ public final class SpellVisualManager {
     }
 
     private static int visualFor(String type) {
-        if (type.contains("FIRE")) return CirclePreviewPayload.VISUAL_FIRE;
-        if (type.contains("FROST")) return CirclePreviewPayload.VISUAL_FROST;
-        if (type.contains("VOID")) return CirclePreviewPayload.VISUAL_VOID;
+        if (type.startsWith("ELEMENT_")) {
+            return Element.fromId(type.substring("ELEMENT_".length()))
+                    .map(SpellVisualManager::visualForElement)
+                    .orElse(CirclePreviewPayload.VISUAL_DEFAULT);
+        }
         if (type.equals("EXECUTE")) return CirclePreviewPayload.VISUAL_EXECUTE;
         if (type.startsWith("SHAPE_")) return CirclePreviewPayload.VISUAL_SHAPE;
         return CirclePreviewPayload.VISUAL_DEFAULT;
+    }
+
+    private static int visualForElement(Element element) {
+        return switch (element) {
+            case FIRE -> CirclePreviewPayload.VISUAL_FIRE;
+            case ICE -> CirclePreviewPayload.VISUAL_ICE;
+            case VOID -> CirclePreviewPayload.VISUAL_VOID;
+            case WATER -> CirclePreviewPayload.VISUAL_WATER;
+            case AIR -> CirclePreviewPayload.VISUAL_AIR;
+            case EARTH -> CirclePreviewPayload.VISUAL_EARTH;
+            case LIGHTNING -> CirclePreviewPayload.VISUAL_LIGHTNING;
+            case TIME -> CirclePreviewPayload.VISUAL_TIME;
+            case SPACE -> CirclePreviewPayload.VISUAL_SPACE;
+            case LIGHT -> CirclePreviewPayload.VISUAL_LIGHT;
+            case DARK -> CirclePreviewPayload.VISUAL_DARK;
+            case NATURE -> CirclePreviewPayload.VISUAL_NATURE;
+            case SOUND -> CirclePreviewPayload.VISUAL_SOUND;
+            case ARCANE -> CirclePreviewPayload.VISUAL_DEFAULT;
+        };
     }
 
     private static double radius(int ring, MagicCircle circle) {
@@ -208,9 +229,19 @@ public final class SpellVisualManager {
     private static PresentationElement trailElement(Element element) {
         return switch (element) {
             case FIRE -> PresentationElement.FIRE;
-            case FROST -> PresentationElement.FROST;
+            case ICE -> PresentationElement.ICE;
             case VOID -> PresentationElement.VOID;
-            case ARCANE -> PresentationElement.FIRE;
+            case ARCANE -> PresentationElement.ARCANE;
+            case WATER -> PresentationElement.WATER;
+            case AIR -> PresentationElement.AIR;
+            case EARTH -> PresentationElement.EARTH;
+            case LIGHTNING -> PresentationElement.LIGHTNING;
+            case TIME -> PresentationElement.TIME;
+            case SPACE -> PresentationElement.SPACE;
+            case LIGHT -> PresentationElement.LIGHT;
+            case DARK -> PresentationElement.DARK;
+            case NATURE -> PresentationElement.NATURE;
+            case SOUND -> PresentationElement.SOUND;
         };
     }
 
@@ -270,7 +301,7 @@ public final class SpellVisualManager {
                 target.hurt(world.damageSources().magic(), (float) Math.min(40.0, 4.0 * magnitude));
                 if (element == Element.FIRE) {
                     target.igniteForSeconds((float) Math.min(10.0, 3.0 * magnitude));
-                } else if (element == Element.FROST) {
+                } else if (element == Element.ICE) {
                     target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1));
                 }
                 ServerTraces.burst(world, position, PresentationParticleStyle.EXPLOSION,
@@ -327,7 +358,7 @@ public final class SpellVisualManager {
                             && SpellSecurityPolicy.canAffectEntity(caster, entity)
                             && entity.distanceToSqr(center) <= targetRadius * targetRadius);
             for (LivingEntity target : targets) {
-                if (element == Element.FROST) {
+                if (element == Element.ICE) {
                     target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 140, 2));
                 }
                 target.hurt(world.damageSources().magic(), (float) Math.min(20.0, 2.0 * magnitude));

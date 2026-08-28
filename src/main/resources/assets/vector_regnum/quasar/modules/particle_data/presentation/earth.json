@@ -1,0 +1,14 @@
+{
+  "render_style": "CUBE",
+  "should_collide": false,
+  "face_velocity": true,
+  "velocity_stretch_factor": 0.35,
+  "additive": true,
+  "modules": [
+    {"module": "drag", "strength": 0.92},
+    {"module": "color", "gradient": {
+      "rgb_points": [{"percent": 0.0, "color": "0xC8A06A"}, {"percent": 1.0, "color": "0x69452D"}],
+      "alpha_points": [{"percent": 0.0, "alpha": 0.85}, {"percent": 1.0, "alpha": 0.0}]},
+      "interpolant": "q.agePercent"}
+  ]
+}

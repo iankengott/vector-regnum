@@ -1,6 +1,6 @@
 # Field Manual artwork
 
-The current Field Manual v6 retains three original 256×256 raster plates first
+The current Field Manual v9 retains three original 256×256 raster plates first
 introduced in v5 and generated for Vector-Regnum with Codex's built-in
 image-generation tool on 2026-08-11. They are checked in under
 `src/main/resources/assets/vector_regnum/textures/gui/guide/` and referenced by
@@ -21,3 +21,8 @@ The generated masters were visually inspected and downscaled with ffmpeg to
 the checked-in game-ready dimensions. Alt text and explanatory prose live in
 the guide JSON rather than being baked into the images, keeping the plates
 localizable and accessible.
+
+The 2026-08-22 compact-screen audit verified these complete source plates are
+scaled proportionally rather than sampled as top-left crops. Compact layouts
+cap their displayed extent so the opening card fits inside the initial
+viewport; the authored 256×256 files remain unchanged.

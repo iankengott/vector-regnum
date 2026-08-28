@@ -198,9 +198,10 @@ class EngineHardeningTest {
     @Test
     void compatibilityRegistriesContainOnlySupportedNames() {
         assertEquals(Element.FIRE, Element.fromId("fire").orElseThrow());
-        assertEquals(Element.FROST, Element.fromId("FROST").orElseThrow());
+        assertEquals(Element.ICE, Element.fromId("FROST").orElseThrow());
+        assertEquals(Element.ICE, Element.fromId("ice").orElseThrow());
         assertTrue(Element.fromId("").isEmpty());
-        assertTrue(Element.fromId("water").isEmpty());
+        assertEquals(Element.WATER, Element.fromId("water").orElseThrow());
         assertEquals(Shape.PROJECTILE, Shape.fromId("projectile").orElseThrow());
         assertTrue(Shape.fromId("cube").isEmpty());
     }

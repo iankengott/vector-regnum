@@ -4,6 +4,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
+import net.neoforged.fml.config.ModConfig;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import vectorregnum.neoforge.automation.AutomationContent;
@@ -21,7 +23,9 @@ public final class VectorRegnumMod {
     public static final String MOD_ID = "vector_regnum";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
-    public VectorRegnumMod(IEventBus modBus) {
+    public VectorRegnumMod(IEventBus modBus, ModContainer modContainer) {
+        modContainer.registerConfig(ModConfig.Type.SERVER, CastingConfig.SPEC,
+                "vector-regnum-casting.toml");
         VectorRegnumContent.register(modBus);
         SpellMediaContent.register(modBus);
         TemporarySpellContent.register(modBus);
@@ -34,7 +38,7 @@ public final class VectorRegnumMod {
         ProgressionContent.initialize(new PlayerManaBridge() {
             @Override
             public ManaAffinity requestedAffinity(net.minecraft.server.level.ServerPlayer player) {
-                return ManaData.affinity(player);
+                return ManaData.channelAffinity(player);
             }
 
             @Override

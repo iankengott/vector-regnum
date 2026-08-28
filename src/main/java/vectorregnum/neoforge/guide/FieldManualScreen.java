@@ -31,6 +31,7 @@ public final class FieldManualScreen extends Screen {
     private static final int NORMAL_CONTENT_TOP = 42;
     private static final int COMPACT_CONTENT_TOP = 66;
     private static final int SCROLL_STEP = 30;
+    private static final int MAX_COMPACT_IMAGE_SIZE = 80;
     private static final long RECIPE_CYCLE_MILLIS = 1_500L;
 
     private final GuideScreenController controller;
@@ -112,7 +113,7 @@ public final class FieldManualScreen extends Screen {
         for (GuideScreenModel.ChapterEntry chapter : model.navigation()) {
             renderItem(context, itemStack(chapter.icon()), x, y);
             context.drawString(font, Component.literal(chapter.title())
-                    .withStyle(ChatFormatting.BOLD), x + 20, y + 4, INK);
+                    .withStyle(ChatFormatting.BOLD), x + 20, y + 4, INK, false);
             y += 20;
             for (GuideScreenModel.PageEntry page : chapter.pages()) {
                 String prefix = page.bookmarked() ? "★ " : "  ";
@@ -138,7 +139,7 @@ public final class FieldManualScreen extends Screen {
 
         context.enableScissor(left, top, left + available, height - 10);
         drawScaled(context, Component.literal(model.page().title()).withStyle(ChatFormatting.BOLD),
-                left, y, INK, true, scale);
+                left, y, INK, false, scale);
         y += scaled(18, scale);
         for (FormattedCharSequence line : bodyLines) {
             drawScaled(context, line, left, y, INK, false, scale);
@@ -163,7 +164,7 @@ public final class FieldManualScreen extends Screen {
         context.fill(left, y, left + available, y + boxHeight, PANEL);
         context.fill(left, y, left + 3, y + boxHeight, GOLD);
         drawScaled(context, Component.literal(symbol(element.type()) + " " + element.label()),
-                left + 8, y + 5, INK, true, scale);
+                left + 8, y + 5, INK, false, scale);
         int visualWidth = visualWidth(element);
         List<FormattedCharSequence> alt = wrap(element.altText(),
                 Math.max(48, available - visualWidth - 18), scale);
@@ -322,21 +323,21 @@ public final class FieldManualScreen extends Screen {
         return height + 12;
     }
 
-    private static int elementHeight(GuideElement element, double scale) {
+    private int elementHeight(GuideElement element, double scale) {
         int base = switch (element.type()) {
             case RECIPE -> 70;
-            case IMAGE -> Math.max(58, metadataInt(element, "display_height", 48, 48, 160) + 10);
+            case IMAGE -> Math.max(58, imageSize(element).height() + 10);
             case DIAGRAM -> 58;
             default -> 36;
         };
         return Math.max(base, scaled(base, scale));
     }
 
-    private static int visualWidth(GuideElement element) {
+    private int visualWidth(GuideElement element) {
         return switch (element.type()) {
             case RECIPE -> 110;
             case DIAGRAM -> 122;
-            case IMAGE -> metadataInt(element, "display_width", 48, 48, 160) + 12;
+            case IMAGE -> imageSize(element).width() + 12;
             default -> 0;
         };
     }
@@ -344,11 +345,27 @@ public final class FieldManualScreen extends Screen {
     private void renderImage(GuiGraphics context, GuideElement element, int x, int y) {
         ResourceLocation texture = ResourceLocation.tryParse(element.metadata("asset"));
         if (texture == null) return;
-        int width = metadataInt(element, "display_width", 48, 48, 160);
-        int height = metadataInt(element, "display_height", 48, 48, 160);
+        ImageSize imageSize = imageSize(element);
+        int width = imageSize.width();
+        int height = imageSize.height();
         int sourceWidth = metadataInt(element, "source_width", 16, 16, 2048);
         int sourceHeight = metadataInt(element, "source_height", 16, 16, 2048);
-        context.blit(texture, x, y, 0, 0, width, height, sourceWidth, sourceHeight);
+        context.blit(texture, x, y, width, height, 0.0F, 0.0F,
+                sourceWidth, sourceHeight, sourceWidth, sourceHeight);
+    }
+
+    private ImageSize imageSize(GuideElement element) {
+        int width = metadataInt(element, "display_width", 48, 48, 160);
+        int height = metadataInt(element, "display_height", 48, 48, 160);
+        int maximum = compactToolbar() ? MAX_COMPACT_IMAGE_SIZE : Integer.MAX_VALUE;
+        return fitImage(width, height, maximum);
+    }
+
+    private static ImageSize fitImage(int width, int height, int maximum) {
+        int largest = Math.max(width, height);
+        if (largest <= maximum) return new ImageSize(width, height);
+        return new ImageSize(Math.max(1, width * maximum / largest),
+                Math.max(1, height * maximum / largest));
     }
 
     private void renderRecipe(GuiGraphics context, GuideElement element, int x, int y) {
@@ -499,5 +516,8 @@ public final class FieldManualScreen extends Screen {
         private boolean contains(double x, double y) {
             return x >= x1 && x < x2 && y >= y1 && y < y2;
         }
+    }
+
+    private record ImageSize(int width, int height) {
     }
 }

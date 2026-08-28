@@ -47,7 +47,8 @@ public final class SigilPalette {
         List<Entry> entries = new ArrayList<>();
         add(entries, "ORIGIN_SELF", Category.ORIGIN, "Self origin", "Begin at the caster");
         add(entries, "VECTOR_FORWARD", Category.DIRECTION, "Forward vector", "Use the caster's look direction");
-        for (String element : List.of("FIRE", "FROST", "ARCANE", "VOID")) {
+        for (String element : List.of("ARCANE", "FIRE", "ICE", "VOID", "WATER", "AIR",
+                "EARTH", "LIGHTNING", "TIME", "SPACE", "LIGHT", "DARK", "NATURE", "SOUND")) {
             add(entries, "ELEMENT_" + element, Category.ELEMENT, title(element),
                     "Apply " + element.toLowerCase(Locale.ROOT) + " resonance");
         }

@@ -233,24 +233,24 @@ public final class ClientPresentationRuntime {
         if (client.player == null || client.screen != null) return;
         int width = context.guiWidth();
         int height = context.guiHeight();
-        double darkness = 0, frost = 0, fault = 0;
+        double darkness = 0, ice = 0, fault = 0;
         for (ActiveCue cue : ACTIVE_CUES) {
             if (!cue.lod.screenLayers() || cue.age <= cue.instruction.startOffsetTicks()) continue;
             double envelope = cue.envelope();
             switch (cue.instruction.cueKind()) {
                 case DARKNESS -> darkness = Math.max(darkness, envelope);
-                case FOG -> frost = Math.max(frost, envelope);
+                case FOG -> ice = Math.max(ice, envelope);
                 case SCREEN -> fault = Math.max(fault, envelope);
                 default -> { }
             }
         }
         darkness *= accessibility.darknessAndFog();
-        frost *= accessibility.darknessAndFog();
+        ice *= accessibility.darknessAndFog();
         fault *= accessibility.flashIntensity();
         if (darkness > 0) context.fill(0, 0, width, height,
                 alpha(darkness * .22) << 24 | 0x110b18);
-        if (frost > 0) {
-            int color = alpha(frost * .16) << 24 | 0xb9e8ef;
+        if (ice > 0) {
+            int color = alpha(ice * .16) << 24 | 0xb9e8ef;
             context.fill(0, 0, width, Math.max(2, height / 12), color);
             context.fill(0, height - Math.max(2, height / 12), width, height, color);
         }
@@ -395,9 +395,19 @@ public final class ClientPresentationRuntime {
                             ? SoundEvents.AMETHYST_BLOCK_RESONATE
                             : switch (element) {
                                 case FIRE -> SoundEvents.BLAZE_SHOOT;
-                                case FROST -> SoundEvents.GLASS_HIT;
+                                case ICE -> SoundEvents.GLASS_HIT;
                                 case VOID -> SoundEvents.ENDERMAN_TELEPORT;
                                 case ARCANE -> SoundEvents.AMETHYST_BLOCK_CHIME;
+                                case WATER -> SoundEvents.BUBBLE_COLUMN_UPWARDS_AMBIENT;
+                                case AIR -> SoundEvents.ELYTRA_FLYING;
+                                case EARTH -> SoundEvents.STONE_PLACE;
+                                case LIGHTNING -> SoundEvents.LIGHTNING_BOLT_THUNDER;
+                                case TIME -> SoundEvents.AMETHYST_BLOCK_RESONATE;
+                                case SPACE -> SoundEvents.ENDERMAN_TELEPORT;
+                                case LIGHT -> SoundEvents.BEACON_AMBIENT;
+                                case DARK -> SoundEvents.SCULK_SENSOR_HIT;
+                                case NATURE -> SoundEvents.AZALEA_LEAVES_BREAK;
+                                case SOUND -> SoundEvents.NOTE_BLOCK_CHIME.value();
                             };
             client.level.playSound(null, point.x, point.y, point.z, sound,
                     SoundSource.PLAYERS,
@@ -455,9 +465,19 @@ public final class ClientPresentationRuntime {
             return switch (style) {
                 case MOTES -> switch (element) {
                     case FIRE -> ParticleTypes.FLAME;
-                    case FROST -> ParticleTypes.SNOWFLAKE;
+                    case ICE -> ParticleTypes.SNOWFLAKE;
                     case VOID -> ParticleTypes.PORTAL;
                     case ARCANE -> ParticleTypes.ENCHANT;
+                    case WATER -> ParticleTypes.FALLING_WATER;
+                    case AIR -> ParticleTypes.CLOUD;
+                    case EARTH -> ParticleTypes.POOF;
+                    case LIGHTNING -> ParticleTypes.ELECTRIC_SPARK;
+                    case TIME -> ParticleTypes.END_ROD;
+                    case SPACE -> ParticleTypes.PORTAL;
+                    case LIGHT -> ParticleTypes.END_ROD;
+                    case DARK -> ParticleTypes.SMOKE;
+                    case NATURE -> ParticleTypes.COMPOSTER;
+                    case SOUND -> ParticleTypes.NOTE;
                 };
                 case CLOUD -> ParticleTypes.CLOUD;
                 case SMOKE -> ParticleTypes.SMOKE;

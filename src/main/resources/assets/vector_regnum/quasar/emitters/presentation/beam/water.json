@@ -1,0 +1,11 @@
+{
+  "max_lifetime": 8,
+  "rate": 10,
+  "count": 5,
+  "max_particles": 48,
+  "emitter_settings": {
+    "shape": "vector_regnum:presentation/cylinder",
+    "particle_settings": "vector_regnum:presentation/motes"
+  },
+  "particle_data": "vector_regnum:presentation/water"
+}

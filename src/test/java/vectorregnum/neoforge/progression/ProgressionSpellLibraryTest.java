@@ -39,4 +39,12 @@ class ProgressionSpellLibraryTest {
         assertFalse(oracle.isUnlocked(ProgressionState.EMPTY));
         assertTrue(oracle.isUnlocked(ProgressionState.EMPTY.unlock(ProgressionUnlock.AUTOMATION_WEAVING)));
     }
+
+    @Test
+    void frostLibraryIdentityIsCanonicalizedToIce() {
+        assertTrue(ProgressionSpellLibrary.BY_ID.containsKey("chain_ice"));
+        assertFalse(ProgressionSpellLibrary.BY_ID.containsKey("chain_frost"));
+        assertTrue(ProgressionSpellLibrary.BY_ID.get("chain_ice").program().stream()
+                .anyMatch(step -> step.opcode() == LibraryOpcode.ELEMENT_ICE));
+    }
 }

@@ -12,7 +12,7 @@ class GuideScreenControllerTest {
     @Test
     void defaultManualLoadsVisualMetadataAndValidLinks() throws IOException {
         GuideBook book = GuideDataLoader.loadDefault(getClass().getClassLoader());
-        assertEquals(6, book.version());
+        assertEquals(9, book.version());
         assertTrue(book.chapters().size() >= 4);
         assertTrue(book.page("mana_sources").orElseThrow().elements().stream()
                 .anyMatch(element -> element.type() == GuideElement.Type.RECIPE
@@ -22,6 +22,30 @@ class GuideScreenControllerTest {
         assertTrue(book.page("mana_infrastructure").orElseThrow().elements().stream()
                 .anyMatch(element -> element.type() == GuideElement.Type.RECIPE
                         && element.metadata("recipe").equals("vector_regnum:resonant_vault")));
+        GuidePage media = book.page("spell_media").orElseThrow();
+        assertTrue(media.elements().stream().anyMatch(element -> element.type() == GuideElement.Type.RECIPE
+                && element.metadata("recipe").equals("vector_regnum:engraved_spell_circle")));
+        for (String method : java.util.List.of("BARE", "RITUAL", "ENGRAVING",
+                "SPELLBOOK", "SCROLL", "INSTALLED_CIRCLE")) {
+            assertTrue(media.body().contains(method), method);
+        }
+        assertTrue(media.body().contains("/vectorregnum circle bind engraving"));
+        GuidePage escrow = book.page("resource_escrow").orElseThrow();
+        assertTrue(escrow.body().contains("amethyst_shard=mana"));
+        assertTrue(escrow.body().contains("sugar=casting_time"));
+        assertTrue(escrow.body().contains("glowstone_dust=upkeep"));
+        assertTrue(escrow.body().contains("fermented_spider_eye=instability"));
+        for (String command : java.util.List.of(
+                "/vectorregnum reagents stage mana|casting_time|upkeep|instability <count>",
+                "/vectorregnum reagents stage offering <count>",
+                "/vectorregnum reagents clear",
+                "/vectorregnum circle quote <method>",
+                "/vectorregnum circle ritual",
+                "/vectorregnum circle bind engraving")) {
+            assertTrue(escrow.body().contains(command), command);
+        }
+        assertTrue(escrow.body().contains("quartz=ritual_offering"));
+        assertTrue(escrow.body().contains("requested and applied"));
     }
 
     @Test
