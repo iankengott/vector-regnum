@@ -37,6 +37,7 @@ import vectorregnum.core.presentation.PresentationCompiler;
 import vectorregnum.core.presentation.PresentationElement;
 import vectorregnum.core.presentation.PresentationParticleStyle;
 import vectorregnum.neoforge.presentation.ServerTraces;
+import vectorregnum.neoforge.effect.PersistentEffectService;
 import vectorregnum.core.semantic.SemanticInstruction;
 import vectorregnum.core.circle.CircleCoordinate;
 import vectorregnum.core.circle.PlacedSigil;
@@ -63,7 +64,6 @@ public final class NeoForgeVmService {
     private static final int PONDER_LIVE_INTERVAL_TICKS = 10;
     private static final List<ActiveVm> ACTIVE_VMS = new ArrayList<>();
     private static final List<ActiveVm> PENDING_VMS = new ArrayList<>();
-    private static final List<ActiveForce> ACTIVE_FORCES = new ArrayList<>();
     private static final CastAbuseGuard ABUSE_GUARD = new CastAbuseGuard();
     private static final Set<UUID> CANCELLED_OWNERS = new HashSet<>();
     private static boolean tickingVms;
@@ -87,7 +87,6 @@ public final class NeoForgeVmService {
         CastingResourceService.refundAll(event.getServer(), ResourceEscrow.Outcome.SHUTDOWN);
         ACTIVE_VMS.clear();
         PENDING_VMS.clear();
-        ACTIVE_FORCES.clear();
         ABUSE_GUARD.clear();
         CANCELLED_OWNERS.clear();
         tickingVms = false;
@@ -119,7 +118,7 @@ public final class NeoForgeVmService {
     public static boolean startAuthored(ServerPlayer player, Program program,
             boolean chargeMana, String label, Consumer<ResourceEscrow.Outcome> terminal) {
         return start(player, syntheticCompilation(program), chargeMana, label,
-                (owner, steps) -> SemanticSpellExecutor.execute(owner, steps, false),
+                (owner, steps, effects) -> SemanticSpellExecutor.execute(owner, steps, false, effects),
                 CastingMethod.BARE, true, ItemStack.EMPTY, terminal);
     }
 
@@ -137,7 +136,7 @@ public final class NeoForgeVmService {
             return false;
         }
         return start(player, compilation, chargeMana, label,
-                (owner, steps) -> SemanticSpellExecutor.execute(owner, steps, false),
+                (owner, steps, effects) -> SemanticSpellExecutor.execute(owner, steps, false, effects),
                 method, useStaged, mediumStack, terminal);
     }
 
@@ -152,6 +151,16 @@ public final class NeoForgeVmService {
     public static boolean startSemantic(ServerPlayer player, Program program,
             boolean chargeMana, String label,
             BiConsumer<ServerPlayer, List<SemanticInstruction>> executor,
+            CastingMethod method, boolean useStaged, ItemStack mediumStack,
+            Consumer<ResourceEscrow.Outcome> terminal) {
+        return start(player, syntheticCompilation(program), chargeMana, label,
+                (owner, steps, effects) -> executor.accept(owner, steps),
+                method, useStaged, mediumStack, terminal);
+    }
+
+    /** Semantic execution that can attach continuing world handles to the cast's durable lease. */
+    public static boolean startSemanticTracked(ServerPlayer player, Program program,
+            boolean chargeMana, String label, SemanticExecution executor,
             CastingMethod method, boolean useStaged, ItemStack mediumStack,
             Consumer<ResourceEscrow.Outcome> terminal) {
         return start(player, syntheticCompilation(program), chargeMana, label, executor,
@@ -207,7 +216,7 @@ public final class NeoForgeVmService {
 
     private static boolean start(ServerPlayer player, Vm2CircleCompilation compilation,
             boolean chargeMana, String label) {
-        return start(player, compilation, chargeMana, label, null,
+        return start(player, compilation, chargeMana, label, (SemanticExecution) null,
                 CastingMethod.BARE, true, ItemStack.EMPTY, ignored -> { });
     }
 
@@ -221,6 +230,17 @@ public final class NeoForgeVmService {
     private static boolean start(ServerPlayer player, Vm2CircleCompilation compilation,
             boolean chargeMana, String label,
             BiConsumer<ServerPlayer, List<SemanticInstruction>> semanticExecutor,
+            CastingMethod method, boolean useStaged, ItemStack mediumStack,
+            Consumer<ResourceEscrow.Outcome> terminal) {
+        return start(player, compilation, chargeMana, label,
+                semanticExecutor == null ? null
+                        : (owner, steps, effects) -> semanticExecutor.accept(owner, steps),
+                method, useStaged, mediumStack, terminal);
+    }
+
+    private static boolean start(ServerPlayer player, Vm2CircleCompilation compilation,
+            boolean chargeMana, String label,
+            SemanticExecution semanticExecutor,
             CastingMethod method, boolean useStaged, ItemStack mediumStack,
             Consumer<ResourceEscrow.Outcome> terminal) {
         Program program = compilation.compiledProgram().orElseThrow();
@@ -255,10 +275,13 @@ public final class NeoForgeVmService {
                 ^ player.serverLevel().getGameTime() ^ program.instructions().hashCode();
         VmPresentationBridge presentation = new VmPresentationBridge(player,
                 PresentationCompiler.compile(label, presentationSeed, program));
+        PersistentEffectService.Batch persistentEffects = PersistentEffectService.begin(
+                player, program, reservation, presentationSeed);
         ActiveVm active = new ActiveVm(player.getUUID(), player.serverLevel(),
                 new SpellVm(program, new MinecraftWorldAccess(player), presentation), label,
                 chargeMana,
-                presentation, compilation, new ArrayList<>(), semanticExecutor, new ArrayList<>());
+                presentation, compilation, new ArrayList<>(), semanticExecutor,
+                new ArrayList<>(), persistentEffects);
         active.reservation = reservation;
         active.remainingCastTicks = reservation.castingTicks();
         active.terminal = terminal;
@@ -279,7 +302,20 @@ public final class NeoForgeVmService {
                 ActiveVm active = vmIterator.next();
                 ServerPlayer currentOwner = server.getPlayerList().getPlayer(active.owner);
                 if (CANCELLED_OWNERS.contains(active.owner) || !validLifecycle(currentOwner, active)) {
+                    active.persistentEffects.rollback();
                     settle(active, ResourceEscrow.Outcome.OWNER_LIFECYCLE);
+                    ABUSE_GUARD.release(active.owner);
+                    vmIterator.remove();
+                    continue;
+                }
+                try {
+                    active.persistentEffects.tickPending();
+                } catch (RuntimeException exception) {
+                    VectorRegnumMod.LOGGER.error(
+                            "Pending persistent effect failed safely for {}", active.label, exception);
+                    active.persistentEffects.rollback();
+                    settle(active, ResourceEscrow.Outcome.ENGINE_FAILURE);
+                    publishTrace(currentOwner, active);
                     ABUSE_GUARD.release(active.owner);
                     vmIterator.remove();
                     continue;
@@ -302,6 +338,7 @@ public final class NeoForgeVmService {
                         currentOwner.sendSystemMessage(Component.literal("Cast stopped safely: "
                                         + outcome.name().toLowerCase(java.util.Locale.ROOT))
                                 .withStyle(ChatFormatting.YELLOW), true);
+                        active.persistentEffects.rollback();
                         settle(active, outcome);
                         publishTrace(currentOwner, active);
                         ABUSE_GUARD.release(active.owner);
@@ -309,12 +346,26 @@ public final class NeoForgeVmService {
                         continue vmLoop;
                     }
                 }
-                for (WorldEffect effect : result.effects()) {
-                    if (effect instanceof WorldEffect.SemanticStep semantic) {
-                        active.semanticSteps.add(semantic.instruction());
-                    } else {
-                        apply(currentOwner, active.world, effect);
+                try {
+                    for (WorldEffect effect : result.effects()) {
+                        if (effect instanceof WorldEffect.SemanticStep semantic) {
+                            active.semanticSteps.add(semantic.instruction());
+                        } else {
+                            apply(currentOwner, active.world, effect, active.persistentEffects);
+                        }
                     }
+                } catch (RuntimeException exception) {
+                    VectorRegnumMod.LOGGER.error("VM effect adapter failed safely for {}",
+                            active.label, exception);
+                    currentOwner.sendSystemMessage(Component.literal(
+                                    "World effect failed safely for " + active.label)
+                            .withStyle(ChatFormatting.RED));
+                    active.persistentEffects.rollback();
+                    settle(active, ResourceEscrow.Outcome.ENGINE_FAILURE);
+                    publishTrace(currentOwner, active);
+                    ABUSE_GUARD.release(active.owner);
+                    vmIterator.remove();
+                    continue vmLoop;
                 }
                 if (result.status() == TickResult.Status.FAULTED) {
                     ServerPlayer owner = server.getPlayerList().getPlayer(active.owner);
@@ -336,6 +387,7 @@ public final class NeoForgeVmService {
                                 ManaData.stabilityLockTicks(100L,
                                         active.reservation.quote().finalCost().instability()));
                     }
+                    active.persistentEffects.rollback();
                     settle(active, faultOutcome);
                     publishTrace(owner, active);
                     ABUSE_GUARD.release(active.owner);
@@ -345,18 +397,31 @@ public final class NeoForgeVmService {
                     ResourceEscrow.Outcome outcome = ResourceEscrow.Outcome.SUCCESS;
                     if (owner != null && active.semanticExecutor != null && !active.semanticSteps.isEmpty()) {
                         try {
-                            active.semanticExecutor.accept(owner, List.copyOf(active.semanticSteps));
+                            active.semanticExecutor.accept(owner, List.copyOf(active.semanticSteps),
+                                    active.persistentEffects);
                         } catch (SemanticSpellExecutor.ExecutionRejection rejection) {
                             outcome = rejection.outcome();
+                            active.persistentEffects.rollback();
                             owner.sendSystemMessage(Component.literal("Semantic execution stopped safely: "
                                             + outcome.name().toLowerCase(java.util.Locale.ROOT))
                                     .withStyle(ChatFormatting.YELLOW));
                         } catch (RuntimeException exception) {
                             outcome = ResourceEscrow.Outcome.ENGINE_FAILURE;
+                            active.persistentEffects.rollback();
                             VectorRegnumMod.LOGGER.error("Semantic adapter rejected {} after validated VM execution",
                                     active.label, exception);
                             owner.sendSystemMessage(Component.literal("Semantic execution failed safely for " + active.label)
                                     .withStyle(ChatFormatting.RED));
+                        }
+                    }
+                    if (outcome == ResourceEscrow.Outcome.SUCCESS) {
+                        try {
+                            active.persistentEffects.commit(active.reservation);
+                        } catch (RuntimeException exception) {
+                            active.persistentEffects.rollback();
+                            outcome = ResourceEscrow.Outcome.ENGINE_FAILURE;
+                            VectorRegnumMod.LOGGER.error(
+                                    "Persistent-effect commit failed for {}", active.label, exception);
                         }
                     }
                     settle(active, outcome);
@@ -374,15 +439,6 @@ public final class NeoForgeVmService {
             PENDING_VMS.clear();
         }
 
-        Iterator<ActiveForce> forceIterator = ACTIVE_FORCES.iterator();
-        while (forceIterator.hasNext()) {
-            ActiveForce active = forceIterator.next();
-            ServerPlayer owner = server.getPlayerList().getPlayer(active.owner);
-            if (CANCELLED_OWNERS.contains(active.owner) || owner == null
-                    || !applyTimed(owner, active) || --active.remaining <= 0) {
-                forceIterator.remove();
-            }
-        }
         CANCELLED_OWNERS.clear();
     }
 
@@ -419,6 +475,7 @@ public final class NeoForgeVmService {
         all.addAll(ACTIVE_VMS);
         all.addAll(PENDING_VMS);
         for (ActiveVm active : all) {
+            active.persistentEffects.rollback();
             settle(active, outcome);
             ABUSE_GUARD.release(active.owner);
         }
@@ -441,7 +498,8 @@ public final class NeoForgeVmService {
         return Optional.empty();
     }
 
-    private static void apply(ServerPlayer owner, ServerLevel world, WorldEffect effect) {
+    private static void apply(ServerPlayer owner, ServerLevel world, WorldEffect effect,
+            PersistentEffectService.Batch persistentEffects) {
         if (effect instanceof WorldEffect.SemanticStep) return;
         Entity entity = find(world, effect.entityId());
         if (entity == null || !SpellSecurityPolicy.canAffectEntity(owner, entity)) return;
@@ -457,10 +515,11 @@ public final class NeoForgeVmService {
                         0.9F, 1.0F, 12);
             }
             default -> {
-                ActiveForce active = new ActiveForce(owner.getUUID(), world, effect, effect.durationTicks());
-                if (applyTimed(owner, active) && effect.durationTicks() > 1) {
-                    active.remaining--;
-                    ACTIVE_FORCES.add(active);
+                if (effect.durationTicks() > 1) {
+                    persistentEffects.applyForce(effect);
+                } else {
+                    applyTimed(owner,
+                            new ActiveForce(owner.getUUID(), world, effect, effect.durationTicks()));
                 }
             }
         }
@@ -598,6 +657,12 @@ public final class NeoForgeVmService {
             TickResult.Status status, int entityCount, ManaCostModel.Breakdown cost) {
     }
 
+    @FunctionalInterface
+    public interface SemanticExecution {
+        void accept(ServerPlayer owner, List<SemanticInstruction> steps,
+                PersistentEffectService.Batch persistentEffects);
+    }
+
     private static final class ActiveVm {
         private final UUID owner;
         private final ServerLevel world;
@@ -607,8 +672,9 @@ public final class NeoForgeVmService {
         private final VmPresentationBridge presentation;
         private final Vm2CircleCompilation compilation;
         private final List<TickResult> trace;
-        private final BiConsumer<ServerPlayer, List<SemanticInstruction>> semanticExecutor;
+        private final SemanticExecution semanticExecutor;
         private final List<SemanticInstruction> semanticSteps;
+        private final PersistentEffectService.Batch persistentEffects;
         private CastingResourceService.Reservation reservation;
         private Consumer<ResourceEscrow.Outcome> terminal;
         private boolean terminalNotified;
@@ -617,8 +683,9 @@ public final class NeoForgeVmService {
         private ActiveVm(UUID owner, ServerLevel world, SpellVm vm, String label,
                 boolean chargeMana, VmPresentationBridge presentation,
                 Vm2CircleCompilation compilation, List<TickResult> trace,
-                BiConsumer<ServerPlayer, List<SemanticInstruction>> semanticExecutor,
-                List<SemanticInstruction> semanticSteps) {
+                SemanticExecution semanticExecutor,
+                List<SemanticInstruction> semanticSteps,
+                PersistentEffectService.Batch persistentEffects) {
             this.owner = owner;
             this.world = world;
             this.vm = vm;
@@ -629,6 +696,7 @@ public final class NeoForgeVmService {
             this.trace = trace;
             this.semanticExecutor = semanticExecutor;
             this.semanticSteps = semanticSteps;
+            this.persistentEffects = persistentEffects;
         }
     }
 

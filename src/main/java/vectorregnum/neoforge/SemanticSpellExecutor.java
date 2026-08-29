@@ -34,6 +34,7 @@ import vectorregnum.core.presentation.PresentationElement;
 import vectorregnum.core.presentation.PresentationParticleStyle;
 import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
 import vectorregnum.neoforge.presentation.ServerTraces;
+import vectorregnum.neoforge.effect.PersistentEffectService;
 
 /** Opcode-driven server adapter for every curated semantic operation. */
 public final class SemanticSpellExecutor {
@@ -113,11 +114,16 @@ public final class SemanticSpellExecutor {
 
     public static void execute(ServerPlayer player,
             List<SemanticInstruction> steps, boolean force) {
+        execute(player, steps, force, null);
+    }
+
+    public static void execute(ServerPlayer player, List<SemanticInstruction> steps,
+            boolean force, PersistentEffectService.Batch persistentEffects) {
         if (!preflight(player, steps)) {
             throw new ExecutionRejection(ResourceEscrow.Outcome.UNLOADED_TARGET,
                     "required target disappeared during cast wind-up");
         }
-        State state = new State(player, force);
+        State state = new State(player, force, persistentEffects);
         for (SemanticInstruction instruction : steps) state.accept(instruction);
     }
 
@@ -125,14 +131,19 @@ public final class SemanticSpellExecutor {
         private final ServerPlayer player;
         private final ServerLevel world;
         private final boolean force;
+        private final PersistentEffectService.Batch persistentEffects;
         private double radius = 8, magnitude = 1;
         private int duration = 1, repeat = 128;
         private String element = "none", shape = "aura", filter = "any";
         private BlockHitResult block;
         private Runnable repeatableAction;
 
-        private State(ServerPlayer player, boolean force) {
-            this.player = player; this.world = player.serverLevel(); this.force = force;
+        private State(ServerPlayer player, boolean force,
+                PersistentEffectService.Batch persistentEffects) {
+            this.player = player;
+            this.world = player.serverLevel();
+            this.force = force;
+            this.persistentEffects = persistentEffects;
         }
 
         private void accept(SemanticInstruction step) {
@@ -171,14 +182,15 @@ public final class SemanticSpellExecutor {
                 case APPLY_DAMAGE -> runRepeatable(this::damage);
                 case APPLY_IMPULSE -> runRepeatable(() -> impulse(SemanticSchema.text(step.operands(),
                         step.operands().keySet().iterator().next())));
-                case APPLY_SLOW -> runRepeatable(() -> livingTargets().forEach(entity -> entity.addEffect(
-                        new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, Math.max(duration, 160), 2))));
-                case APPLY_FEATHERFALL -> runRepeatable(() -> player.addEffect(new MobEffectInstance(
-                        MobEffects.SLOW_FALLING, duration, 0)));
+                case APPLY_SLOW -> runRepeatable(() -> livingTargets().forEach(entity ->
+                        applyStatus(entity, MobEffects.MOVEMENT_SLOWDOWN, Math.max(duration, 160), 2)));
+                case APPLY_FEATHERFALL -> runRepeatable(() ->
+                        applyStatus(player, MobEffects.SLOW_FALLING, duration, 0));
                 case PLACE_LIGHT -> runRepeatable(this::placeLight);
                 case BREAK_BLOCKS -> runRepeatable(() -> breakBlocks(SemanticSchema.text(step.operands(), "mode")));
                 case TRANSMUTE_BLOCK -> runRepeatable(() -> transmute(SemanticSchema.text(step.operands(), "into")));
-                case CREATE_FORM -> runRepeatable(() -> SemanticCreationExecutor.create(player, step.creationSpec()));
+                case CREATE_FORM -> runRepeatable(() -> SemanticCreationExecutor.create(
+                        player, step.creationSpec(), persistentEffects));
                 case EMIT_PARTICLES -> runRepeatable(() -> particles(SemanticSchema.text(step.operands(), "style")));
                 case EMIT_REDSTONE -> runRepeatable(() -> redstone(SemanticSchema.integer(step.operands(), "strength")));
             }
@@ -242,8 +254,8 @@ public final class SemanticSpellExecutor {
         }
 
         private void barrier() {
-            player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, duration, 1));
-            player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, duration, 1));
+            applyStatus(player, MobEffects.DAMAGE_RESISTANCE, duration, 1);
+            applyStatus(player, MobEffects.ABSORPTION, duration, 1);
             player.playSound(SoundEvents.SHIELD_BLOCK, .8F, 1.3F);
         }
 
@@ -252,8 +264,12 @@ public final class SemanticSpellExecutor {
             BlockPos pos = block.getBlockPos().relative(block.getDirection());
             if (world.isEmptyBlock(pos) && SpellSecurityPolicy.canModifyBlock(player, pos,
                     world.getBlockState(pos))) {
-                world.setBlock(pos, TemporarySpellContent.mageLight().defaultBlockState(), Block.UPDATE_ALL);
-                world.scheduleTick(pos, TemporarySpellContent.mageLight(), duration);
+                prepareBlock(pos, TemporarySpellContent.mageLight(), duration);
+                if (world.setBlock(pos, TemporarySpellContent.mageLight().defaultBlockState(),
+                        Block.UPDATE_ALL)) {
+                    world.scheduleTick(pos, TemporarySpellContent.mageLight(), duration);
+                    trackBlock(pos, TemporarySpellContent.mageLight(), duration);
+                }
             }
         }
 
@@ -288,8 +304,8 @@ public final class SemanticSpellExecutor {
 
         private void particles(String style) {
             if (style.equals("outline")) {
-                livingTargets().forEach(entity -> entity.addEffect(
-                        new MobEffectInstance(MobEffects.GLOWING, Math.max(duration, 200), 0)));
+                livingTargets().forEach(entity ->
+                        applyStatus(entity, MobEffects.GLOWING, Math.max(duration, 200), 0));
             } else if (style.equals("vein_trace")) {
                 List<Vec3> ores = new ArrayList<>(32);
                 BlockPos center = player.blockPosition(); int r = Math.min(12, (int) radius);
@@ -310,16 +326,44 @@ public final class SemanticSpellExecutor {
                 BlockPos pos = player.blockPosition().relative(direction);
                 if (world.isEmptyBlock(pos) && SpellSecurityPolicy.canModifyBlock(player, pos,
                         world.getBlockState(pos))) {
-                    world.setBlock(pos, TemporarySpellContent.oracleSignal().defaultBlockState(), Block.UPDATE_ALL);
-                    world.scheduleTick(pos, TemporarySpellContent.oracleSignal(),
-                            Math.max(OracleSignalBlock.LIFETIME_TICKS, duration));
-                    return;
+                    int lifetime = Math.max(OracleSignalBlock.LIFETIME_TICKS, duration);
+                    prepareBlock(pos, TemporarySpellContent.oracleSignal(), lifetime);
+                    if (world.setBlock(pos, TemporarySpellContent.oracleSignal().defaultBlockState(),
+                            Block.UPDATE_ALL)) {
+                        world.scheduleTick(pos, TemporarySpellContent.oracleSignal(), lifetime);
+                        trackBlock(pos, TemporarySpellContent.oracleSignal(), lifetime);
+                        return;
+                    }
                 }
             }
         }
 
         private boolean canModify(BlockPos pos, BlockState state) {
             return SpellSecurityPolicy.canModifyBlock(player, pos, state);
+        }
+
+        private void applyStatus(LivingEntity target,
+                net.minecraft.core.Holder<net.minecraft.world.effect.MobEffect> effect,
+                int ticks, int amplifier) {
+            if (persistentEffects != null && ticks > 1) {
+                persistentEffects.prepareStatus(target, effect.value(), amplifier, ticks);
+            }
+            boolean applied = target.addEffect(new MobEffectInstance(effect, ticks, amplifier));
+            if (applied && persistentEffects != null && ticks > 1) {
+                persistentEffects.trackStatus(target, effect.value(), amplifier, ticks);
+            }
+        }
+
+        private void trackBlock(BlockPos pos, Block expected, int ticks) {
+            if (persistentEffects != null && ticks > 1) {
+                persistentEffects.trackBlock(pos, expected, ticks);
+            }
+        }
+
+        private void prepareBlock(BlockPos pos, Block expected, int ticks) {
+            if (persistentEffects != null && ticks > 1) {
+                persistentEffects.prepareBlock(pos, expected, ticks);
+            }
         }
 
         private static void requireTarget(List<?> targets, String message) {

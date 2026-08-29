@@ -1,7 +1,7 @@
 {
   "id": "field_manual",
   "title": "Vector-Regnum Field Manual",
-  "version": 9,
+  "version": 10,
   "theme": "brass_ink_and_amethyst",
   "chapters": [
     {
@@ -58,6 +58,38 @@
               "label": "Ponder a complete cast",
               "alt": "Animate compiler order, mana quote, and the actual executed VM ticks.",
               "metadata": { "scene": "spell_cast_success", "trace": "actual_vm_events" }
+            }
+          ]
+        },
+        {
+          "id": "persistent_magic",
+          "title": "Persistent Magic",
+          "body": "Every continuing effect receives one versioned server ledger contract containing its owner, program hash, dimension, natural endpoint or hard deadline, exact prepaid upkeep, and bounded cleanup handles. Use /vectorregnum effect status to inspect your live contracts. Loaded effects reconcile exact upkeep installments. Offline owners cannot drive world mutations; unloaded chunks pause reconciliation until they load again. Restart recovery resumes from SavedData. Natural conclusions clean once. Exhausted upkeep or a missing conclusion becomes bounded deterministic Wild Magic, then cleans instead of remaining free or orphaned.",
+          "required_unlocks": ["crystal_harvest"],
+          "elements": [
+            {
+              "type": "DIAGRAM",
+              "label": "Durable effect lifecycle",
+              "alt": "A cast transfers prepaid upkeep to a versioned ledger, reconciles while loaded, then reaches natural cleanup or bounded Wild Magic collapse.",
+              "metadata": { "diagram": "persistent_effect_lifecycle", "stages": "quote,prepay,register,reconcile,conclude_or_collapse,cleanup", "offline": "pause_world_mutation", "unloaded": "pause_reconciliation", "restart": "saved_data_recovery" }
+            },
+            {
+              "type": "EXAMPLE",
+              "label": "Inspect owned effects",
+              "alt": "The effect status command lists each short contract ID, state, handle count, remaining ticks, and upkeep balance.",
+              "metadata": { "example": "persistent_effect_status", "command": "/vectorregnum effect status" }
+            },
+            {
+              "type": "PONDER",
+              "label": "Ponder upkeep and conclusion",
+              "alt": "Follow quoted upkeep into the durable ledger, through loaded reconciliation, natural cleanup, and a bounded unpaid collapse reconstruction.",
+              "metadata": { "scene": "persistent_effect_lifecycle", "trace": "authoritative_contract_events" }
+            },
+            {
+              "type": "LINK",
+              "label": "Return to resource escrow",
+              "alt": "Return to quotes, reagents, and cast settlement.",
+              "metadata": { "target": "resource_escrow" }
             }
           ]
         }

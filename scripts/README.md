@@ -38,7 +38,7 @@ The wizard does not open, focus, type into, or close Minecraft. It preflights
 the isolated launcher, gives the human an explicit in-game checklist, and then
 verifies permanent natural identity versus mutable channel attunement, Ice
 terminology and visuals, the then-current Field Manual v7 (the repository now
-ships v9), authored/library casts, resource
+ships v10), authored/library casts, resource
 reload, accessible low LOD, the IPv4 endpoint, owned-unit cleanup, and free
 port after the human closes Minecraft normally. It writes the ignored evidence
 record `visual-evidence/main-pc-priority21-visual-attestation.txt` only after
@@ -72,6 +72,31 @@ field_manual=9`. Its live chat log must show a ritual quote with separate
 ritual offering (no discount)`. Inspect the captured window rather than
 treating the file as evidence by itself, then stop both development units and
 confirm Hermes loopback port 25575 is free.
+
+## Priority 23 persistent-effect checks
+
+Run the focused ownership-contract, upkeep state machine, guide/Ponder, JSON,
+shell, and source-policy gate with:
+
+```bash
+scripts/verify-priority23.sh
+```
+
+The production GameTest matrix now contains 30 tests, including seven
+priority-23 cases for SavedData round-trip, exact loaded upkeep, pre-halt force
+continuation, natural idempotent cleanup, deterministic unpaid collapse,
+offline ownership, and unloaded-chunk pausing. The guarded Hermes visual client must log both
+`VISUAL_CHECKPOINT_READY milestone=priority_23 ... field_manual=10` and
+`PERSISTENT_EFFECT_CHECKPOINT_READY ... contracts=...`, and its live chat must
+show the persistent contract registration plus remaining escrow. Capture only
+after the second marker, open and inspect the image, then stop both development
+units and confirm loopback port 25575 is free.
+
+The 2026-08-29 final Hermes gate logged three live contracts with 12.15 mana
+remaining in escrow and no malformed-contract quarantine. Direct inspection of
+`visual-evidence/hermes-window-20260829T064530Z.png` confirmed the authored
+scene, active spell particles, and all three endpoint/upkeep lines. Both
+development units then stopped and port 25575 was free.
 
 ## Priority 21 elemental checks
 
@@ -175,7 +200,7 @@ VR_CLIENT_RENDERER=builtin scripts/hermes-client.sh restart
 
 ## Production NeoForge GameTests
 
-The ordinary Gradle `test` task runs JUnit and contract tests. The 23 production
+The ordinary Gradle `test` task runs JUnit and contract tests. The 30 production
 NeoForge GameTests must additionally run inside the real isolated GameTest
 server on Hermes when their integration surface changes:
 
@@ -184,12 +209,13 @@ ssh ian-kengott@100.88.229.63 \
   'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-The runner exits after the matrix completes and must report all 23 required
+The runner exits after the matrix completes and must report all 30 required
 tests passed. The tests cover live registration parity, commands, players,
 attachments, media/tablet and crystal block entities, scheduled expiry,
 serialized tick-queue reload, claim/death migration, relay persistence, remote
 ownership, redstone/data automation, safe follow-up VM queueing from a real
-Vector Step cast, and priority-22 casting/escrow behavior. The parity test reads
+Vector Step cast, priority-22 casting/escrow behavior, and priority-23 durable
+effect ownership, reconciliation, collapse, and cleanup. The parity test reads
 `data/vector_regnum/registration_parity.json` and queries the running registry,
 payload, attachment, creative-tab, and command state; update that manifest when
 an intentional registration changes. A true OS-process stop/start remains part

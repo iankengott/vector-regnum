@@ -8,9 +8,9 @@ import org.junit.jupiter.api.Test;
 
 class GuideElementalIdentityTest {
     @Test
-    void manualV9TeachesPermanentIdentityAndMutableAttunement() throws IOException {
+    void manualV10TeachesPermanentIdentityAndMutableAttunement() throws IOException {
         GuideBook book = GuideDataLoader.loadDefault(getClass().getClassLoader());
-        assertEquals(9, book.version());
+        assertEquals(10, book.version());
         GuidePage page = book.page("elemental_identity").orElseThrow();
         assertTrue(page.body().contains("permanent natural element"));
         assertTrue(page.body().contains("mutable"));

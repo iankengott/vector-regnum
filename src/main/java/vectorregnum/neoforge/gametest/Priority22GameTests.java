@@ -33,8 +33,8 @@ public final class Priority22GameTests {
         CastCost baseline = new CastCost(20.0, 20.0, 1.0, 1.0);
         var refundable = CastingResourceService.begin(player, CastingMethod.BARE,
                 baseline, true, true, ItemStack.EMPTY).orElseThrow();
-        context.assertValueEqual(85.0, ManaData.available(player),
-                "the bounded 5-mana reagent discount should reserve 15 mana");
+        context.assertValueEqual(84.0, ManaData.available(player),
+                "the bounded discount should reserve 15 mana plus 1 prepaid upkeep");
         context.assertValueEqual(1, player.getInventory().countItem(Items.AMETHYST_SHARD),
                 "staged reagent should remain outside inventory while escrow is active");
         CastingResourceService.settle(player, refundable, ResourceEscrow.Outcome.ENGINE_FAILURE);

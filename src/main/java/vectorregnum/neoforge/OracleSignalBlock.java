@@ -9,6 +9,7 @@ import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import vectorregnum.neoforge.effect.PersistentEffectService;
 
 /** A full-strength redstone signal whose persisted scheduled tick removes it safely. */
 public final class OracleSignalBlock extends Block {
@@ -33,7 +34,7 @@ public final class OracleSignalBlock extends Block {
 
     @Override
     protected void tick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
-        if (state.is(this)) world.removeBlock(pos, false);
+        PersistentEffectService.onScheduledBlockTick(world, pos, this);
     }
 
     @Override

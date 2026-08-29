@@ -1,11 +1,11 @@
 # Vector-Regnum
 
-> **Platform status (2026-08-27):** this is the active Vector-Regnum NeoForge
+> **Platform status (2026-08-28):** this is the active Vector-Regnum NeoForge
 > 1.21.1 repository. The Fabric implementation is deprecated and frozen in its
-> own archived repository. Priorities 20a–22 have coherent end-to-end alpha
-> passes. Priority 22 passed its complete automated and guarded Hermes gates;
+> own archived repository. Priorities 20a–23 have coherent end-to-end alpha
+> passes. Priority 23 passed its complete automated and guarded Hermes gates;
 > at Ian's direction, its final runtime and visual checks ran on Hermes only.
-> Priority 23 is the first unfinished item.
+> Priority 24 is the first unfinished item.
 > The frozen Fabric repository and all companion projects are listed in
 > [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
@@ -16,11 +16,11 @@ effects; invalid programs fault at an exact physical sigil and may collapse into
 Wild Magic.
 
 The current build is a substantial playable alpha, not a finished release. It
-implements the first coherent working pass of priorities 1–22: typed/ticked
+implements the first coherent working pass of priorities 1–23: typed/ticked
 execution, authoring and diagnostics,
 safety-bounded control flow, perception, physics, cost accounting, three spell
-media, six quoted casting methods, bounded reagents and escrow, finite crystal
-progression, Ponders, the visual Field Manual, the
+media, six quoted casting methods, bounded reagents and escrow, durable upkeep
+and effect conclusions, finite crystal progression, Ponders, the visual Field Manual, the
 server-backed circle editor, natural crystal progression, GameTests,
 multiplayer/security policy, programmable automation, and compiler-driven
 client presentation.
@@ -39,7 +39,7 @@ development unit inactive and port free. The repeatable visual workflow is
 |---|---|
 | Build | NeoForge 21.1.248, ModDevGradle 2.0.141, Mojang official mappings |
 | Loader surface | NeoForge `@Mod`, deferred registries, attachments, SavedData, payloads, events, custom-feature worldgen, client subscribers |
-| Automated suite | 254 JUnit tests and 23 production NeoForge GameTests |
+| Automated suite | 262 JUnit tests and 30 production NeoForge GameTests |
 | Live parity | Registries, payload directions, attachments, creative tab, and command root checked against a manifest |
 | Launch workflow | Guarded NixOS launcher and guarded Hermes server/client mirror on loopback port 25575 |
 
@@ -93,15 +93,16 @@ closed normally, the owned unit unloaded, and port 25575 was free.
 
 - NeoForge 21.1.248, ModDevGradle 2.0.141, official/Parchment mappings,
   Gradle 9.2.1, and Java 21.
-- **254 passing JUnit tests** covering the compatibility engine, typed VM,
+- **262 passing JUnit tests** covering the compatibility engine, typed VM,
   static stack analysis, semantics/presentation, circle authoring, media,
   guide/Ponder models, geology, transport, multiplayer policy, automation
   ownership, progression, spell-library contracts, priority-20a particle
   allowlist/trace wire/Quasar vocabulary, and priority-21 elemental matrix,
-  migration, tuning, guide, presentation, casting-method, reagent-quote, and
-  escrow checks, plus **23 passing
+  migration, tuning, guide, presentation, casting-method, reagent-quote,
+  escrow, persistent-effect ledger, and SavedData checks, plus **30 passing
   production NeoForge GameTests** on an isolated headless server, including a
-  real Vector Step follow-up-VM regression. The separate
+  real Vector Step follow-up-VM regression and seven priority-23 persistence
+  cases. The separate
   frozen Fabric alpha at `c7371ca` retains its 170-test/16-GameTest record.
 - A Minecraft-independent `vm2` with numbers, booleans, points, vectors,
   entity references, immutable lists, Push/Pop/Dup memory, arithmetic, logic,
@@ -129,6 +130,16 @@ closed normally, the owned unit unloaded, and port 25575 was free.
   ritual offering and never grants a discount. Escrow refunds exact mana,
   items, offerings, and scrolls on policy, unloaded-target, owner-lifecycle,
   shutdown, and internal failure, including absent-owner fallback settlement.
+- Continuing status, force, and temporary-block effects register one bounded,
+  versioned contract per successful cast in per-dimension SavedData. Each
+  contract records its owner, program hash, opaque cleanup handles with their
+  own deadlines, a cast-level natural/hard deadline, and prepaid upkeep. Loaded contracts debit exact scheduled
+  upkeep. Continuing VM forces keep ticking during pre-halt delays and transfer
+  only their unexpired remainder into the contract. A failed synchronous save
+  restores and re-saves the prior ledger before escrow refunds. Unloaded chunks pause reconciliation, while offline owners cannot
+  drive mutations. Natural expiry cleans exactly once. Unpaid or overlong
+  effects persist deterministic collapse and emission states before bounded
+  Wild Magic and idempotent cleanup. `/vectorregnum effect status` exposes the live ledger.
 - Players begin with **0 mana and 0 capacity**. Capacity grows from crystal
   shards; finite source nodes hold eight charges; the last used same-dimension
   node can feed a cast while its chunk remains loaded. Draw strength uses
@@ -141,7 +152,7 @@ closed normally, the owned unit unloaded, and port 25575 was free.
   channel does not rewrite identity. The JSON-backed symmetric matrix admits
   only 100/75/50/25% bands, with Arcane neutral, rare Void, and a 25% floor.
 - Crystal/media recipes, seven persistent research discoveries, advancement
-  guidance, and a versioned first-join Field Manual v9. The v9 book opens a
+  guidance, and a versioned first-join Field Manual v10. The v10 book opens a
   searchable, scrollable, progression-aware visual manual with three original
   illustrated plates, contextual links, tooltips, live shaped/shapeless recipe
   grids, bounded recipe-alternative cycling, and item icons. Its Ponder cards
@@ -231,6 +242,15 @@ The live search overlay was also inspected. Minecraft then closed normally,
 the temporary input binding was restored, the local unit became inactive, and
 port 25575 was free.
 
+Priority 23's final Hermes run registered three continuing effects, debited
+their prepaid upkeep, and logged `PERSISTENT_EFFECT_CHECKPOINT_READY` with
+three live contracts and 12.15 mana remaining. The directly inspected frame
+`visual-evidence/hermes-window-20260829T064530Z.png` showed the authored scene,
+active spell particles, all three natural endpoints and prepaid balances, and
+the matching escrow total. No malformed-contract quarantine occurred. All 59
+Quasar emitters loaded, both isolated Hermes units were stopped, and port 25575
+was free afterward. This runtime and visual closeout was Hermes-only.
+
 ## Build and test
 
 Java 21 is required. Hermes is the default execution host. From the canonical
@@ -244,8 +264,8 @@ ssh ian-kengott@100.88.229.63 \
   'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-The automated suite must report 254 JUnit tests and the GameTest server must
-report all 23 production tests passed at the priority-22 checkpoint.
+The automated suite must report 262 JUnit tests and the GameTest server must
+report all 30 production tests passed at the priority-23 checkpoint.
 `scripts/hermes-build.sh` also validates every checked-in JSON file and shell
 script on Hermes. Run `scripts/hermes-diff-check.sh` in the guarded Hermes
 mirror for the overlaid Git whitespace check documented in
@@ -422,8 +442,8 @@ small versioned API. See [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
 ## Still not finished
 
-Priority 23's persistent-upkeep and natural-conclusion work is next.
-Shared-memory branching,
+Priority 24's advanced shared-memory spell control is next. Bounded variables,
+iterators, watchers, signals, outputs, and deterministic logical branching,
 explicitly approved cooperative rituals, security and accessibility hardening,
 and the optional SMP integration API follow. Configuration, balancing,
 profiling, full playtests, NeoForge/modpack compatibility, final art,
@@ -440,8 +460,8 @@ ladder, approval-gated NixOS opening rule, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
 [ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priorities
-20a–22 have coherent end-to-end alpha passes. Priority 22 passed its automated
-and Hermes visual gates under Ian's Hermes-only instruction; priority 23 is the
+20a–23 have coherent end-to-end alpha passes. Priority 23 passed its automated
+and Hermes visual gates under Ian's Hermes-only instruction; priority 24 is the
 first unfinished item.
 `AGENTS.md` also records Ian's current subagent rule: use OpenAI Codex Luna at
 max reasoning only. If Luna max is unavailable, keep the work in the parent

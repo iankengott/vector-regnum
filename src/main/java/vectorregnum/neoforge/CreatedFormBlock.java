@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import vectorregnum.neoforge.effect.PersistentEffectService;
 
 /** Internal creation material whose scheduled removal survives normal server restarts. */
 public final class CreatedFormBlock extends Block {
@@ -17,6 +18,6 @@ public final class CreatedFormBlock extends Block {
 
     @Override
     protected void tick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
-        if (state.is(this)) world.removeBlock(pos, false);
+        PersistentEffectService.onScheduledBlockTick(world, pos, this);
     }
 }

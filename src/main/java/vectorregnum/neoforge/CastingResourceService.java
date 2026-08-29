@@ -207,10 +207,16 @@ public final class CastingResourceService {
             return Optional.empty();
         }
         double mana = quote.finalCost().mana();
-        if (!ManaData.ensureAvailable(player, mana) || !ManaData.trySpend(player, mana)) {
+        double upkeep = quote.finalCost().upkeep();
+        double commitment = mana + upkeep;
+        if (!Double.isFinite(commitment)) {
+            throw new IllegalArgumentException("cast mana and upkeep commitment overflowed");
+        }
+        if (!ManaData.ensureAvailable(player, commitment)
+                || !ManaData.trySpend(player, commitment)) {
             player.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
-                            "%s needs %.2f μ; only %.2f μ is available",
-                            method.stableLabel(), mana, ManaData.available(player)))
+                            "%s needs %.2f μ plus %.2f μ prepaid upkeep; only %.2f μ is available",
+                            method.stableLabel(), mana, upkeep, ManaData.available(player)))
                     .withStyle(ChatFormatting.RED), true);
             return Optional.empty();
         }
@@ -229,13 +235,14 @@ public final class CastingResourceService {
             }
             ResourceEscrow escrow = ResourceEscrow.reserve(quote, method == CastingMethod.SCROLL);
             UUID id = UUID.randomUUID();
-            ACTIVE.put(id, new ActiveReservation(player, escrow, scrollRefund));
+            ACTIVE.put(id, new ActiveReservation(player, escrow, scrollRefund, upkeep));
             player.sendSystemMessage(Component.literal("Escrow reserved • " + id.toString().substring(0, 8)
-                            + " • " + quote.loadout().totalUnits() + " reagent unit(s)")
+                            + " • " + quote.loadout().totalUnits() + " reagent unit(s) • "
+                            + format(upkeep) + " μ upkeep prepaid")
                     .withStyle(ChatFormatting.GOLD), false);
             return Optional.of(new Reservation(id, quote, castingTicks, true));
         } catch (RuntimeException exception) {
-            if (!ManaData.tryCreditExact(player, mana)) {
+            if (!ManaData.tryCreditExact(player, commitment)) {
                 VectorRegnumMod.LOGGER.error("Could not roll back failed escrow mana reservation for {}",
                         player.getUUID());
             }
@@ -263,11 +270,15 @@ public final class CastingResourceService {
             throw new IllegalArgumentException("escrow owner mismatch");
         }
         ResourceEscrow terminal = active.escrow().settle(outcome);
-        if (terminal.isRefunded()) {
-            if (!ManaData.tryCreditExact(player, terminal.manaRefunded())) {
+        double upkeepRefund = active.upkeepClaimed ? 0.0 : active.upkeepReserved;
+        if (terminal.isRefunded() || upkeepRefund > 0.0) {
+            double refund = terminal.manaRefunded() + upkeepRefund;
+            if (!ManaData.tryCreditExact(player, refund)) {
                 ACTIVE.put(reservation.id(), active);
                 throw new IllegalStateException("reserved mana no longer fits its payer capacity");
             }
+        }
+        if (terminal.isRefunded()) {
             returnReagents(player, terminal.reagentsRefunded());
             if (terminal.scrollRefunded() && !active.scrollRefund().isEmpty()) {
                 player.getInventory().placeItemBackInInventory(active.scrollRefund().copy());
@@ -292,6 +303,33 @@ public final class CastingResourceService {
                     ? ResourceEscrow.State.CONSUMED : ResourceEscrow.State.REFUNDED, false);
         }
         return settle(active.payer(), reservation, outcome);
+    }
+
+    /**
+     * Transfers the prepaid upkeep commitment from a live cast into its durable
+     * persistent-effect ledger. The first claim wins so duplicate semantic
+     * callbacks cannot mint a second balance.
+     */
+    public static double claimUpkeep(Reservation reservation) {
+        Objects.requireNonNull(reservation, "reservation");
+        if (!reservation.funded()) {
+            // Internal follow-ups and the guarded visual showcase do not debit a
+            // player. They still receive the quoted bounded budget so their
+            // continuation follows the same ledger state machine.
+            return reservation.quote().finalCost().upkeep();
+        }
+        ActiveReservation active = ACTIVE.get(reservation.id());
+        if (active == null || active.upkeepClaimed) return 0.0;
+        active.upkeepClaimed = true;
+        return active.upkeepReserved;
+    }
+
+    /** Rolls back a failed durable-ledger handoff before cast settlement. */
+    public static void releaseUpkeepClaim(Reservation reservation) {
+        Objects.requireNonNull(reservation, "reservation");
+        if (!reservation.funded()) return;
+        ActiveReservation active = ACTIVE.get(reservation.id());
+        if (active != null) active.upkeepClaimed = false;
     }
 
     public static int refundOwner(ServerPlayer player, ResourceEscrow.Outcome outcome) {
@@ -330,7 +368,8 @@ public final class CastingResourceService {
 
     public static double reservedMana(UUID owner) {
         return ACTIVE.values().stream().filter(active -> active.owner().equals(owner))
-                .mapToDouble(active -> active.escrow().reservedMana()).sum();
+                .mapToDouble(active -> active.escrow().reservedMana()
+                        + (active.upkeepClaimed ? 0.0 : active.upkeepReserved)).sum();
     }
 
     public static int activeCount(UUID owner) {
@@ -500,7 +539,36 @@ public final class CastingResourceService {
             boolean changed) {
     }
 
-    private record ActiveReservation(ServerPlayer payer, ResourceEscrow escrow, ItemStack scrollRefund) {
+    private static final class ActiveReservation {
+        private final ServerPlayer payer;
+        private final ResourceEscrow escrow;
+        private final ItemStack scrollRefund;
+        private final double upkeepReserved;
+        private boolean upkeepClaimed;
+
+        private ActiveReservation(ServerPlayer payer, ResourceEscrow escrow,
+                ItemStack scrollRefund, double upkeepReserved) {
+            this.payer = Objects.requireNonNull(payer, "payer");
+            this.escrow = Objects.requireNonNull(escrow, "escrow");
+            this.scrollRefund = Objects.requireNonNull(scrollRefund, "scrollRefund");
+            if (!Double.isFinite(upkeepReserved) || upkeepReserved < 0.0) {
+                throw new IllegalArgumentException("upkeep reserve must be finite and non-negative");
+            }
+            this.upkeepReserved = upkeepReserved;
+        }
+
+        private ServerPlayer payer() {
+            return payer;
+        }
+
+        private ResourceEscrow escrow() {
+            return escrow;
+        }
+
+        private ItemStack scrollRefund() {
+            return scrollRefund;
+        }
+
         private UUID owner() {
             return payer.getUUID();
         }

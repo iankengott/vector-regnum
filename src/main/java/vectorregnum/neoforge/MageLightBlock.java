@@ -7,6 +7,7 @@ import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.state.BlockState;
+import vectorregnum.neoforge.effect.PersistentEffectService;
 
 /** A scheduled-tick light: expiry persists with the chunk across server restarts. */
 public final class MageLightBlock extends Block {
@@ -31,6 +32,6 @@ public final class MageLightBlock extends Block {
 
     @Override
     protected void tick(BlockState state, ServerLevel world, BlockPos pos, RandomSource random) {
-        if (state.is(this)) world.removeBlock(pos, false);
+        PersistentEffectService.onScheduledBlockTick(world, pos, this);
     }
 }

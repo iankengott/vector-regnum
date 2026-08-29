@@ -23,20 +23,23 @@ end-to-end alpha passes, but still need balance and hardening.
 
 ## Current handoff checkpoint
 
-As of 2026-08-27, priority 22 is checked. The current NeoForge 1.21.1 tree has
-254 passing JUnit tests and 23 passing production GameTests. Its six casting
-methods share one bounded server quote and escrow contract; four typed vanilla
-reagents reduce individual cost dimensions, while separately staged quartz is
-an offering-only ritual resource. Exact refunds cover missing targets, owner
-lifecycle loss, absent owners, shutdown, policy, and engine failures. Field
-Manual v9 teaches the corrected commands and requested-versus-applied quote.
-The final fresh Hermes checkpoint loaded all 59 Quasar emitters, logged the
-quartz ritual quote and priority-22 marker, and the inspected frame showed the
-authored scene and casting telemetry. Ian directed that no further builds or
-launches run on NixOS, so the final runtime/visual closeout was Hermes-only.
+As of 2026-08-29, priority 23 is checked. The current NeoForge 1.21.1 tree has
+262 passing JUnit tests and 30 passing production GameTests. Continuing status,
+force, and temporary-block effects register bounded per-dimension SavedData
+contracts with versioned ownership, program identity, natural and hard
+deadlines, prepaid upkeep, and idempotent cleanup handles. Loaded contracts
+debit exact upkeep; forces remain live during a delayed owning VM and transfer
+only their unexpired remainder at halt. Failed synchronous saves restore and
+re-save the prior ledger. Unloaded chunks pause reconciliation; offline owners
+cannot drive mutations. Natural expiry cleans once, while unpaid or overlong effects
+persist deterministic collapse before bounded Wild Magic and cleanup. Field
+Manual v10 and `/vectorregnum effect status` teach and expose the contract. The
+final Hermes checkpoint loaded all 59 Quasar emitters, logged three live
+contracts with 12.15 mana escrowed, and the inspected frame showed their
+endpoints, prepaid balances, and active scene. The closeout was Hermes-only.
 Both Hermes development units stopped and port 25575 was free.
 
-Priority 23 is the first unfinished canonical item. Always re-read
+Priority 24 is the first unfinished canonical item. Always re-read
 `ROADMAP.md` before reporting or implementing work because it supersedes this
 dated checkpoint whenever the queue changes.
 
@@ -101,7 +104,7 @@ not complete without the full NeoForge ladder.
    check from `scripts/README.md`; it uses a fresh public clone so
    `git diff --check` covers the candidate tree without running on NixOS.
 
-   The GameTest process must report all 23 required tests passed. Its live
+   The GameTest process must report all 30 required tests passed. Its live
    parity test validates registry IDs, attachments, payload directions,
    creative-tab membership, and the command root against
    `data/vector_regnum/registration_parity.json`.

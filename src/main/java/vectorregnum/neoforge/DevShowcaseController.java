@@ -31,6 +31,7 @@ import vectorregnum.neoforge.multiplayer.ClaimLedger;
 import vectorregnum.neoforge.multiplayer.ClaimSavedData;
 import vectorregnum.neoforge.multiplayer.MultiplayerLifecycleService;
 import vectorregnum.neoforge.multiplayer.PlayerDataMigration;
+import vectorregnum.neoforge.effect.PersistentEffectService;
 import vectorregnum.core.presentation.PresentationElement;
 import vectorregnum.core.presentation.PresentationParticleStyle;
 import vectorregnum.neoforge.presentation.ServerTraces;
@@ -43,6 +44,7 @@ import java.util.UUID;
 /** Makes NeoForge visual checks reproducible without enabling them in normal play. */
 public final class DevShowcaseController {
     private static final Map<UUID, Integer> PENDING = new HashMap<>();
+    private static final Map<UUID, Integer> PENDING_PERSISTENT = new HashMap<>();
     private static final Map<UUID, Integer> PENDING_PALETTE = new HashMap<>();
     private static final java.util.List<StagedBlock> STAGED_BLOCKS = new java.util.ArrayList<>();
     private static boolean registered;
@@ -70,6 +72,7 @@ public final class DevShowcaseController {
     @SubscribeEvent
     public static void onPlayerLoggedOut(PlayerEvent.PlayerLoggedOutEvent event) {
         PENDING.remove(event.getEntity().getUUID());
+        PENDING_PERSISTENT.remove(event.getEntity().getUUID());
         PENDING_PALETTE.remove(event.getEntity().getUUID());
     }
 
@@ -83,6 +86,7 @@ public final class DevShowcaseController {
         }
         STAGED_BLOCKS.clear();
         PENDING.clear();
+        PENDING_PERSISTENT.clear();
         PENDING_PALETTE.clear();
         registered = false;
     }
@@ -106,6 +110,7 @@ public final class DevShowcaseController {
                 runShowcase(player);
             }
         }
+        tickPersistentCheckpoint(server);
         tickPalette(server);
     }
 
@@ -220,26 +225,30 @@ public final class DevShowcaseController {
 
         CastService.cast(player, SpellPresets.FIREBOLT, false);
         CastService.cast(player, SpellPresets.ICE_NOVA, false);
-        LibrarySpellService.castForShowcase(player, "aegis_shell");
-        LibrarySpellService.castForShowcase(player, "featherfall");
-        LibrarySpellService.castForShowcase(player, "redstone_oracle");
+        if (!LibrarySpellService.castForShowcase(player, "aegis_shell")
+                || !LibrarySpellService.castForShowcase(player, "featherfall")
+                || !LibrarySpellService.castForShowcase(player, "redstone_oracle")) {
+            throw new IllegalStateException("priority-23 persistent-effect visual preflight failed");
+        }
+        PENDING_PERSISTENT.put(player.getUUID(), 40);
         // Let the bounded spell/circle cues finish before presenting the
         // canonical grid. This makes the automated visual proof repeatable.
         PENDING_PALETTE.put(player.getUUID(),
                 SpellVisualManager.DEV_SHOWCASE_DURATION_TICKS + 40);
-        player.sendSystemMessage(Component.literal("VECTOR-REGNUM • PRIORITY 22 CASTING CHECKPOINT")
+        player.sendSystemMessage(Component.literal("VECTOR-REGNUM • PRIORITY 23 PERSISTENT MAGIC CHECKPOINT")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
         int playerSchema = player.getData(PlayerAttachmentContent.PLAYER_DATA_SCHEMA);
         if (playerSchema != PlayerDataMigration.CURRENT_SCHEMA) {
             throw new IllegalStateException("player attachment schema did not persist migration");
         }
         VectorRegnumMod.LOGGER.info(
-                "VISUAL_CHECKPOINT_READY milestone=priority_22 player={} circle_sigils={} "
+                "VISUAL_CHECKPOINT_READY milestone=priority_23 player={} circle_sigils={} "
                         + "library_spells={} automation_relay={} vm_status={} vm_cost={} duration_ticks={} "
                         + "persistence_claim={} player_schema={} unlocks_added={} create_renderer_probe={} "
                         + "element_palette_count=14 affinity_matrix=100,75,50,25 opposed_floor=25 "
                         + "natural_element=server_authoritative channel_attunement={} "
-                        + "casting_methods=6 reagent_kinds=4 ritual_offering=quartz field_manual=9",
+                        + "casting_methods=6 reagent_kinds=4 ritual_offering=quartz field_manual=10 "
+                        + "persistent_contracts=queued",
                 player.getGameProfile().getName(),
                 circle.sigils().size(),
                 ProgressionSpellLibrary.ALL.size(),
@@ -252,6 +261,38 @@ public final class DevShowcaseController {
                 unlocksAdded,
                 createRendererProbe,
                 ManaData.channelAffinity(player).getSerializedName());
+    }
+
+    private static void tickPersistentCheckpoint(MinecraftServer server) {
+        Iterator<Map.Entry<UUID, Integer>> iterator = PENDING_PERSISTENT.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<UUID, Integer> entry = iterator.next();
+            int ticks = entry.getValue() - 1;
+            if (ticks > 0) {
+                entry.setValue(ticks);
+                continue;
+            }
+            iterator.remove();
+            ServerPlayer player = server.getPlayerList().getPlayer(entry.getKey());
+            if (player == null) continue;
+            var contracts = PersistentEffectService.ownedBy(player);
+            if (contracts.isEmpty()) {
+                throw new IllegalStateException(
+                        "priority-23 showcase produced no durable persistent-effect contract");
+            }
+            double upkeep = contracts.stream()
+                    .mapToDouble(vectorregnum.core.effect.PersistentEffectContract::prepaidUpkeep)
+                    .sum();
+            player.sendSystemMessage(Component.literal(String.format(java.util.Locale.ROOT,
+                            "PERSISTENT MAGIC • %d active contract(s) • %.2f μ escrow left",
+                            contracts.size(), upkeep))
+                    .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), false);
+            VectorRegnumMod.LOGGER.info(
+                    "PERSISTENT_EFFECT_CHECKPOINT_READY player={} contracts={} upkeep_remaining={} "
+                            + "saved_data={} field_manual=10 command=\"/vectorregnum effect status\"",
+                    player.getGameProfile().getName(), contracts.size(), upkeep,
+                    vectorregnum.neoforge.effect.PersistentEffectSavedData.FILE_ID);
+        }
     }
 
     private static void tickPalette(MinecraftServer server) {

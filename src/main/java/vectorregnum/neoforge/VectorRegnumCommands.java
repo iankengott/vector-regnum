@@ -16,9 +16,11 @@ import vectorregnum.core.Sigil;
 import vectorregnum.core.circle.SpellMedium;
 import vectorregnum.core.casting.CastingMethod;
 import vectorregnum.core.casting.ReagentKind;
+import vectorregnum.core.effect.PersistentEffectContract;
 import vectorregnum.core.automation.AutomationRule;
 import vectorregnum.neoforge.automation.AutomationContent;
 import vectorregnum.neoforge.automation.AutomationRelayBlockEntity;
+import vectorregnum.neoforge.effect.PersistentEffectService;
 import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
 import vectorregnum.neoforge.progression.ManaAffinity;
 import vectorregnum.neoforge.progression.ProgressionContent;
@@ -71,6 +73,10 @@ public final class VectorRegnumCommands {
         }
         mana.then(attune);
         root.then(mana);
+        root.then(Commands.literal("effect")
+                .executes(context -> effectStatus(context.getSource()))
+                .then(Commands.literal("status")
+                        .executes(context -> effectStatus(context.getSource()))));
         root.then(Commands.literal("give_tome")
                 .requires(source -> source.hasPermission(2))
                 .executes(context -> giveTome(context.getSource())));
@@ -300,6 +306,31 @@ public final class VectorRegnumCommands {
                     .withStyle(ChatFormatting.GRAY), false);
         }
         return 1;
+    }
+
+    private static int effectStatus(CommandSourceStack source) {
+        ServerPlayer player = targetPlayer(source);
+        if (player == null) return noPlayer(source);
+        List<PersistentEffectContract> effects = PersistentEffectService.ownedBy(player);
+        if (effects.isEmpty()) {
+            player.sendSystemMessage(Component.literal("No persistent effects are owned by you")
+                    .withStyle(ChatFormatting.GRAY), false);
+            return 1;
+        }
+        long now = player.serverLevel().getGameTime();
+        player.sendSystemMessage(Component.literal("Persistent effects • " + effects.size())
+                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
+        for (PersistentEffectContract effect : effects) {
+            long remaining = Math.max(0L, effect.effectiveDeadlineTick() - now);
+            player.sendSystemMessage(Component.literal(String.format(java.util.Locale.ROOT,
+                            "%s • %s • %d handle(s) • %dt left • %.2f μ upkeep",
+                            effect.effectId().toString().substring(0, 8),
+                            effect.state().name().toLowerCase(java.util.Locale.ROOT),
+                            effect.handles().size(), remaining, effect.prepaidUpkeep()))
+                    .withStyle(effect.state() == PersistentEffectContract.State.ACTIVE
+                            ? ChatFormatting.AQUA : ChatFormatting.LIGHT_PURPLE), false);
+        }
+        return effects.size();
     }
 
     private static int refill(CommandSourceStack source) {

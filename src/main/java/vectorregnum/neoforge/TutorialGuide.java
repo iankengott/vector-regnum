@@ -16,8 +16,8 @@ import java.util.List;
 /** Gives each player a persistent first-join field manual and starter tome. */
 public final class TutorialGuide {
     public static final String FIELD_MANUAL_TITLE_PREFIX = "Vector-Regnum Field Manual v";
-    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "8";
-    private static final int CURRENT_GUIDE_VERSION = 9;
+    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "10";
+    private static final int CURRENT_GUIDE_VERSION = 10;
     private TutorialGuide() {
     }
 
@@ -104,6 +104,9 @@ public final class TutorialGuide {
                 page("SETTLEMENT\n\n"
                         + "After admission, mana, staged reagents, and a scroll enter server escrow. Success and genuine spell faults or Wild Magic consume them. Policy, unloaded-target, rate, shutdown, owner-lifecycle, and internal failures refund or never withdraw them.\n\n"
                         + "Books and world media remain reusable. Cooperative contributor approval belongs to the later ritual system."),
+                page("PERSISTENT MAGIC\n\n"
+                        + "Every continuing effect records its owner, program, dimension, endpoint, hard deadline, cleanup handles, and exact prepaid upkeep. Check yours with /vectorregnum effect status.\n\n"
+                        + "Unloaded chunks pause reconciliation until loaded; offline owners cannot drive world mutations. Natural conclusions clean exactly once. Unpaid or non-concluding magic collapses into bounded deterministic Wild Magic, then cleans."),
                 page("THE TICKED VM\n\n"
                         + "The new runtime has typed numbers, booleans, points, vectors, entities, and lists; Push/Pop memory; delay/duration; branches; and bounded loops.\n\n"
                         + "Load an editable typed example with /vectorregnum circle vm_starter. Use circle params for comma-separated vector/list/control parameters. VM_CREATE_FORM adds bounded material forms. It yields safely at per-tick limits."),

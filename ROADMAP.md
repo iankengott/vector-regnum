@@ -16,7 +16,7 @@ art, UX, or production hardening is complete.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Ice Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 254 JUnit/contract tests, 23 production NeoForge GameTests, plus real
+- [x] 262 JUnit/contract tests, 30 production NeoForge GameTests, plus real
   Hermes server/client boots and direct visual inspection.
 
 ## Priorities 1–10 milestone
@@ -200,7 +200,7 @@ acceptance scope.
     natural element and a separate mutable channel, migrates legacy Frost data
     and block states to Ice, and drives source conversion, spell quotes,
     instability, all 14 tuning items, the then-current Field Manual v7 (now
-    v9), and the complete
+    v10), and the complete
     59-emitter Quasar palette from the canonical data. Remote source draws are
     atomic even when insufficient. The final ladder passed 235 JUnit tests,
     all 19 production GameTests, the focused verifier, JSON/shell/diff checks,
@@ -225,11 +225,33 @@ acceptance scope.
     guarded build/client launch, a Veil 59-emitter checkpoint, live ritual
     quote inspection, and direct screenshot inspection. Both Hermes units were
     stopped and port 25575 was free.
-23. [ ] **Persistent upkeep and natural conclusions.** Give every continuing
+23. [x] **Persistent upkeep and natural conclusions.** Give every continuing
     effect a versioned owner, endpoint/deadline or termination predicate,
     upkeep payer/escrow, offline and unloaded-chunk policy, restart recovery,
     and idempotent atomic cleanup. Unpaid or non-concluding magic transitions
     into bounded deterministic Wild Magic rather than becoming free or orphaned.
+    Successful continuing casts now atomically transfer their quoted prepaid
+    upkeep into one schema-1 per-dimension SavedData contract that records the
+    owner, program hash, dimension, natural and hard deadlines, upkeep cadence
+    and balance, deterministic collapse seed, and bounded opaque cleanup
+    handles with independent deadlines. Casts without continuing handles refund the unused upkeep claim.
+    Continuing VM forces remain active through pre-halt delays and transfer
+    only their unexpired remainder. A failed synchronous registration save
+    restores and re-saves the prior ledger before escrow can refund.
+    Loaded contracts debit exact elapsed cadence; unloaded chunks pause their
+    reconciliation, while offline or invalid owners cannot drive world
+    mutations. Natural expiry cleans exactly once. Unpaid and hard-cap paths
+    persist deterministic collapsed and emitted states around bounded Wild
+    Magic, then clean and remove idempotently across ticks and restarts. Status,
+    force, mage-light, redstone-oracle, and temporary-form handles all use the
+    same durable ledger. `/vectorregnum effect status`, Field Manual v10, and
+    the Ponder primer expose the contract and conclusion rules. The final
+    Hermes-only ladder passed 262 JUnit tests, all 30 production GameTests,
+    focused/JSON/shell/overlay-diff checks, and a guarded client run with all 59
+    Quasar emitters. Its inspected priority-23 frame showed three active
+    contracts, their natural endpoints and prepaid balances, visible spell
+    particles, and 12.15 mana remaining in escrow. Both Hermes units stopped
+    and port 25575 was free.
 24. [ ] **Advanced shared-memory spell control.** Add bounded variables,
     iterators, collision, watcher/signal/output operations, and logical parallel
     branches while retaining a shared `Push`/`Pop` stack. Branches advance in a
@@ -280,7 +302,7 @@ acceptance scope.
 - [x] Command-based server-authoritative editor and persistent draft.
 - [x] Save, inspect, validate, copy into media, and recover via checksums.
 - [x] Animated actual circle topology with compiler order/error highlighting.
-- [x] Versioned Field Manual v9 with exact crystal/media/infrastructure recipes and commands,
+- [x] Versioned Field Manual v10 with exact crystal/media/infrastructure recipes and commands,
   data-driven visual elements, search/history/bookmarks/scaling/scrolling,
   progression gating, live recipe/item rendering, and a native Ponder action.
 - [x] Illustrated custom Field Manual inspired by Patchouli/Lexica Botania and
@@ -332,7 +354,7 @@ acceptance scope.
   media/block-entity round trips, crystal interactions, timers, serialized
   restart contracts, two-player isolation, claims/death migration, relay
   persistence, remote ownership, and redstone/data behavior.
-- [x] Eighteen production NeoForge GameTests replace and extend the legacy integration
+- [x] Twenty-nine production NeoForge GameTests replace and extend the legacy integration
   coverage and add live registration parity while preserving and expanding the
   loader-neutral JUnit suite.
 - [ ] Configuration, balancing, profiling, localization beyond English,

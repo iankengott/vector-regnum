@@ -18,8 +18,10 @@ grep -Fq '21. [x] **Elemental identity and affinity expansion.**' \
     ROADMAP.md || die 'ROADMAP.md does not mark priority 21 complete'
 grep -Fq '22. [x] **Casting media, reagents, and resource escrow.**' \
     ROADMAP.md || die 'ROADMAP.md does not mark priority 22 complete'
-grep -Fq '"version": 9' src/main/resources/assets/vector_regnum/guide/field_manual.json \
-    || die 'Field Manual is not at the priority-22 version'
+grep -Fq '23. [x] **Persistent upkeep and natural conclusions.**' \
+    ROADMAP.md || die 'ROADMAP.md does not mark priority 23 complete'
+grep -Fq '"version": 10' src/main/resources/assets/vector_regnum/guide/field_manual.json \
+    || die 'Field Manual is not at the priority-23 version'
 
 grep -Fq '**Execution-host policy (Ian, 2026-08-27):** Hermes is the default' \
     AGENTS.md || die 'AGENTS.md lost the Hermes-first, approval-gated NixOS policy'
@@ -62,8 +64,13 @@ readonly -a STALE_CLAIMS=(
     'priority 22 remains unfinished'
     'priority 22 is next'
     'priority 22 casting media, reagents, and resource escrow is next'
+    'priority 23 is the first unfinished'
+    'priority 23 remains unfinished'
+    'priority 23 is next'
+    'priority 23 persistent upkeep and natural conclusions is next'
     'priorities 1–20a'
     'priorities 1–21 are checked'
+    'priorities 1–22 are checked'
     '1. On NixOS, use Java 21'
     'the 19 production neoforge gametests'
     'all 19 required tests passed'
@@ -82,5 +89,5 @@ for stale_claim in "${STALE_CLAIMS[@]}"; do
     fi
 done
 
-printf 'HANDOFF_DOCS_OK priority20a=complete priority21=complete priority22=complete hermes_first=true luna_max=true checked_files=%d\n' \
+printf 'HANDOFF_DOCS_OK priority20a=complete priority21=complete priority22=complete priority23=complete hermes_first=true luna_max=true checked_files=%d\n' \
     "${#LIVE_HANDOFF_DOCS[@]}"

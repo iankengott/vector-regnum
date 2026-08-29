@@ -12,7 +12,7 @@ class GuideScreenControllerTest {
     @Test
     void defaultManualLoadsVisualMetadataAndValidLinks() throws IOException {
         GuideBook book = GuideDataLoader.loadDefault(getClass().getClassLoader());
-        assertEquals(9, book.version());
+        assertEquals(10, book.version());
         assertTrue(book.chapters().size() >= 4);
         assertTrue(book.page("mana_sources").orElseThrow().elements().stream()
                 .anyMatch(element -> element.type() == GuideElement.Type.RECIPE
@@ -46,6 +46,11 @@ class GuideScreenControllerTest {
         }
         assertTrue(escrow.body().contains("quartz=ritual_offering"));
         assertTrue(escrow.body().contains("requested and applied"));
+        GuidePage persistent = book.page("persistent_magic").orElseThrow();
+        assertTrue(persistent.body().contains("/vectorregnum effect status"));
+        assertTrue(persistent.body().contains("Restart recovery"));
+        assertTrue(persistent.elements().stream()
+                .anyMatch(element -> element.type() == GuideElement.Type.PONDER));
     }
 
     @Test

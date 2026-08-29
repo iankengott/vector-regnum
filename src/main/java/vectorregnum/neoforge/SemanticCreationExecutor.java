@@ -18,6 +18,7 @@ import vectorregnum.core.semantic.CreationSpec;
 import vectorregnum.core.semantic.SemanticInstruction;
 import vectorregnum.core.semantic.SemanticOpcode;
 import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
+import vectorregnum.neoforge.effect.PersistentEffectService;
 
 /** Server-authoritative bounded material/form placement for executable CREATE_FORM. */
 public final class SemanticCreationExecutor {
@@ -35,6 +36,11 @@ public final class SemanticCreationExecutor {
     }
 
     static int create(ServerPlayer player, CreationSpec spec) {
+        return create(player, spec, null);
+    }
+
+    static int create(ServerPlayer player, CreationSpec spec,
+            PersistentEffectService.Batch persistentEffects) {
         ServerLevel world = player.serverLevel();
         BlockPos anchor = anchor(player);
         int requested = Math.min((int) Math.ceil(spec.volume()),
@@ -47,10 +53,16 @@ public final class SemanticCreationExecutor {
             if (pos.distToCenterSqr(player.position()) > MAX_CAST_RANGE * MAX_CAST_RANGE) continue;
             BlockState old = world.getBlockState(pos);
             if (!old.canBeReplaced() || !SpellSecurityPolicy.canModifyBlock(player, pos, old)) continue;
+            if (!spec.permanent() && persistentEffects != null) {
+                persistentEffects.prepareBlock(pos, state.getBlock(), spec.durationTicks());
+            }
             if (world.setBlock(pos, state, Block.UPDATE_ALL)) {
                 placed++;
                 if (!spec.permanent()) {
                     world.scheduleTick(pos, state.getBlock(), spec.durationTicks());
+                    if (persistentEffects != null) {
+                        persistentEffects.trackBlock(pos, state.getBlock(), spec.durationTicks());
+                    }
                 }
             }
         }

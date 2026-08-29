@@ -10,6 +10,7 @@ import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.NeoForge;
 import vectorregnum.neoforge.automation.AutomationContent;
 import vectorregnum.neoforge.automation.AutomationService;
+import vectorregnum.neoforge.effect.PersistentEffectService;
 import vectorregnum.neoforge.multiplayer.MultiplayerLifecycleService;
 import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
 import vectorregnum.neoforge.progression.ManaAffinity;
@@ -64,6 +65,7 @@ public final class VectorRegnumMod {
 
         NeoForge.EVENT_BUS.register(MultiplayerLifecycleService.class);
         NeoForge.EVENT_BUS.register(NeoForgeVmService.class);
+        NeoForge.EVENT_BUS.register(PersistentEffectService.class);
         NeoForge.EVENT_BUS.register(SpellVisualManager.class);
         NeoForge.EVENT_BUS.register(AutomationService.class);
         NeoForge.EVENT_BUS.register(SpellSecurityPolicy.class);

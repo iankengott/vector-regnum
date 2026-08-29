@@ -477,5 +477,8 @@ Priority 20a's initial optional Veil and target-pack gates passed on 2026-08-20,
 and its complete Veil ownership migration and repeated verification ladder
 passed on 2026-08-21. The final Main-PC attestation exercised authored and
 library casts, F3+T reload, accessible low LOD, and normal cleanup on the final
-artifact. Priorities 20a–22 are checked, and priority 23 is next. No new
+artifact. Priorities 20a–23 are checked, and priority 24 is next. Priority 23's
+durable effect contracts, prepaid upkeep, restart reconciliation, natural
+cleanup, and deterministic collapse passed 262 JUnit tests, 30 production
+GameTests, and the guarded Hermes runtime/visual gate on 2026-08-28. No new
 gameplay lands on Fabric.

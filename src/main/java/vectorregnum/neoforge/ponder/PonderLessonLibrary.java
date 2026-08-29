@@ -62,6 +62,27 @@ public final class PonderLessonLibrary {
                         Map.of("state", "reserved", "owner", "server", "medium", "scroll")),
                 cue(PonderTimeline.CueType.MANA_FLOW, null,
                         Map.of("from", "caster", "to", "escrow", "amount", "23.375")));
+        add(steps, 32, PonderTimeline.Phase.MANA, "Continuing magic owns its upkeep",
+                "The server transfers the quoted upkeep into one versioned effect contract with an owner, endpoint, hard deadline, and bounded cleanup handles.",
+                cue(PonderTimeline.CueType.ESCROW_STATE, null,
+                        Map.of("state", "upkeep_prepaid", "owner", "server_ledger",
+                                "amount", "4", "interval_ticks", "20")),
+                cue(PonderTimeline.CueType.WORLD_EFFECT, null,
+                        Map.of("effect", "PersistentContract", "endpoint_ticks", "1200",
+                                "cleanup", "idempotent", "restart", "reconcile")));
+        add(steps, 28, PonderTimeline.Phase.EXECUTION, "Natural conclusion cleans once",
+                "Loaded effects pay exact installments from escrow. Offline owners cannot drive them; unloaded chunks pause them. At the endpoint the owned handles clean once.",
+                cue(PonderTimeline.CueType.ESCROW_STATE, null,
+                        Map.of("state", "upkeep_paid", "policy", "loaded_only")),
+                cue(PonderTimeline.CueType.WORLD_EFFECT, null,
+                        Map.of("effect", "NaturalConclusion", "cleanup", "atomic_idempotent")));
+        add(steps, 34, PonderTimeline.Phase.FAULT, "Unpaid magic collapses safely",
+                "This warded reconstruction shows an exhausted escrow or missing conclusion crossing its bounded hard cap, emitting deterministic Wild Magic, and cleaning instead of becoming free or orphaned.",
+                cue(PonderTimeline.CueType.WILD_MAGIC, null,
+                        Map.of("fault", "PERSISTENT_CONTRACT", "category", "VIOLENT_MISCAST",
+                                "visual", "bounded_collapse", "seed", "persisted")),
+                cue(PonderTimeline.CueType.WORLD_EFFECT, null,
+                        Map.of("effect", "PersistentCleanup", "cleanup", "idempotent")));
         add(steps, 26, PonderTimeline.Phase.EXECUTION, "The server executes",
                 "The authoritative VM advances its cursor and emits a bounded world effect. The teaching scene only replays that result.",
                 cue(PonderTimeline.CueType.EXECUTION_CURSOR, source(4, 1, 2, "VM_IMPULSE"),

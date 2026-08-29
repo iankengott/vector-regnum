@@ -80,8 +80,12 @@ public final class LibrarySpellService {
         // startSemantic owns admission, source draw, and the atomic spend in
         // that order. Pre-drawing here would debit a crystal before a later
         // rate/concurrency rejection.
-        boolean applied = NeoForgeVmService.startSemantic(player, program, chargeMana, spell.title(),
-                (owner, steps) -> SemanticSpellExecutor.execute(owner, steps, ignoreUnlock));
+        boolean applied = NeoForgeVmService.startSemanticTracked(player, program, chargeMana,
+                spell.title(),
+                (owner, steps, effects) -> SemanticSpellExecutor.execute(
+                        owner, steps, ignoreUnlock, effects),
+                vectorregnum.core.casting.CastingMethod.BARE, true,
+                net.minecraft.world.item.ItemStack.EMPTY, ignored -> { });
         if (!applied) return false;
         player.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
                         "%s woven • %.0f μ • %.1f μ remaining",
