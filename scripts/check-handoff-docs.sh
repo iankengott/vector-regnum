@@ -20,8 +20,8 @@ grep -Fq '22. [x] **Casting media, reagents, and resource escrow.**' \
     ROADMAP.md || die 'ROADMAP.md does not mark priority 22 complete'
 grep -Fq '23. [x] **Persistent upkeep and natural conclusions.**' \
     ROADMAP.md || die 'ROADMAP.md does not mark priority 23 complete'
-grep -Fq '"version": 10' src/main/resources/assets/vector_regnum/guide/field_manual.json \
-    || die 'Field Manual is not at the priority-23 version'
+grep -Fq '"version": 11' src/main/resources/assets/vector_regnum/guide/field_manual.json \
+    || die 'Field Manual is not at the current five-spell-expansion version'
 
 grep -Fq '**Execution-host policy (Ian, 2026-08-27):** Hermes is the default' \
     AGENTS.md || die 'AGENTS.md lost the Hermes-first, approval-gated NixOS policy'

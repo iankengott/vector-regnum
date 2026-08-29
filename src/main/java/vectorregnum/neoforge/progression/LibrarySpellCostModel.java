@@ -39,8 +39,10 @@ public final class LibrarySpellCostModel {
                 double magnitude = operand(instruction, "power", 1.0);
                 work = magnitude * magnitude * 10.0;
             }
+            case SET_TARGET_LIMIT -> control = boundedInt(instruction, "count");
             case SET_DURATION -> duration = boundedInt(instruction, "ticks");
             case APPLY_DAMAGE -> work = 25.0;
+            case APPLY_EXPLOSION -> { work = 80.0; rarity = 1.0; }
             case APPLY_IMPULSE -> work = 20.0;
             case APPLY_SLOW, APPLY_FEATHERFALL -> rarity = 0.5;
             case PLACE_LIGHT -> rarity = 2.0;
@@ -58,6 +60,7 @@ public final class LibrarySpellCostModel {
                 duration = boundedInt(instruction, "ticks");
                 control = 1;
             }
+            case TELEPORT_CASTER -> { work = 100.0; rarity = 3.0; }
             default -> { }
         }
         return new ManaCostModel.Input(work, range, duration, rarity,

@@ -31,5 +31,19 @@ public enum LibraryOpcode {
     EMIT_REDSTONE,
     REPEAT_BOUNDED,
     WAIT_TICKS,
-    EXECUTE
+    EXECUTE,
+    // Appended so existing serialized/presentation ordinals remain stable.
+    ELEMENT_WATER,
+    ELEMENT_AIR,
+    ELEMENT_EARTH,
+    ELEMENT_LIGHTNING,
+    ELEMENT_TIME,
+    ELEMENT_SPACE,
+    ELEMENT_LIGHT,
+    ELEMENT_DARK,
+    ELEMENT_NATURE,
+    ELEMENT_SOUND,
+    SET_TARGET_LIMIT,
+    APPLY_EXPLOSION,
+    TELEPORT_CASTER
 }

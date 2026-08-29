@@ -24,7 +24,9 @@ end-to-end alpha passes, but still need balance and hardening.
 ## Current handoff checkpoint
 
 As of 2026-08-29, priority 23 is checked. The current NeoForge 1.21.1 tree has
-262 passing JUnit tests and 30 passing production GameTests. Continuing status,
+267 passing JUnit tests and 34 passing production GameTests. Its 20-program
+library includes bounded Fireball, Storm Arc, Tidal Prison, Stone Aegis, and
+safe loaded-destination Teleport spells. Continuing status,
 force, and temporary-block effects register bounded per-dimension SavedData
 contracts with versioned ownership, program identity, natural and hard
 deadlines, prepaid upkeep, and idempotent cleanup handles. Loaded contracts
@@ -33,11 +35,13 @@ only their unexpired remainder at halt. Failed synchronous saves restore and
 re-save the prior ledger. Unloaded chunks pause reconciliation; offline owners
 cannot drive mutations. Natural expiry cleans once, while unpaid or overlong effects
 persist deterministic collapse before bounded Wild Magic and cleanup. Field
-Manual v10 and `/vectorregnum effect status` teach and expose the contract. The
-final Hermes checkpoint loaded all 59 Quasar emitters, logged three live
-contracts with 12.15 mana escrowed, and the inspected frame showed their
-endpoints, prepaid balances, and active scene. The closeout was Hermes-only.
-Both Hermes development units stopped and port 25575 was free.
+Manual v11 and `/vectorregnum effect status` teach and expose the contract. The
+final Hermes checkpoint loaded all 59 Quasar emitters and reported 20 library
+spells, Field Manual v11, and all five expansion programs. The directly
+inspected frame `visual-evidence/hermes-window-20260829T111619Z.png` showed the
+bounded Stone Aegis ward centered on the staged scene plus three live contracts
+with 12.15 mana escrowed. The closeout was Hermes-only. Both Hermes development
+units stopped and port 25575 was free.
 
 Priority 24 is the first unfinished canonical item. Always re-read
 `ROADMAP.md` before reporting or implementing work because it supersedes this
@@ -104,7 +108,7 @@ not complete without the full NeoForge ladder.
    check from `scripts/README.md`; it uses a fresh public clone so
    `git diff --check` covers the candidate tree without running on NixOS.
 
-   The GameTest process must report all 30 required tests passed. Its live
+   The GameTest process must report all 34 required tests passed. Its live
    parity test validates registry IDs, attachments, payload directions,
    creative-tab membership, and the command root against
    `data/vector_regnum/registration_parity.json`.

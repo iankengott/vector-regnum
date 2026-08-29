@@ -38,7 +38,7 @@ The wizard does not open, focus, type into, or close Minecraft. It preflights
 the isolated launcher, gives the human an explicit in-game checklist, and then
 verifies permanent natural identity versus mutable channel attunement, Ice
 terminology and visuals, the then-current Field Manual v7 (the repository now
-ships v10), authored/library casts, resource
+ships v11), authored/library casts, resource
 reload, accessible low LOD, the IPv4 endpoint, owned-unit cleanup, and free
 port after the human closes Minecraft normally. It writes the ignored evidence
 record `visual-evidence/main-pc-priority21-visual-attestation.txt` only after
@@ -82,11 +82,11 @@ shell, and source-policy gate with:
 scripts/verify-priority23.sh
 ```
 
-The production GameTest matrix now contains 30 tests, including seven
+The production GameTest matrix now contains 34 tests, including seven
 priority-23 cases for SavedData round-trip, exact loaded upkeep, pre-halt force
 continuation, natural idempotent cleanup, deterministic unpaid collapse,
 offline ownership, and unloaded-chunk pausing. The guarded Hermes visual client must log both
-`VISUAL_CHECKPOINT_READY milestone=priority_23 ... field_manual=10` and
+`VISUAL_CHECKPOINT_READY milestone=priority_23 ... field_manual=11` and
 `PERSISTENT_EFFECT_CHECKPOINT_READY ... contracts=...`, and its live chat must
 show the persistent contract registration plus remaining escrow. Capture only
 after the second marker, open and inspect the image, then stop both development
@@ -198,9 +198,33 @@ client command to prove the dependency-free fallback, for example:
 VR_CLIENT_RENDERER=builtin scripts/hermes-client.sh restart
 ```
 
+## Five-spell expansion metrics
+
+After a guarded sync and build, generate the authoritative Fireball, Storm Arc,
+Tidal Prison, Stone Aegis, and Teleport cost/timing table on Hermes with:
+
+```bash
+ssh ian-kengott@100.88.229.63 \
+  'cd /home/ian-kengott/projects/vector-regnum && scripts/report-five-spell-metrics.sh'
+```
+
+The report warms each semantic adapter/lowerer path 2,000 times and records the
+median of 2,001 compiles. It prints aligned and 75/50/25%-affinity mana, bare
+cast wind-up, quoted versus committed upkeep, duration, cadence, and per-cadence
+debit. Instant spells show the configured upkeep quote floor but commit zero
+upkeep because they register no continuing effect.
+
+The 2026-08-29 final expansion gate passed 267 JUnit tests and all 34
+production GameTests. The guarded client logged 20 library spells, Field Manual
+v11, all five expansion programs, and 59 loaded Quasar emitters. Direct
+inspection of `visual-evidence/hermes-window-20260829T111619Z.png` showed a
+bounded vertical Stone Aegis ward centered on the staged scene alongside the
+three-contract/12.15 μ escrow status. Both units stopped and port 25575 was
+free.
+
 ## Production NeoForge GameTests
 
-The ordinary Gradle `test` task runs JUnit and contract tests. The 30 production
+The ordinary Gradle `test` task runs JUnit and contract tests. The 34 production
 NeoForge GameTests must additionally run inside the real isolated GameTest
 server on Hermes when their integration surface changes:
 
@@ -209,13 +233,15 @@ ssh ian-kengott@100.88.229.63 \
   'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-The runner exits after the matrix completes and must report all 30 required
+The runner exits after the matrix completes and must report all 34 required
 tests passed. The tests cover live registration parity, commands, players,
 attachments, media/tablet and crystal block entities, scheduled expiry,
 serialized tick-queue reload, claim/death migration, relay persistence, remote
 ownership, redstone/data automation, safe follow-up VM queueing from a real
-Vector Step cast, priority-22 casting/escrow behavior, and priority-23 durable
-effect ownership, reconciliation, collapse, and cleanup. The parity test reads
+Vector Step cast, live Fireball impact, Tidal Prison's six-target cap, explicit
+duration, and no-target refund, and Teleport destination behavior,
+priority-22 casting/escrow behavior, and priority-23 durable effect ownership,
+reconciliation, collapse, and cleanup. The parity test reads
 `data/vector_regnum/registration_parity.json` and queries the running registry,
 payload, attachment, creative-tab, and command state; update that manifest when
 an intentional registration changes. A true OS-process stop/start remains part

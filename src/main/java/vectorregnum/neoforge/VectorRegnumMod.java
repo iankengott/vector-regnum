@@ -79,6 +79,7 @@ public final class VectorRegnumMod {
         AutomationService.initialize();
         LibrarySpellService.initialize();
         DevShowcaseController.initialize();
-        LOGGER.info("Vector-Regnum NeoForge initialized: authored circles, vm2, progression, and 15-spell library online");
+        LOGGER.info("Vector-Regnum NeoForge initialized: authored circles, vm2, progression, and {}-spell library online",
+                vectorregnum.neoforge.progression.ProgressionSpellLibrary.ALL.size());
     }
 }

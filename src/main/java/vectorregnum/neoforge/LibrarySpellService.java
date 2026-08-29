@@ -21,10 +21,13 @@ public final class LibrarySpellService {
     private static final Set<String> IMPLEMENTED_SPELL_IDS = Set.of(
             "ember_lance", "chain_ice", "gravity_slam",
             "aegis_shell", "kinetic_ward",
+            "stone_aegis",
             "vector_step", "featherfall",
+            "teleport",
             "mage_light", "excavate", "stoneweave",
             "life_sense", "ore_resonance",
-            "sentry_pulse", "harvest_cycle", "redstone_oracle");
+            "sentry_pulse", "harvest_cycle", "redstone_oracle",
+            "fireball", "storm_arc", "tidal_prison");
     private static boolean initialized;
 
     private LibrarySpellService() {
@@ -96,7 +99,8 @@ public final class LibrarySpellService {
 
     public static void list(ServerPlayer player) {
         ProgressionState state = ProgressionData.get(player);
-        player.sendSystemMessage(Component.literal("VECTOR-REGNUM SPELL LIBRARY • 15 bounded programs")
+        player.sendSystemMessage(Component.literal("VECTOR-REGNUM SPELL LIBRARY • "
+                        + ProgressionSpellLibrary.ALL.size() + " bounded programs")
                 .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
         for (SpellDefinition spell : ProgressionSpellLibrary.ALL) {
             boolean unlocked = spell.isUnlocked(state);

@@ -77,4 +77,20 @@ public enum CastingMethod {
     public String stableLabel() {
         return stableId().replace('_', ' ');
     }
+
+    /** Exact pre-reagent wind-up used by the server for this casting method. */
+    public double baseCastingTicks(int instructionCount) {
+        if (instructionCount < 0) {
+            throw new IllegalArgumentException("instruction count cannot be negative");
+        }
+        double methodTicks = switch (this) {
+            case BARE -> 20.0;
+            case RITUAL -> 60.0;
+            case ENGRAVING -> 30.0;
+            case SPELLBOOK -> 16.0;
+            case SCROLL -> 12.0;
+            case INSTALLED_CIRCLE -> 8.0;
+        };
+        return methodTicks + Math.min(100.0, instructionCount * 0.5);
+    }
 }

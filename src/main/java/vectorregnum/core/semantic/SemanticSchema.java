@@ -20,7 +20,8 @@ public final class SemanticSchema {
             SemanticOpcode.SHAPE_PROJECTILE, SemanticOpcode.SHAPE_AURA,
             SemanticOpcode.SHAPE_BARRIER, SemanticOpcode.APPLY_DAMAGE,
             SemanticOpcode.APPLY_SLOW, SemanticOpcode.APPLY_FEATHERFALL,
-            SemanticOpcode.PLACE_LIGHT, SemanticOpcode.EXECUTE);
+            SemanticOpcode.PLACE_LIGHT, SemanticOpcode.APPLY_EXPLOSION,
+            SemanticOpcode.TELEPORT_CASTER, SemanticOpcode.EXECUTE);
 
     private SemanticSchema() { }
 
@@ -33,6 +34,7 @@ public final class SemanticSchema {
             case SELECT_NEARBY_ENTITIES -> number(opcode, operands, "radius", 0.0, 128.0, false);
             case SET_RADIUS -> number(opcode, operands, "blocks", 0.0, 128.0, false);
             case SET_MAGNITUDE -> number(opcode, operands, "power", 0.0, 16.0, false);
+            case SET_TARGET_LIMIT -> integer(opcode, operands, "count", 1, 16);
             case SET_DURATION -> integer(opcode, operands, "ticks", 1, 1_200);
             case EMIT_REDSTONE -> integer(opcode, operands, "strength", 0, 15);
             case REPEAT_BOUNDED -> integer(opcode, operands, "count", 1, 1_024);

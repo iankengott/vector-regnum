@@ -1,7 +1,7 @@
 {
   "id": "field_manual",
   "title": "Vector-Regnum Field Manual",
-  "version": 10,
+  "version": 11,
   "theme": "brass_ink_and_amethyst",
   "chapters": [
     {
@@ -393,7 +393,7 @@
         {
           "id": "movement_school",
           "title": "Movement Weaving",
-          "body": "Movement programs use typed points, vectors, entities, durations, and validated world effects. Vector Step and Kinetic Ward are the first live VM examples.",
+          "body": "Movement programs use typed points, vectors, entities, durations, and validated world effects. Vector Step and Kinetic Ward are the first live VM examples; Teleport adds a server-validated blink to the safe face of a visible block.",
           "required_unlocks": ["movement_weaving"],
           "elements": [
             {
@@ -403,10 +403,36 @@
               "metadata": { "example": "vector_step", "library_id": "vector_step" }
             },
             {
+              "type": "EXAMPLE",
+              "label": "Teleport",
+              "alt": "Blink to a collision-free loaded block face within the bounded visible raycast.",
+              "metadata": { "example": "teleport", "library_id": "teleport", "command": "/vectorregnum library cast teleport" }
+            },
+            {
               "type": "LINK",
               "label": "Review compiler order",
               "alt": "Return to the circle authoring chapter.",
               "metadata": { "target": "circle_order" }
+            }
+          ]
+        },
+        {
+          "id": "five_spell_expansion",
+          "title": "Five New Programs",
+          "body": "The library now contains 20 server-authoritative programs. Fireball detonates a bounded non-block-breaking impact, Storm Arc strikes at most six nearby hostiles, Tidal Prison slows at most six hostiles for six seconds, Stone Aegis raises an eight-second self barrier, and Teleport blinks to a loaded collision-free block face. Compile and mana costs come from each program's lowered vm2 instructions; use /vectorregnum library inspect <id> before casting.",
+          "required_unlocks": ["combat_weaving"],
+          "elements": [
+            {
+              "type": "EXAMPLE",
+              "label": "Inspect before casting",
+              "alt": "Inspect Fireball's authoritative program and quote, then cast it at a visible target.",
+              "metadata": { "example": "five_spell_expansion", "inspect_command": "/vectorregnum library inspect fireball", "cast_command": "/vectorregnum library cast fireball", "ids": "fireball,storm_arc,tidal_prison,stone_aegis,teleport" }
+            },
+            {
+              "type": "LINK",
+              "label": "Review mana quotes",
+              "alt": "Return to the mana quote explanation.",
+              "metadata": { "target": "mana_quote" }
             }
           ]
         }

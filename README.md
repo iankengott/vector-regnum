@@ -39,7 +39,7 @@ development unit inactive and port free. The repeatable visual workflow is
 |---|---|
 | Build | NeoForge 21.1.248, ModDevGradle 2.0.141, Mojang official mappings |
 | Loader surface | NeoForge `@Mod`, deferred registries, attachments, SavedData, payloads, events, custom-feature worldgen, client subscribers |
-| Automated suite | 262 JUnit tests and 30 production NeoForge GameTests |
+| Automated suite | 267 JUnit tests and 34 production NeoForge GameTests |
 | Live parity | Registries, payload directions, attachments, creative tab, and command root checked against a manifest |
 | Launch workflow | Guarded NixOS launcher and guarded Hermes server/client mirror on loopback port 25575 |
 
@@ -93,16 +93,17 @@ closed normally, the owned unit unloaded, and port 25575 was free.
 
 - NeoForge 21.1.248, ModDevGradle 2.0.141, official/Parchment mappings,
   Gradle 9.2.1, and Java 21.
-- **262 passing JUnit tests** covering the compatibility engine, typed VM,
+- **267 passing JUnit tests** covering the compatibility engine, typed VM,
   static stack analysis, semantics/presentation, circle authoring, media,
   guide/Ponder models, geology, transport, multiplayer policy, automation
   ownership, progression, spell-library contracts, priority-20a particle
   allowlist/trace wire/Quasar vocabulary, and priority-21 elemental matrix,
   migration, tuning, guide, presentation, casting-method, reagent-quote,
-  escrow, persistent-effect ledger, and SavedData checks, plus **30 passing
+  escrow, persistent-effect ledger, SavedData, and five-spell expansion checks,
+  plus **34 passing
   production NeoForge GameTests** on an isolated headless server, including a
-  real Vector Step follow-up-VM regression and seven priority-23 persistence
-  cases. The separate
+  real Vector Step follow-up-VM regression, seven priority-23 persistence
+  cases, and live Fireball, Tidal Prison target-cap, and Teleport execution. The separate
   frozen Fabric alpha at `c7371ca` retains its 170-test/16-GameTest record.
 - A Minecraft-independent `vm2` with numbers, booleans, points, vectors,
   entity references, immutable lists, Push/Pop/Dup memory, arithmetic, logic,
@@ -152,7 +153,7 @@ closed normally, the owned unit unloaded, and port 25575 was free.
   channel does not rewrite identity. The JSON-backed symmetric matrix admits
   only 100/75/50/25% bands, with Arcane neutral, rare Void, and a 25% floor.
 - Crystal/media recipes, seven persistent research discoveries, advancement
-  guidance, and a versioned first-join Field Manual v10. The v10 book opens a
+  guidance, and a versioned first-join Field Manual v11. The v11 book opens a
   searchable, scrollable, progression-aware visual manual with three original
   illustrated plates, contextual links, tooltips, live shaped/shapeless recipe
   grids, bounded recipe-alternative cycling, and item icons. Its Ponder cards
@@ -170,13 +171,16 @@ closed normally, the owned unit unloaded, and port 25575 was free.
   placement and movement with preserved parameters, right-click/Delete removal,
   quoted parameter editing, diagnostics, undo, compile, explicit
   Scroll/Book/Tablet binding, and a server-validated fixed block-face anchor.
-  Static stack analysis rejects invalid vm2 programs before execution. All 15
+  Static stack analysis rejects invalid vm2 programs before execution. All 20
   curated spells lower through one complete opcode-driven semantic backend;
   authored `VM_CREATE_FORM` programs create bounded permission-checked material
   forms, and the presentation IR receives authoritative VM events.
-- Fifteen playable spells across combat, defense, movement, utility,
+- Twenty playable spells across combat, defense, movement, utility,
   detection, and automation. Their semantic programs are quoted through the
   same vm2 cost dimensions; Vector Step and Kinetic Ward use live vm2 physics.
+  Fireball adds a bounded non-block-breaking explosion, Storm Arc and Tidal
+  Prison cap their hostile selections at six, Stone Aegis provides a timed
+  barrier, and Teleport validates its loaded collision-free destination.
 - Temporary Mage Light and Redstone Oracle blocks remove themselves through
   persisted scheduled block ticks, including across a normal server restart.
 - Formal multiplayer lifecycle and security: running spells cancel on owner
@@ -251,6 +255,15 @@ the matching escrow total. No malformed-contract quarantine occurred. All 59
 Quasar emitters loaded, both isolated Hermes units were stopped, and port 25575
 was free afterward. This runtime and visual closeout was Hermes-only.
 
+The five-spell expansion then passed 267 JUnit tests, all 34 production
+GameTests, the guarded Hermes overlay diff, and a second Hermes-only client
+checkpoint. The server reported `library_spells=20`, `field_manual=11`, and
+`five_spell_expansion=5` while Veil loaded all 59 Quasar emitters. Direct
+inspection of `visual-evidence/hermes-window-20260829T111619Z.png` showed the
+bounded vertical Stone Aegis ward layer centered on the staged scene and the
+three-contract/12.15 μ escrow status. Both development units stopped and port
+25575 was free.
+
 ## Build and test
 
 Java 21 is required. Hermes is the default execution host. From the canonical
@@ -264,8 +277,8 @@ ssh ian-kengott@100.88.229.63 \
   'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-The automated suite must report 262 JUnit tests and the GameTest server must
-report all 30 production tests passed at the priority-23 checkpoint.
+The automated suite must report 267 JUnit tests and the GameTest server must
+report all 34 production tests passed.
 `scripts/hermes-build.sh` also validates every checked-in JSON file and shell
 script on Hermes. Run `scripts/hermes-diff-check.sh` in the guarded Hermes
 mirror for the overlaid Git whitespace check documented in

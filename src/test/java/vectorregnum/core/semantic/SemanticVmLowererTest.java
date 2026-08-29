@@ -85,6 +85,7 @@ class SemanticVmLowererTest {
             case SELECT_NEARBY_ENTITIES -> number(opcode, "radius", 8, source);
             case SET_RADIUS -> number(opcode, "blocks", 4, source);
             case SET_MAGNITUDE -> number(opcode, "power", 2, source);
+            case SET_TARGET_LIMIT -> number(opcode, "count", 4, source);
             case SET_DURATION -> number(opcode, "ticks", 20, source);
             case EMIT_REDSTONE -> number(opcode, "strength", 15, source);
             case REPEAT_BOUNDED -> number(opcode, "count", 2, source);

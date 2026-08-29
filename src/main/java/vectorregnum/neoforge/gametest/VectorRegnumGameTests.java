@@ -14,7 +14,10 @@ import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ClientInformation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.arguments.EntityAnchorArgument;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.GameType;
@@ -362,6 +365,110 @@ public final class VectorRegnumGameTests {
         context.runAfterDelay(40, () -> {
             context.assertTrue(player.getDeltaMovement().lengthSqr() > 0.0,
                     "the follow-up impulse VM should execute on a later server tick");
+            completeAfterCleanup(context, player);
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 70)
+    public void fireballUsesTheLibraryVmAndDamagesAVisibleBoundedImpact(GameTestHelper context) {
+        ServerPlayer player = connectedCreativePlayer(context);
+        player.moveTo(context.absolutePos(new BlockPos(1, 2, 2)).getCenter().x,
+                context.absolutePos(new BlockPos(1, 2, 2)).getY(),
+                context.absolutePos(new BlockPos(1, 2, 2)).getCenter().z,
+                -90.0F, 0.0F);
+        var target = context.spawn(EntityType.HUSK, new BlockPos(7, 2, 2));
+        target.setNoAi(true);
+        player.lookAt(EntityAnchorArgument.Anchor.EYES, target.getEyePosition());
+        float health = target.getHealth();
+        ManaData.setForTesting(player, 1_000.0, 1_000.0);
+        ProgressionData.unlock(player, ProgressionUnlock.COMBAT_WEAVING);
+
+        context.assertTrue(LibrarySpellService.cast(player, "fireball"),
+                "Fireball should queue through the real library VM");
+        context.runAfterDelay(45, () -> {
+            context.assertTrue(target.getHealth() < health,
+                    "Fireball should damage its visible impact target after the cast wind-up");
+            context.assertTrue(target.getHealth() >= health - 20.0F,
+                    "Fireball damage must remain inside the semantic damage cap");
+            target.discard();
+            completeAfterCleanup(context, player);
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 70)
+    public void tidalPrisonSlowsAtMostSixNearbyHostiles(GameTestHelper context) {
+        BlockPos start = context.absolutePos(new BlockPos(5, 2, 5));
+        ServerPlayer player = connectedCreativePlayer(context);
+        player.moveTo(start.getX() + 0.5, start.getY(), start.getZ() + 0.5,
+                0.0F, 0.0F);
+        var targets = List.of(
+                context.spawn(EntityType.HUSK, new BlockPos(3, 2, 5)),
+                context.spawn(EntityType.HUSK, new BlockPos(4, 2, 5)),
+                context.spawn(EntityType.HUSK, new BlockPos(5, 2, 3)),
+                context.spawn(EntityType.HUSK, new BlockPos(5, 2, 4)),
+                context.spawn(EntityType.HUSK, new BlockPos(6, 2, 5)),
+                context.spawn(EntityType.HUSK, new BlockPos(5, 2, 6)),
+                context.spawn(EntityType.HUSK, new BlockPos(9, 2, 5)));
+        targets.forEach(target -> target.setNoAi(true));
+        ManaData.setForTesting(player, 1_000.0, 1_000.0);
+        ProgressionData.unlock(player, ProgressionUnlock.COMBAT_WEAVING);
+
+        context.assertTrue(LibrarySpellService.cast(player, "tidal_prison"),
+                "Tidal Prison should queue through the real library VM");
+        context.runAfterDelay(45, () -> {
+            long slowed = targets.stream()
+                    .filter(target -> target.hasEffect(MobEffects.MOVEMENT_SLOWDOWN)).count();
+            context.assertValueEqual(6L, slowed,
+                    "Tidal Prison should enforce its six-target semantic limit");
+            int longestRemaining = targets.stream()
+                    .map(target -> target.getEffect(MobEffects.MOVEMENT_SLOWDOWN))
+                    .filter(java.util.Objects::nonNull)
+                    .mapToInt(net.minecraft.world.effect.MobEffectInstance::getDuration)
+                    .max().orElse(0);
+            context.assertTrue(longestRemaining > 0 && longestRemaining <= 120,
+                    "Tidal Prison should honor its explicit 120-tick duration");
+            targets.forEach(net.minecraft.world.entity.Entity::discard);
+            completeAfterCleanup(context, player);
+        });
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 20)
+    public void tidalPrisonRejectsAnEmptyHostileSelectionBeforeCharging(GameTestHelper context) {
+        ServerPlayer player = connectedCreativePlayer(context);
+        ManaData.setForTesting(player, 1_000.0, 1_000.0);
+        ProgressionData.unlock(player, ProgressionUnlock.COMBAT_WEAVING);
+        double before = ManaData.available(player);
+
+        context.assertTrue(!LibrarySpellService.cast(player, "tidal_prison"),
+                "Tidal Prison should reject an empty hostile selection during preflight");
+        context.assertTrue(ManaData.available(player) == before,
+                "Rejected Tidal Prison preflight must not consume mana");
+        completeAfterCleanup(context, player);
+    }
+
+    @GameTest(template = "empty", timeoutTicks = 70)
+    public void teleportMovesTheCasterOnlyToAClearLoadedBlockFace(GameTestHelper context) {
+        BlockPos start = new BlockPos(1, 2, 2);
+        BlockPos target = new BlockPos(7, 3, 2);
+        BlockPos destination = new BlockPos(6, 3, 2);
+        context.setBlock(target, Blocks.STONE);
+        context.setBlock(destination.below(), Blocks.STONE);
+        ServerPlayer player = connectedCreativePlayer(context);
+        BlockPos absoluteStart = context.absolutePos(start);
+        player.moveTo(absoluteStart.getX() + 0.5, absoluteStart.getY(),
+                absoluteStart.getZ() + 0.5, -90.0F, 0.0F);
+        player.lookAt(EntityAnchorArgument.Anchor.EYES,
+                net.minecraft.world.phys.Vec3.atCenterOf(context.absolutePos(target)));
+        ManaData.setForTesting(player, 1_000.0, 1_000.0);
+        ProgressionData.unlock(player, ProgressionUnlock.MOVEMENT_WEAVING);
+
+        context.assertTrue(LibrarySpellService.cast(player, "teleport"),
+                "Teleport should queue through the real library VM");
+        context.runAfterDelay(45, () -> {
+            context.assertValueEqual(context.absolutePos(destination), player.blockPosition(),
+                    "Teleport should place the caster at the visible block face");
+            context.assertTrue(player.getDeltaMovement().lengthSqr() == 0.0,
+                    "Teleport should clear stale movement at arrival");
             completeAfterCleanup(context, player);
         });
     }

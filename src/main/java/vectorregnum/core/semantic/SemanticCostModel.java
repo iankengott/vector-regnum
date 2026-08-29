@@ -8,7 +8,7 @@ public final class SemanticCostModel {
 
     public static boolean isRepeatableAction(SemanticOpcode opcode) {
         return switch (opcode) {
-            case APPLY_DAMAGE, APPLY_IMPULSE, APPLY_SLOW, APPLY_FEATHERFALL, PLACE_LIGHT,
+            case APPLY_DAMAGE, APPLY_EXPLOSION, APPLY_IMPULSE, APPLY_SLOW, APPLY_FEATHERFALL, PLACE_LIGHT,
                     BREAK_BLOCKS, TRANSMUTE_BLOCK, CREATE_FORM, EMIT_PARTICLES,
                     EMIT_REDSTONE -> true;
             default -> false;
@@ -31,8 +31,11 @@ public final class SemanticCostModel {
                 double power = SemanticSchema.number(instruction.operands(), "power");
                 work = power * power * 10.0;
             }
+            case SET_TARGET_LIMIT ->
+                    control = SemanticSchema.integer(instruction.operands(), "count");
             case SET_DURATION -> duration = SemanticSchema.integer(instruction.operands(), "ticks");
             case APPLY_DAMAGE -> work = 25;
+            case APPLY_EXPLOSION -> { work = 80; rarity = 1; }
             case APPLY_IMPULSE -> work = 20;
             case APPLY_SLOW, APPLY_FEATHERFALL -> rarity = 0.5;
             case PLACE_LIGHT -> rarity = 2;
@@ -48,6 +51,7 @@ public final class SemanticCostModel {
             case WAIT_TICKS -> {
                 duration = SemanticSchema.integer(instruction.operands(), "ticks"); control = 1;
             }
+            case TELEPORT_CASTER -> { work = 100; rarity = 3; }
             default -> { }
         }
         return new ManaCostModel.Input(work, range, duration, rarity, memory, perception, control);

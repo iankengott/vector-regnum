@@ -15,6 +15,9 @@ import java.util.Set;
  * than Fabric calls so the library can be lowered into vm2 without rewriting content.
  */
 public final class ProgressionSpellLibrary {
+    public static final Set<String> FIVE_SPELL_EXPANSION_IDS = Set.of(
+            "fireball", "teleport", "storm_arc", "tidal_prison", "stone_aegis");
+
     public static final List<SpellDefinition> ALL = List.of(
             spell("ember_lance", "Ember Lance", SpellCategory.COMBAT, 1, 85,
                     ProgressionUnlock.COMBAT_WEAVING,
@@ -30,6 +33,21 @@ public final class ProgressionSpellLibrary {
                     op(ORIGIN_SELF), number(SELECT_NEARBY_ENTITIES, "radius", 5), op(FILTER_HOSTILE),
                     number(SET_MAGNITUDE, "power", 3), text(APPLY_IMPULSE, "direction", "down"),
                     op(APPLY_DAMAGE), op(EXECUTE)),
+            spell("fireball", "Fireball", SpellCategory.COMBAT, 2, 135,
+                    ProgressionUnlock.COMBAT_WEAVING,
+                    op(ORIGIN_SELF), op(LOOK_VECTOR), op(ELEMENT_FIRE), op(SHAPE_PROJECTILE),
+                    number(SET_RADIUS, "blocks", 3), number(SET_MAGNITUDE, "power", 3),
+                    number(SET_TARGET_LIMIT, "count", 6), op(APPLY_EXPLOSION), op(EXECUTE)),
+            spell("storm_arc", "Storm Arc", SpellCategory.COMBAT, 2, 160,
+                    ProgressionUnlock.COMBAT_WEAVING,
+                    op(ORIGIN_SELF), number(SELECT_NEARBY_ENTITIES, "radius", 8), op(FILTER_HOSTILE),
+                    op(ELEMENT_LIGHTNING), op(SHAPE_AURA), number(SET_TARGET_LIMIT, "count", 6),
+                    number(SET_MAGNITUDE, "power", 2.2), op(APPLY_DAMAGE), op(EXECUTE)),
+            spell("tidal_prison", "Tidal Prison", SpellCategory.COMBAT, 2, 145,
+                    ProgressionUnlock.COMBAT_WEAVING,
+                    op(ORIGIN_SELF), number(SELECT_NEARBY_ENTITIES, "radius", 6), op(FILTER_HOSTILE),
+                    op(ELEMENT_WATER), op(SHAPE_AURA), number(SET_TARGET_LIMIT, "count", 6),
+                    number(SET_DURATION, "ticks", 120), op(APPLY_SLOW), op(EXECUTE)),
 
             spell("aegis_shell", "Aegis Shell", SpellCategory.DEFENSE, 2, 155,
                     ProgressionUnlock.DEFENSIVE_WEAVING,
@@ -40,6 +58,11 @@ public final class ProgressionSpellLibrary {
                     op(ORIGIN_SELF), number(SELECT_NEARBY_ENTITIES, "radius", 4), op(FILTER_HOSTILE),
                     number(SET_MAGNITUDE, "power", 2.5), text(APPLY_IMPULSE, "direction", "away"),
                     number(SET_DURATION, "ticks", 80), op(EXECUTE)),
+            spell("stone_aegis", "Stone Aegis", SpellCategory.DEFENSE, 2, 150,
+                    ProgressionUnlock.DEFENSIVE_WEAVING,
+                    op(ORIGIN_SELF), op(ELEMENT_EARTH), op(SHAPE_BARRIER),
+                    number(SET_RADIUS, "blocks", 2.5), number(SET_DURATION, "ticks", 160),
+                    op(EXECUTE)),
 
             spell("vector_step", "Vector Step", SpellCategory.MOVEMENT, 1, 65,
                     ProgressionUnlock.MOVEMENT_WEAVING,
@@ -48,6 +71,10 @@ public final class ProgressionSpellLibrary {
             spell("featherfall", "Featherfall", SpellCategory.MOVEMENT, 1, 45,
                     ProgressionUnlock.MOVEMENT_WEAVING,
                     op(ORIGIN_SELF), number(SET_DURATION, "ticks", 200), op(APPLY_FEATHERFALL), op(EXECUTE)),
+            spell("teleport", "Teleport", SpellCategory.MOVEMENT, 2, 125,
+                    ProgressionUnlock.MOVEMENT_WEAVING,
+                    op(ORIGIN_SELF), op(LOOK_VECTOR), op(RAYCAST_BLOCK), op(ELEMENT_SPACE),
+                    op(TELEPORT_CASTER), op(EXECUTE)),
 
             spell("mage_light", "Mage Light", SpellCategory.UTILITY, 1, 30,
                     ProgressionUnlock.CRYSTAL_HARVEST,

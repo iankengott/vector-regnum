@@ -16,8 +16,8 @@ import java.util.List;
 /** Gives each player a persistent first-join field manual and starter tome. */
 public final class TutorialGuide {
     public static final String FIELD_MANUAL_TITLE_PREFIX = "Vector-Regnum Field Manual v";
-    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "10";
-    private static final int CURRENT_GUIDE_VERSION = 10;
+    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "11";
+    private static final int CURRENT_GUIDE_VERSION = 11;
     private TutorialGuide() {
     }
 
@@ -114,7 +114,7 @@ public final class TutorialGuide {
                         + "The VM can select and raycast entities, then emit validated impulse, acceleration, damping, path, move-toward, and keep-distance effects.\n\n"
                         + "Typed sigils use the VM_ prefix and EXECUTE ends the program. Cost names physical work, range, duration, rarity, memory, perception, and control flow."),
                 page("SPELL LIBRARY\n\n"
-                        + "Use /vectorregnum library list for 15 spells across combat, defense, movement, utility, detection, and automation.\n\n"
+                        + "Use /vectorregnum library list for 20 spells across combat, defense, movement, utility, detection, and automation. The newest programs are Fireball, Storm Arc, Tidal Prison, Stone Aegis, and Teleport.\n\n"
                         + "After drawing crystal mana, spend 25 μ to research a school, for example /vectorregnum research combat_weaving."),
                 page("WILD MAGIC\n\n"
                         + "Compiler faults are physical. Depending on how far the spell progressed, failure may detonate internally, burst as an unstructured element, or become a violent miscast.\n\n"

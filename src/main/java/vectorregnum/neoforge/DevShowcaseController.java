@@ -219,13 +219,13 @@ public final class DevShowcaseController {
 
         var probe = NeoForgeVmService.perceptionProbe(player, 16.0);
         if (probe.status() != vectorregnum.core.vm2.TickResult.Status.HALTED
-                || ProgressionSpellLibrary.ALL.size() != 15) {
+                || ProgressionSpellLibrary.ALL.size() != 20) {
             throw new IllegalStateException("vm2/library automated visual preflight failed");
         }
 
         CastService.cast(player, SpellPresets.FIREBOLT, false);
         CastService.cast(player, SpellPresets.ICE_NOVA, false);
-        if (!LibrarySpellService.castForShowcase(player, "aegis_shell")
+        if (!LibrarySpellService.castForShowcase(player, "stone_aegis")
                 || !LibrarySpellService.castForShowcase(player, "featherfall")
                 || !LibrarySpellService.castForShowcase(player, "redstone_oracle")) {
             throw new IllegalStateException("priority-23 persistent-effect visual preflight failed");
@@ -247,8 +247,8 @@ public final class DevShowcaseController {
                         + "persistence_claim={} player_schema={} unlocks_added={} create_renderer_probe={} "
                         + "element_palette_count=14 affinity_matrix=100,75,50,25 opposed_floor=25 "
                         + "natural_element=server_authoritative channel_attunement={} "
-                        + "casting_methods=6 reagent_kinds=4 ritual_offering=quartz field_manual=10 "
-                        + "persistent_contracts=queued",
+                        + "casting_methods=6 reagent_kinds=4 ritual_offering=quartz field_manual=11 "
+                        + "persistent_contracts=queued five_spell_expansion=5",
                 player.getGameProfile().getName(),
                 circle.sigils().size(),
                 ProgressionSpellLibrary.ALL.size(),
@@ -289,7 +289,7 @@ public final class DevShowcaseController {
                     .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), false);
             VectorRegnumMod.LOGGER.info(
                     "PERSISTENT_EFFECT_CHECKPOINT_READY player={} contracts={} upkeep_remaining={} "
-                            + "saved_data={} field_manual=10 command=\"/vectorregnum effect status\"",
+                            + "saved_data={} field_manual=11 command=\"/vectorregnum effect status\"",
                     player.getGameProfile().getName(), contracts.size(), upkeep,
                     vectorregnum.neoforge.effect.PersistentEffectSavedData.FILE_ID);
         }

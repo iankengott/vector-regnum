@@ -12,7 +12,9 @@ import org.junit.jupiter.api.Test;
 class ProgressionSpellLibraryTest {
     @Test
     void libraryHasMultipleSpellsAndEveryGameplayCategory() {
-        assertTrue(ProgressionSpellLibrary.ALL.size() >= 15);
+        assertEquals(20, ProgressionSpellLibrary.ALL.size());
+        assertTrue(ProgressionSpellLibrary.BY_ID.keySet()
+                .containsAll(ProgressionSpellLibrary.FIVE_SPELL_EXPANSION_IDS));
         assertEquals(EnumSet.allOf(SpellCategory.class),
                 ProgressionSpellLibrary.ALL.stream()
                         .map(SpellDefinition::category)

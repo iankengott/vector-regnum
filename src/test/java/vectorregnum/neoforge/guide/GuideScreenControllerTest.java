@@ -12,7 +12,7 @@ class GuideScreenControllerTest {
     @Test
     void defaultManualLoadsVisualMetadataAndValidLinks() throws IOException {
         GuideBook book = GuideDataLoader.loadDefault(getClass().getClassLoader());
-        assertEquals(10, book.version());
+        assertEquals(11, book.version());
         assertTrue(book.chapters().size() >= 4);
         assertTrue(book.page("mana_sources").orElseThrow().elements().stream()
                 .anyMatch(element -> element.type() == GuideElement.Type.RECIPE
@@ -51,6 +51,11 @@ class GuideScreenControllerTest {
         assertTrue(persistent.body().contains("Restart recovery"));
         assertTrue(persistent.elements().stream()
                 .anyMatch(element -> element.type() == GuideElement.Type.PONDER));
+        GuidePage expansion = book.page("five_spell_expansion").orElseThrow();
+        for (String spell : java.util.List.of(
+                "Fireball", "Storm Arc", "Tidal Prison", "Stone Aegis", "Teleport")) {
+            assertTrue(expansion.body().contains(spell), spell);
+        }
     }
 
     @Test

@@ -16,7 +16,7 @@ art, UX, or production hardening is complete.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Ice Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 262 JUnit/contract tests, 30 production NeoForge GameTests, plus real
+- [x] 267 JUnit/contract tests, 34 production NeoForge GameTests, plus real
   Hermes server/client boots and direct visual inspection.
 
 ## Priorities 1–10 milestone
@@ -42,7 +42,7 @@ art, UX, or production hardening is complete.
 9. [x] Mana-crystal progression: zero start, capacity shards, finite permanent
    source nodes, elemental tuning, inverse-square local/remote draw,
    same-dimension loaded-source validation, research, recipes, and advancements.
-10. [x] Expanded spell library: 15 playable programs across combat, defense,
+10. [x] Expanded spell library: 20 playable programs across combat, defense,
     movement, utility, detection, and automation, all quoted by vm2 cost
     dimensions.
 
@@ -293,7 +293,7 @@ acceptance scope.
 - [x] Executable creation/form opcodes with concrete material/rarity,
   permanence, volume, duration, range, replacement, and permission constraints.
 - [x] Generic lowering/execution for every semantic library opcode through one
-  opcode-driven Fabric adapter shared by all 15 curated spells.
+  opcode-driven semantic adapter shared by all 20 curated spells.
 - [x] Multithreaded automation ingress with immutable data and explicit
   many-producer/single-server-thread queue, VM, world, and mana ownership.
 
@@ -302,7 +302,7 @@ acceptance scope.
 - [x] Command-based server-authoritative editor and persistent draft.
 - [x] Save, inspect, validate, copy into media, and recover via checksums.
 - [x] Animated actual circle topology with compiler order/error highlighting.
-- [x] Versioned Field Manual v10 with exact crystal/media/infrastructure recipes and commands,
+- [x] Versioned Field Manual v11 with exact crystal/media/infrastructure recipes and commands,
   data-driven visual elements, search/history/bookmarks/scaling/scrolling,
   progression gating, live recipe/item rendering, and a native Ponder action.
 - [x] Illustrated custom Field Manual inspired by Patchouli/Lexica Botania and
@@ -333,7 +333,9 @@ acceptance scope.
 
 ## Content and release quality
 
-- [x] Initial useful 15-spell library with concrete bounded world effects.
+- [x] Useful 20-spell library with concrete bounded world effects, including
+  Fireball, Storm Arc, Tidal Prison, Stone Aegis, and safe loaded-destination
+  Teleport programs.
 - [x] Persisted scheduled expiry for temporary light/redstone spell blocks.
 - [x] Stable bounded presentation IR, codec, S2C execution-event bridge, and
   budgeted client runtime shared by library and player-authored spells; see

@@ -23,7 +23,7 @@ rg -q 'vector_regnum_persistent_effects' src/main/java/vectorregnum/neoforge/eff
 rg -q 'COLLAPSE_UNPAID' src/main/java/vectorregnum/neoforge/effect/PersistentEffectService.java
 rg -q 'literal\("effect"\)' src/main/java/vectorregnum/neoforge/VectorRegnumCommands.java
 rg -q 'literal\("status"\)' src/main/java/vectorregnum/neoforge/VectorRegnumCommands.java
-rg -q '"version": 10' src/main/resources/assets/vector_regnum/guide/field_manual.json
+rg -q '"version": 11' src/main/resources/assets/vector_regnum/guide/field_manual.json
 rg -q 'PERSISTENT_EFFECT_CHECKPOINT_READY' src/main/java/vectorregnum/neoforge/DevShowcaseController.java
 rg -q 'tickPending' src/main/java/vectorregnum/neoforge/NeoForgeVmService.java
 rg -q 'persistRegistration' src/test/java/vectorregnum/neoforge/effect/PersistentEffectSavedDataTest.java

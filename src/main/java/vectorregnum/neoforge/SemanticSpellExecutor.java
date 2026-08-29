@@ -38,6 +38,8 @@ import vectorregnum.neoforge.effect.PersistentEffectService;
 
 /** Opcode-driven server adapter for every curated semantic operation. */
 public final class SemanticSpellExecutor {
+    private static final double SEMANTIC_RAYCAST_RANGE = 24.0;
+
     private SemanticSpellExecutor() { }
 
     /** Typed execution refusal so the escrow adapter can distinguish refunds from spell faults. */
@@ -84,15 +86,17 @@ public final class SemanticSpellExecutor {
     public static boolean preflight(ServerPlayer player, List<SemanticInstruction> steps) {
         boolean needsBlock = has(steps, SemanticOpcode.PLACE_LIGHT)
                 || has(steps, SemanticOpcode.BREAK_BLOCKS)
-                || has(steps, SemanticOpcode.TRANSMUTE_BLOCK);
-        if (needsBlock && blockHit(player, 32).isEmpty()) {
+                || has(steps, SemanticOpcode.TRANSMUTE_BLOCK)
+                || has(steps, SemanticOpcode.TELEPORT_CASTER);
+        if (needsBlock && blockHit(player, SEMANTIC_RAYCAST_RANGE).isEmpty()) {
             player.sendSystemMessage(Component.literal("Spell needs a visible block target")
                     .withStyle(ChatFormatting.YELLOW), true);
             return false;
         }
         boolean needsHostile = has(steps, SemanticOpcode.FILTER_HOSTILE)
                 && (has(steps, SemanticOpcode.APPLY_DAMAGE)
-                    || has(steps, SemanticOpcode.APPLY_IMPULSE));
+                    || has(steps, SemanticOpcode.APPLY_IMPULSE)
+                    || has(steps, SemanticOpcode.APPLY_SLOW));
         if (needsHostile) {
             double radius = operand(steps, SemanticOpcode.SELECT_NEARBY_ENTITIES, "radius", 24);
             if (hostiles(player, radius, 1).isEmpty()) {
@@ -102,9 +106,10 @@ public final class SemanticSpellExecutor {
             }
         }
         if (has(steps, SemanticOpcode.SHAPE_PROJECTILE)
-                && has(steps, SemanticOpcode.APPLY_DAMAGE)
+                && (has(steps, SemanticOpcode.APPLY_DAMAGE)
+                    || has(steps, SemanticOpcode.APPLY_EXPLOSION))
                 && !has(steps, SemanticOpcode.SELECT_NEARBY_ENTITIES)
-                && entityHit(player, 32).isEmpty()) {
+                && entityHit(player, SEMANTIC_RAYCAST_RANGE).isEmpty()) {
             player.sendSystemMessage(Component.literal("Spell needs a visible entity target")
                     .withStyle(ChatFormatting.YELLOW), true);
             return false;
@@ -133,7 +138,8 @@ public final class SemanticSpellExecutor {
         private final boolean force;
         private final PersistentEffectService.Batch persistentEffects;
         private double radius = 8, magnitude = 1;
-        private int duration = 1, repeat = 128;
+        private int duration = 1, repeat = 128, targetLimit = 128;
+        private boolean durationConfigured;
         private String element = "none", shape = "aura", filter = "any";
         private BlockHitResult block;
         private Runnable repeatableAction;
@@ -150,7 +156,7 @@ public final class SemanticSpellExecutor {
             switch (step.opcode()) {
                 case ORIGIN_SELF, ORIGIN_TARGET, LOOK_VECTOR, RAYCAST_ENTITY, WAIT_TICKS,
                         EXECUTE -> { }
-                case RAYCAST_BLOCK -> block = blockHit(player, 32).orElse(null);
+                case RAYCAST_BLOCK -> block = blockHit(player, SEMANTIC_RAYCAST_RANGE).orElse(null);
                 case SELECT_NEARBY_ENTITIES -> radius = SemanticSchema.number(step.operands(), "radius");
                 case FILTER_HOSTILE -> filter = "hostile";
                 case FILTER_LIVING -> filter = "living";
@@ -174,16 +180,20 @@ public final class SemanticSpellExecutor {
                 case SHAPE_BARRIER -> shape = "barrier";
                 case SET_RADIUS -> radius = SemanticSchema.number(step.operands(), "blocks");
                 case SET_MAGNITUDE -> magnitude = SemanticSchema.number(step.operands(), "power");
-                case SET_DURATION -> duration = SemanticSchema.integer(step.operands(), "ticks");
+                case SET_TARGET_LIMIT -> targetLimit = SemanticSchema.integer(step.operands(), "count");
+                case SET_DURATION -> {
+                    duration = SemanticSchema.integer(step.operands(), "ticks");
+                    durationConfigured = true;
+                }
                 case REPEAT_BOUNDED -> {
                     repeat = SemanticSchema.integer(step.operands(), "count");
                     if (repeatableAction != null) for (int pass = 1; pass < repeat; pass++) repeatableAction.run();
                 }
                 case APPLY_DAMAGE -> runRepeatable(this::damage);
+                case APPLY_EXPLOSION -> runRepeatable(this::explosion);
                 case APPLY_IMPULSE -> runRepeatable(() -> impulse(SemanticSchema.text(step.operands(),
                         step.operands().keySet().iterator().next())));
-                case APPLY_SLOW -> runRepeatable(() -> livingTargets().forEach(entity ->
-                        applyStatus(entity, MobEffects.MOVEMENT_SLOWDOWN, Math.max(duration, 160), 2)));
+                case APPLY_SLOW -> runRepeatable(this::slow);
                 case APPLY_FEATHERFALL -> runRepeatable(() ->
                         applyStatus(player, MobEffects.SLOW_FALLING, duration, 0));
                 case PLACE_LIGHT -> runRepeatable(this::placeLight);
@@ -193,6 +203,7 @@ public final class SemanticSpellExecutor {
                         player, step.creationSpec(), persistentEffects));
                 case EMIT_PARTICLES -> runRepeatable(() -> particles(SemanticSchema.text(step.operands(), "style")));
                 case EMIT_REDSTONE -> runRepeatable(() -> redstone(SemanticSchema.integer(step.operands(), "strength")));
+                case TELEPORT_CASTER -> teleportCaster();
             }
             if (step.opcode() == SemanticOpcode.EXECUTE && shape.equals("barrier")) barrier();
         }
@@ -203,17 +214,19 @@ public final class SemanticSpellExecutor {
         }
 
         private List<LivingEntity> livingTargets() {
-            if (filter.equals("hostile")) return new ArrayList<>(hostiles(player, radius, repeat));
+            if (filter.equals("hostile")) {
+                return new ArrayList<>(hostiles(player, radius, Math.min(repeat, targetLimit)));
+            }
             return world.getEntitiesOfClass(LivingEntity.class,
                     player.getBoundingBox().inflate(radius), entity -> entity != player && entity.isAlive())
                     .stream().sorted(Comparator.comparingDouble(entity -> entity.distanceToSqr(player)))
-                    .limit(Math.min(128, Math.max(repeat, 64))).toList();
+                    .limit(Math.min(128, targetLimit)).toList();
         }
 
         private void damage() {
             List<? extends LivingEntity> targets;
             if (shape.equals("projectile") && filter.equals("any")) {
-                targets = entityHit(player, 32).map(EntityHitResult::getEntity)
+                targets = entityHit(player, SEMANTIC_RAYCAST_RANGE).map(EntityHitResult::getEntity)
                         .filter(LivingEntity.class::isInstance).map(LivingEntity.class::cast)
                         .map(List::of).orElseGet(List::of);
             } else targets = livingTargets();
@@ -232,8 +245,69 @@ public final class SemanticSpellExecutor {
                 default -> 0;
             };
             float damage = (float) Math.clamp(magnitude * 3.0 + elemental, 1, 20);
-            permitted.stream().limit(repeat)
+            permitted.stream().limit(Math.min(repeat, targetLimit))
                     .forEach(target -> target.hurt(world.damageSources().magic(), damage));
+        }
+
+        private void slow() {
+            List<LivingEntity> targets = livingTargets();
+            requireTarget(targets, "slow target disappeared during cast wind-up");
+            List<LivingEntity> permitted = targets.stream()
+                    .filter(target -> SpellSecurityPolicy.canAffectEntity(player, target)).toList();
+            if (permitted.isEmpty()) rejectPolicy("slow target is protected by server policy");
+            int effectDuration = durationConfigured ? duration : 160;
+            permitted.forEach(target -> applyStatus(target,
+                    MobEffects.MOVEMENT_SLOWDOWN, effectDuration, 2));
+        }
+
+        private void explosion() {
+            EntityHitResult hit = entityHit(player, SEMANTIC_RAYCAST_RANGE).orElse(null);
+            if (hit == null) rejectUnloaded("fireball target disappeared during cast wind-up");
+            Vec3 center = hit.getEntity().position().add(0.0,
+                    hit.getEntity().getBbHeight() * 0.5, 0.0);
+            double boundedRadius = Math.min(8.0, radius);
+            List<LivingEntity> targets = world.getEntitiesOfClass(LivingEntity.class,
+                            new AABB(center, center).inflate(boundedRadius),
+                            entity -> entity != player && entity.isAlive())
+                    .stream().sorted(Comparator.comparingDouble(entity -> entity.distanceToSqr(center)))
+                    .limit(targetLimit).toList();
+            requireTarget(targets, "fireball found no target at impact");
+            List<LivingEntity> permitted = targets.stream()
+                    .filter(target -> SpellSecurityPolicy.canAffectEntity(player, target)).toList();
+            if (permitted.isEmpty()) rejectPolicy("fireball impact is protected by server policy");
+            for (LivingEntity target : permitted) {
+                double distance = Math.sqrt(target.distanceToSqr(center));
+                double falloff = 1.0 - Math.min(1.0, distance / Math.max(1.0, boundedRadius)) * 0.5;
+                float damage = (float) Math.clamp((magnitude * 3.0 + 2.0) * falloff, 1.0, 20.0);
+                target.hurt(world.damageSources().magic(), damage);
+                Vec3 push = target.position().subtract(center);
+                if (push.lengthSqr() < 1.0e-6) push = new Vec3(0.0, 1.0, 0.0);
+                else push = push.normalize();
+                target.setDeltaMovement(target.getDeltaMovement().add(
+                        push.scale(Math.min(1.25, 0.25 + magnitude * 0.2)).add(0.0, 0.2, 0.0)));
+                target.hasImpulse = true;
+            }
+            ServerTraces.burstAll(world, List.of(center), PresentationParticleStyle.EXPLOSION,
+                    PresentationElement.FIRE, 1.0F, 1.0F, 24);
+            player.playSound(SoundEvents.GENERIC_EXPLODE.value(), 0.9F, 1.05F);
+        }
+
+        private void teleportCaster() {
+            if (block == null) rejectUnloaded("teleport destination disappeared during cast wind-up");
+            BlockPos feet = block.getBlockPos().relative(block.getDirection());
+            if (!world.hasChunkAt(feet)) rejectUnloaded("teleport destination chunk is not loaded");
+            Vec3 destination = Vec3.atBottomCenterOf(feet);
+            AABB bounds = player.getDimensions(player.getPose()).makeBoundingBox(destination);
+            if (!world.getWorldBorder().isWithinBounds(bounds) || !world.noCollision(player, bounds)) {
+                rejectPolicy("teleport destination is obstructed or outside the world border");
+            }
+            Vec3 origin = player.position();
+            player.teleportTo(destination.x, destination.y, destination.z);
+            player.setDeltaMovement(Vec3.ZERO);
+            player.fallDistance = 0.0F;
+            ServerTraces.burstAll(world, List.of(origin, destination), PresentationParticleStyle.SPARK,
+                    PresentationElement.SPACE, 0.8F, 1.0F, 16);
+            player.playSound(SoundEvents.CHORUS_FRUIT_TELEPORT, 0.8F, 1.15F);
         }
 
         private void impulse(String direction) {
@@ -393,10 +467,13 @@ public final class SemanticSpellExecutor {
                 ? java.util.Optional.of(block) : java.util.Optional.empty();
     }
     private static java.util.Optional<EntityHitResult> entityHit(ServerPlayer player, double range) {
-        Vec3 start = player.getEyePosition(), end = start.add(player.getViewVector(1).scale(range));
+        Vec3 start = player.getEyePosition();
+        Vec3 fullEnd = start.add(player.getViewVector(1).scale(range));
+        Vec3 end = blockHit(player, range).map(HitResult::getLocation).orElse(fullEnd);
+        double maximumDistance = start.distanceToSqr(end);
         EntityHitResult hit = ProjectileUtil.getEntityHitResult(player, start, end,
                 new AABB(start, end).inflate(1),
-                entity -> entity instanceof LivingEntity && entity.isAlive(), range * range);
+                entity -> entity instanceof LivingEntity && entity.isAlive(), maximumDistance);
         return java.util.Optional.ofNullable(hit);
     }
     private static List<Monster> hostiles(ServerPlayer player, double radius, int maximum) {

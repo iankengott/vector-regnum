@@ -52,15 +52,7 @@ public final class CastingResourceService {
             int instructionCount, double declaredUpkeep, double instability) {
         Objects.requireNonNull(method, "method");
         if (instructionCount < 0) throw new IllegalArgumentException("instruction count cannot be negative");
-        double methodTicks = switch (method) {
-            case BARE -> 20.0;
-            case RITUAL -> 60.0;
-            case ENGRAVING -> 30.0;
-            case SPELLBOOK -> 16.0;
-            case SCROLL -> 12.0;
-            case INSTALLED_CIRCLE -> 8.0;
-        };
-        double castingTicks = methodTicks + Math.min(100.0, instructionCount * 0.5);
+        double castingTicks = method.baseCastingTicks(instructionCount);
         CastingPolicy policy = policy();
         return new CastCost(Math.max(policy.floors().mana(), mana),
                 Math.max(policy.floors().castingTime(), castingTicks),

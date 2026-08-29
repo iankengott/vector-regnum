@@ -44,5 +44,9 @@ public enum SemanticOpcode {
     ELEMENT_LIGHT,
     ELEMENT_DARK,
     ELEMENT_NATURE,
-    ELEMENT_SOUND
+    ELEMENT_SOUND,
+    // Bounded library expansion operations. Keep appended for wire ordinal stability.
+    SET_TARGET_LIMIT,
+    APPLY_EXPLOSION,
+    TELEPORT_CASTER
 }

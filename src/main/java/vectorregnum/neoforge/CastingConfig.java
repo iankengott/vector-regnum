@@ -8,6 +8,7 @@ import vectorregnum.core.casting.ReagentKind;
 
 /** Server-owned floors, caps, and reagent potency for priority-22 cast quotes. */
 public final class CastingConfig {
+    public static final double DEFAULT_MINIMUM_UPKEEP = 0.25;
     public static final ModConfigSpec SPEC;
 
     private static final ModConfigSpec.DoubleValue MINIMUM_MANA;
@@ -32,7 +33,7 @@ public final class CastingConfig {
                 .push("floors");
         MINIMUM_MANA = builder.defineInRange("mana", 1.0, 0.01, 10_000.0);
         MINIMUM_CASTING_TICKS = builder.defineInRange("casting_ticks", 5.0, 1.0, 1_200.0);
-        MINIMUM_UPKEEP = builder.defineInRange("upkeep", 0.25, 0.01, 10_000.0);
+        MINIMUM_UPKEEP = builder.defineInRange("upkeep", DEFAULT_MINIMUM_UPKEEP, 0.01, 10_000.0);
         MINIMUM_INSTABILITY = builder.defineInRange("instability", 0.25, 0.01, 100.0);
         builder.pop();
 

@@ -19,10 +19,10 @@ import java.nio.file.Path;
 
 class LibrarySpellIntegrationContractTest {
     @Test
-    void everyCuratedSpellHasAPlayableFabricImplementation() {
+    void everyCuratedSpellHasAPlayableNeoForgeImplementation() {
         assertEquals(ProgressionSpellLibrary.BY_ID.keySet(),
                 LibrarySpellService.implementedSpellIds());
-        assertEquals(15, LibrarySpellService.implementedSpellIds().size());
+        assertEquals(20, LibrarySpellService.implementedSpellIds().size());
     }
 
     @Test

@@ -128,6 +128,26 @@ public final class PresentationCompiler {
                             PresentationBinding.IMPACT_POINT, 0, 14, .30, false,
                             parameters, MICRO));
                 }
+                case APPLY_EXPLOSION -> {
+                    cues.add(cue(trigger, PresentationPhase.IMPACT,
+                            PresentationCueKind.PARTICLES, "truth/bounded_explosion",
+                            PresentationBinding.IMPACT_POINT, 0, 16, .88,
+                            true, parameters, GESTURE));
+                    cues.add(cue(trigger, PresentationPhase.AFTERMATH,
+                            PresentationCueKind.AFTERMATH, "aftermath/heat_wake",
+                            PresentationBinding.AFFECTED_AREA, 2, 24, .34,
+                            false, parameters, MICRO));
+                }
+                case TELEPORT_CASTER -> {
+                    cues.add(cue(trigger, PresentationPhase.TRAVEL,
+                            PresentationCueKind.RIBBON, "truth/teleport_path",
+                            PresentationBinding.DIRECTION, 0, 10, .76,
+                            true, parameters, GESTURE));
+                    cues.add(cue(trigger, PresentationPhase.IMPACT,
+                            PresentationCueKind.PARTICLES, "truth/teleport_arrival",
+                            PresentationBinding.IMPACT_POINT, 0, 14, .64,
+                            true, parameters, GESTURE));
+                }
                 case APPLY_FEATHERFALL -> cues.add(cue(trigger, PresentationPhase.SUSTAIN,
                         PresentationCueKind.AIR, "truth/featherfall",
                         PresentationBinding.TARGET, 0, style.durationTicks, .52,
