@@ -105,6 +105,13 @@ public final class VmPresentationBridge implements ExecutionEventSink {
                 if (emitted.effect() instanceof WorldEffect.SemanticStep step) {
                     kind = PresentationTrigger.Kind.OPCODE;
                     semantic = Optional.of(step.instruction().opcode());
+                    if (step.instruction().opcode()
+                            == vectorregnum.core.semantic.SemanticOpcode.APPLY_FEATHERFALL) {
+                        // The AIR cue belongs around the caster's feet. Centering a
+                        // sustained cloud volume at eye height can cover the camera
+                        // in both the built-in and Veil renderers.
+                        point = player.position().add(0.0, 0.15, 0.0);
+                    }
                 } else {
                     kind = PresentationTrigger.Kind.WORLD_EFFECT;
                     point = resolvedPoint(emitted.effect());

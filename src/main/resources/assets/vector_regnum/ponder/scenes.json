@@ -21,6 +21,7 @@
     { "id": "unstructured_element_burst", "phases": ["FAULT"], "source": "actual_result_or_authored_reconstruction", "category": "UNSTRUCTURED_ELEMENT_BURST" },
     { "id": "violent_miscast", "phases": ["FAULT"], "source": "actual_result_or_authored_reconstruction", "category": "VIOLENT_MISCAST" },
     { "id": "scroll_lifecycle", "phases": ["COMPILATION", "MANA", "EXECUTION", "FAULT"], "source": "artifact_and_escrow_transition", "shows": ["success_consumption", "genuine_fault_consumption", "refundable_failure_restoration"] },
-    { "id": "casting_methods", "phases": ["COMPILATION", "MANA", "EXECUTION", "FAULT"], "source": "casting_method_and_escrow", "shows": ["bare", "ritual", "engraving", "spellbook", "scroll", "installed_circle"] }
+    { "id": "casting_methods", "phases": ["COMPILATION", "MANA", "EXECUTION", "FAULT"], "source": "casting_method_and_escrow", "shows": ["bare", "ritual", "engraving", "spellbook", "scroll", "installed_circle"] },
+    { "id": "shared_memory_control", "phases": ["COMPILATION", "MANA", "EXECUTION", "FAULT"], "source": "authoritative_vm_messages_and_authored_lesson", "shows": ["creation_order_branch_scheduling", "one_shared_atomic_stack", "named_variables", "one_item_per_tick_iterators", "read_only_collision", "watcher_signal", "bounded_owner_output", "join_cancel_and_bounds"], "truth": ["textual_branch_order", "textual_atomic_operations", "textual_message_sequence", "textual_bounds"], "color_is_never_the_only_signal": true }
   ]
 }

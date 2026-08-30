@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import vectorregnum.core.circle.CircleValue;
+import vectorregnum.core.vm2.AdvancedOperand;
 
 /** Immutable, searchable metadata for a discoverable graphical sigil palette. */
 public final class SigilPalette {
@@ -61,6 +62,8 @@ public final class SigilPalette {
             add(entries, id, Category.VALUE, title(id), "Push a contextual typed value");
         }
         add(entries, "VM_PUSH_NUMBER", Category.VALUE, "Number", "Push a number", number("value"));
+        add(entries, "VM_PUSH_TEXT", Category.VALUE, "Text", "Push bounded owner-visible text",
+                text("text"));
         add(entries, "VM_PUSH_BOOLEAN", Category.VALUE, "Boolean", "Push true or false", bool("value"));
         add(entries, "VM_PUSH_VECTOR", Category.VALUE, "Vector", "Push an x/y/z vector",
                 number("x"), number("y"), number("z"));
@@ -85,10 +88,39 @@ public final class SigilPalette {
         add(entries, "VM_DELAY", Category.CONTROL, "Delay", "Yield for ticks", integer("ticks"));
         add(entries, "VM_DURATION", Category.CONTROL, "Duration", "Set effect duration", integer("ticks"));
 
+        add(entries, "VM_STORE_VARIABLE", Category.VARIABLE, "Store variable",
+                "Pop one typed value into a named variable", identifier("name"));
+        add(entries, "VM_LOAD_VARIABLE", Category.VARIABLE, "Load variable",
+                "Push a definitely-assigned named variable", identifier("name"));
+        add(entries, "VM_ITERATOR_BEGIN", Category.ITERATION, "Begin iterator",
+                "Capture a bounded list snapshot", identifier("name"), integer("exit"),
+                integer("max_steps"));
+        add(entries, "VM_ITERATOR_NEXT", Category.ITERATION, "Next iterator",
+                "Advance one iterator item or finish", identifier("name"), integer("body"));
+
         for (String id : List.of("VM_SELECT_RADIUS", "VM_SELECT_HOSTILE", "VM_RAYCAST_ENTITIES")) {
             add(entries, id, Category.PERCEPTION, title(id), "Select a bounded entity list",
                     number("range"), integer("limit"));
         }
+        add(entries, "VM_COLLISION", Category.COLLISION, "Collision",
+                "Ask the validated world boundary about two targets",
+                number("range"), integer("samples"));
+        add(entries, "VM_WATCH_VARIABLE", Category.WATCHER, "Watch variable",
+                "Emit a bounded signal when a variable changes",
+                identifier("name"), number("range"));
+        add(entries, "VM_SIGNAL", Category.SIGNAL, "Signal",
+                "Queue one bounded signal from the shared stack", number("range"));
+        add(entries, "VM_OUTPUT", Category.OUTPUT, "Output",
+                "Send bounded text to the spell owner", number("range"));
+        add(entries, "VM_FORK", Category.PARALLEL, "Fork branch",
+                "Start a deterministic bounded branch body",
+                identifier("name"), integer("start"), integer("end"));
+        add(entries, "VM_JOIN", Category.PARALLEL, "Join branches",
+                "Wait for every active branch to terminate");
+        add(entries, "VM_CANCEL_BRANCH", Category.PARALLEL, "Cancel branch",
+                "Cancel a known branch idempotently", identifier("name"));
+        add(entries, "VM_BRANCH_END", Category.PARALLEL, "End branch",
+                "Terminate the current branch at its bounded body end");
         for (String id : List.of("VM_IMPULSE", "VM_ACCELERATION", "VM_DAMPING",
                 "VM_FOLLOW_PATH", "VM_MOVE_TOWARD", "VM_KEEP_DISTANCE")) {
             add(entries, id, Category.PHYSICS, title(id), "Emit a bounded physics command",
@@ -122,6 +154,11 @@ public final class SigilPalette {
         return new ParameterSpec(name, ParameterKind.TEXT, "Text value");
     }
 
+    private static ParameterSpec identifier(String name) {
+        return new ParameterSpec(name, ParameterKind.IDENTIFIER,
+                "Identifier matching [a-z][a-z0-9_]{0,31}");
+    }
+
     private static String title(String id) {
         String value = id.startsWith("VM_") ? id.substring(3) : id;
         String[] words = value.toLowerCase(Locale.ROOT).split("_");
@@ -135,15 +172,16 @@ public final class SigilPalette {
 
     public enum Category {
         ORIGIN, DIRECTION, ELEMENT, SHAPE, MODIFIER, VALUE, MEMORY,
-        LOGIC, CONTROL, PERCEPTION, PHYSICS, TERMINAL
-        , CREATION
+        LOGIC, CONTROL, PERCEPTION, PHYSICS, TERMINAL, CREATION,
+        VARIABLE, ITERATION, COLLISION, WATCHER, SIGNAL, OUTPUT, PARALLEL
     }
 
     public enum ParameterKind {
         NUMBER,
         NON_NEGATIVE_INTEGER,
         BOOLEAN,
-        TEXT;
+        TEXT,
+        IDENTIFIER;
 
         CircleValue parse(String raw) {
             String value = Objects.requireNonNull(raw, "parameter value").strip();
@@ -165,6 +203,8 @@ public final class SigilPalette {
                 }
                 case TEXT -> new CircleValue.TextValue(value.startsWith("text:")
                         ? value.substring("text:".length()) : value);
+                case IDENTIFIER -> new CircleValue.TextValue(AdvancedOperand.checkedName(
+                        value.startsWith("text:") ? value.substring("text:".length()) : value));
             };
         }
     }

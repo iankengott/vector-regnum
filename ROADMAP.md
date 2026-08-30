@@ -16,8 +16,9 @@ art, UX, or production hardening is complete.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Ice Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 267 JUnit/contract tests, 34 production NeoForge GameTests, plus real
-  Hermes server/client boots and direct visual inspection.
+- [x] 289 JUnit/contract tests, 39 production NeoForge GameTests, plus real
+  Hermes server/client boots and direct visual/video inspection through
+  priority 24.
 
 ## Priorities 1–10 milestone
 
@@ -252,11 +253,26 @@ acceptance scope.
     contracts, their natural endpoints and prepaid balances, visible spell
     particles, and 12.15 mana remaining in escrow. Both Hermes units stopped
     and port 25575 was free.
-24. [ ] **Advanced shared-memory spell control.** Add bounded variables,
+24. [x] **Advanced shared-memory spell control.** Add bounded variables,
     iterators, collision, watcher/signal/output operations, and logical parallel
     branches while retaining a shared `Push`/`Pop` stack. Branches advance in a
     deterministic server-tick order; shared operations are atomic and traced;
     branch count, work, lifetime, messages, and stack depth remain hard-capped.
+    The final candidate implements the append-only operation vocabulary, typed
+    static analysis, structured iterator and branch validation, atomic
+    same-tick message rollback, conservative costing, server-side collision and
+    owner-only output, compiler/palette support, Field Manual v12, a Ponder,
+    `/vectorregnum vm control_demo`, and a guarded Hermes showcase. It passed
+    289 JUnit tests, all 39 production GameTests, the focused verifier, and the
+    Hermes overlay diff. Video debugging reproduced camera-obscuring
+    Featherfall clouds in both Veil and built-in renderers, traced them to an
+    eye-centered sustained truth cue, and corrected the cue to a bounded
+    feet-anchored volume while delaying the showcase until earlier preludes
+    expire. The directly inspected eight-second final recording
+    `visual-evidence/hermes-window-20260829T214514Z.mp4` retained readable
+    world geometry, HUD, staged blocks, and checkpoint text throughout. Every
+    Hermes test start now resets generated world state while preserving player
+    data, advancements, and statistics.
 25. [ ] **Cooperative rituals and multicasting.** Split/replicate circles and
     combine mana without implicit consent. Every contributor must approve each
     ritual's exact maximum mana, reagent, and upkeep commitment; reservations
@@ -302,7 +318,7 @@ acceptance scope.
 - [x] Command-based server-authoritative editor and persistent draft.
 - [x] Save, inspect, validate, copy into media, and recover via checksums.
 - [x] Animated actual circle topology with compiler order/error highlighting.
-- [x] Versioned Field Manual v11 with exact crystal/media/infrastructure recipes and commands,
+- [x] Versioned Field Manual v12 with exact crystal/media/infrastructure recipes and commands,
   data-driven visual elements, search/history/bookmarks/scaling/scrolling,
   progression gating, live recipe/item rendering, and a native Ponder action.
 - [x] Illustrated custom Field Manual inspired by Patchouli/Lexica Botania and
@@ -356,7 +372,7 @@ acceptance scope.
   media/block-entity round trips, crystal interactions, timers, serialized
   restart contracts, two-player isolation, claims/death migration, relay
   persistence, remote ownership, and redstone/data behavior.
-- [x] Twenty-nine production NeoForge GameTests replace and extend the legacy integration
+- [x] Thirty-nine production NeoForge GameTests replace and extend the legacy integration
   coverage and add live registration parity while preserving and expanding the
   loader-neutral JUnit suite.
 - [ ] Configuration, balancing, profiling, localization beyond English,

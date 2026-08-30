@@ -14,6 +14,11 @@ public interface WorldAccess {
 
     List<EntitySnapshot> select(Vector3 center, double radius, SelectionFilter filter);
 
+    /** Loader-neutral entity/point overlap query. Implementations must not mutate the world. */
+    default boolean collides(CollisionTarget first, CollisionTarget second, double maximumRange) {
+        throw new UnsupportedOperationException("collision query is unavailable");
+    }
+
     WorldAccess EMPTY = new WorldAccess() {
         @Override public Optional<EntitySnapshot> entity(String id) { return Optional.empty(); }
         @Override public Optional<RaycastHit> raycast(Vector3 origin, Vector3 direction,
@@ -49,6 +54,20 @@ public interface WorldAccess {
             kind.ifPresent(value -> {
                 if (value.isBlank()) throw new IllegalArgumentException("kind cannot be blank");
             });
+        }
+    }
+
+    sealed interface CollisionTarget permits CollisionTarget.EntityTarget,
+            CollisionTarget.PointTarget {
+        record EntityTarget(String id) implements CollisionTarget {
+            public EntityTarget {
+                Objects.requireNonNull(id, "id");
+                if (id.isBlank()) throw new IllegalArgumentException("entity id cannot be blank");
+            }
+        }
+
+        record PointTarget(Vector3 point) implements CollisionTarget {
+            public PointTarget { Objects.requireNonNull(point, "point"); }
         }
     }
 }

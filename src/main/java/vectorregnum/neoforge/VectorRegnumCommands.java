@@ -220,7 +220,9 @@ public final class VectorRegnumCommands {
                 .then(Commands.literal("demo")
                         .executes(context -> vmDemo(context.getSource())))
                 .then(Commands.literal("probe")
-                        .executes(context -> vmProbe(context.getSource())));
+                        .executes(context -> vmProbe(context.getSource())))
+                .then(Commands.literal("control_demo")
+                        .executes(context -> vmControlDemo(context.getSource())));
     }
 
     private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack>
@@ -534,6 +536,17 @@ public final class VectorRegnumCommands {
                         report.entityCount(), report.cost().total(), report.cost().range(),
                         report.cost().perception())).withStyle(ChatFormatting.AQUA), false);
         return 1;
+    }
+
+    private static int vmControlDemo(CommandSourceStack source) {
+        ServerPlayer player = targetPlayer(source);
+        if (player == null) return noPlayer(source);
+        boolean accepted = NeoForgeVmService.launchPriority24Demo(player);
+        player.sendSystemMessage(Component.literal(accepted
+                        ? "Priority 24 shared-control demo queued"
+                        : "Priority 24 shared-control demo was rejected")
+                .withStyle(accepted ? ChatFormatting.AQUA : ChatFormatting.RED), false);
+        return accepted ? 1 : 0;
     }
 
     private static int giveAutomationRelay(CommandSourceStack source) {

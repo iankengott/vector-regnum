@@ -12,7 +12,7 @@ class GuideScreenControllerTest {
     @Test
     void defaultManualLoadsVisualMetadataAndValidLinks() throws IOException {
         GuideBook book = GuideDataLoader.loadDefault(getClass().getClassLoader());
-        assertEquals(11, book.version());
+        assertEquals(12, book.version());
         assertTrue(book.chapters().size() >= 4);
         assertTrue(book.page("mana_sources").orElseThrow().elements().stream()
                 .anyMatch(element -> element.type() == GuideElement.Type.RECIPE
@@ -56,6 +56,16 @@ class GuideScreenControllerTest {
                 "Fireball", "Storm Arc", "Tidal Prison", "Stone Aegis", "Teleport")) {
             assertTrue(expansion.body().contains(spell), spell);
         }
+        GuidePage sharedControl = book.page("shared_memory_control").orElseThrow();
+        for (String invariant : java.util.List.of(
+                "one item per server tick", "stable creation order", "atomic and traced",
+                "hard-capped", "never resumes after restart",
+                "/vectorregnum vm control_demo")) {
+            assertTrue(sharedControl.body().contains(invariant), invariant);
+        }
+        assertTrue(sharedControl.elements().stream()
+                .anyMatch(element -> element.type() == GuideElement.Type.PONDER
+                        && element.metadata("scene").equals("shared_memory_control")));
     }
 
     @Test

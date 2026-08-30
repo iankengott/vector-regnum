@@ -131,6 +131,7 @@ public final class PonderLessonLibrary {
         wildMagic(steps, "Violent miscast", "VIOLENT_MISCAST",
                 "A late failure has enough compiled structure to become a violent, displaced result. Server bounds and the ward contain this lesson.",
                 "violent_miscast");
+        sharedMemoryControlSteps(steps);
         add(steps, 30, PonderTimeline.Phase.COMPILATION, "Now replay your own trace",
                 "Cast or compile a circle, then press K. This authored primer is replaced by the latest bounded server trace, live while a VM is running.",
                 cue(PonderTimeline.CueType.SET_PIECE, null,
@@ -138,6 +139,73 @@ public final class PonderLessonLibrary {
                 cue(PonderTimeline.CueType.CAMERA_FOCUS, null,
                         Map.of("target", "circle", "motion", "settle")));
         return new PonderTimeline("workshop-primer", "Spell and Scroll Ponder", steps);
+    }
+
+    /** Authored, bounded primer for the priority-24 control vocabulary. */
+    public static PonderTimeline sharedMemoryControl() {
+        List<PonderTimeline.Step> steps = new ArrayList<>();
+        sharedMemoryControlSteps(steps);
+        return new PonderTimeline("shared_memory_control", "Shared Memory Control Ponder", steps);
+    }
+
+    private static void sharedMemoryControlSteps(List<PonderTimeline.Step> steps) {
+        add(steps, 30, PonderTimeline.Phase.COMPILATION,
+                "Branches follow creation order",
+                "FORK creates a child with the next branch number. The child starts on the next authoritative server tick; each tick visits branch 0, then branch 1, in ascending creation order. This is logical parallelism, never an OS thread.",
+                controlCue("FORK_ORDER", Map.of("branches", "0,1", "schedule", "next_server_tick",
+                        "order", "0_then_1", "parallelism", "logical_only")),
+                cue(PonderTimeline.CueType.SET_PIECE, null,
+                        Map.of("stage", "scribe_workshop", "artifact", "shared_memory")),
+                cue(PonderTimeline.CueType.CAMERA_FOCUS, null,
+                        Map.of("target", "circle", "motion", "settle")));
+        add(steps, 30, PonderTimeline.Phase.MANA,
+                "Control work is quoted before admission",
+                "The static quote includes conservative branch fan-out, iterator, collision, watcher, signal, output, and shared-memory work. Bounds are charged once globally; a branch cannot multiply the budget for free.",
+                cue(PonderTimeline.CueType.MANA_SEGMENT, null,
+                        Map.of("dimension", "control_flow", "amount", "worst_case_bounded",
+                                "total", "quoted_before_admission")),
+                controlCue("BOUNDED_QUOTE", Map.of("work", "global", "analysis", "conservative")));
+        add(steps, 30, PonderTimeline.Phase.EXECUTION,
+                "One atomic stack is shared",
+                "Push and Pop use one shared LIFO for the root and every branch. Each operation is globally ordered and atomic: it commits completely or faults with no partial branch-local merge.",
+                controlCue("SHARED_STACK", Map.of("storage", "one_shared_lifo", "atomic", "true",
+                        "ordering", "global_server_tick", "underflow", "source_fault")));
+        add(steps, 30, PonderTimeline.Phase.EXECUTION,
+                "Variables have names and one shared map",
+                "STORE(name) atomically pops one typed value into the shared variable map. LOAD(name) reads that value back onto the stack. A missing name is a source fault; there is no implicit null or default.",
+                controlCue("SHARED_VARIABLE", Map.of("operations", "STORE_LOAD", "name", "charge",
+                        "storage", "one_shared_map", "missing", "source_fault")));
+        add(steps, 30, PonderTimeline.Phase.EXECUTION,
+                "Iterators advance one item per tick",
+                "ITER_BEGIN captures an immutable bounded list snapshot. ITER_NEXT returns at most one next item on an authoritative tick, never flattening the remainder; every advance consumes the global iterator-step bound.",
+                controlCue("ITERATOR", Map.of("operations", "ITER_BEGIN_ITER_NEXT",
+                        "progress", "one_item_per_tick", "snapshot", "immutable_bounded",
+                        "steps", "global_1024_cap")));
+        add(steps, 30, PonderTimeline.Phase.EXECUTION,
+                "Collision is a read-only boundary query",
+                "COLLISION asks the validated WorldAccess boundary about any pair of entities or points, then pushes one boolean result. It cannot mutate the world, bypass loaded-chunk checks, or skip claim, team, PvP, range, or lifecycle policy.",
+                controlCue("COLLISION", Map.of("result", "one_boolean", "mutation", "none",
+                        "boundary", "WorldAccess", "policy", "server_authoritative")));
+        add(steps, 30, PonderTimeline.Phase.EXECUTION,
+                "Watchers make signals explicit",
+                "WATCH observes a named shared variable. A changed STORE commits the variable and exactly one watcher signal together; an equal replacement emits none. Every explicit SIGNAL keeps its global sequence, while a later same-tick fault discards the staged batch.",
+                controlCue("WATCH_SIGNAL", Map.of("watch", "named_variable", "changed", "one_signal",
+                        "equal", "no_signal", "fault", "discard_staged_batch",
+                        "ordering", "global_sequence")));
+        add(steps, 30, PonderTimeline.Phase.EXECUTION,
+                "Output belongs to the owner",
+                "OUTPUT converts one bounded typed value to canonical plain text and sends an owner-visible record. It cannot execute commands or address arbitrary recipients; output count and total characters remain hard-capped.",
+                controlCue("OWNER_OUTPUT", Map.of("recipient", "owner_only", "commands", "never",
+                        "bound", "64_records_256_chars")));
+        add(steps, 34, PonderTimeline.Phase.FAULT,
+                "Join, cancellation, and bounds close safely",
+                "JOIN waits for the finite branches it captured. CANCEL_BRANCH is idempotent for a known terminal branch, BRANCH_END closes a child exactly once, and deadlines or hard bounds cancel the remaining work. The lesson is textual truth, not a color-only effect.",
+                controlCue("BRANCH_LIFECYCLE", Map.of("join", "captured_set", "cancel", "idempotent",
+                        "end", "exactly_once", "deadline", "cancel_remaining")),
+                cue(PonderTimeline.CueType.RUNTIME_FAULT, null,
+                        Map.of("code", "BOUND_OR_BRANCH_FAULT", "truth", "textual_authoritative",
+                                "partial_state", "never_committed",
+                                "source", "AUTHORED_RECONSTRUCTION")));
     }
 
     private static void sourceStep(List<PonderTimeline.Step> steps, int index, int ring, int slot,
@@ -176,6 +244,15 @@ public final class PonderLessonLibrary {
     private static PonderTimeline.Cue cue(PonderTimeline.CueType type,
             PonderTimeline.SourceRef source, Map<String, String> data) {
         return new PonderTimeline.Cue(type, Optional.ofNullable(source), data);
+    }
+
+    private static PonderTimeline.Cue controlCue(String operation, Map<String, String> details) {
+        java.util.LinkedHashMap<String, String> data = new java.util.LinkedHashMap<>();
+        data.put("trace", "shared_memory_control");
+        data.put("operation", operation);
+        data.put("truth", "textual_authoritative");
+        data.putAll(details);
+        return cue(PonderTimeline.CueType.EXECUTION_CURSOR, null, data);
     }
 
     private static PonderTimeline.SourceRef source(int index, int ring, int slot, String sigil) {

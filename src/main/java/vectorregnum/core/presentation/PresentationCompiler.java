@@ -151,7 +151,7 @@ public final class PresentationCompiler {
                 case APPLY_FEATHERFALL -> cues.add(cue(trigger, PresentationPhase.SUSTAIN,
                         PresentationCueKind.AIR, "truth/featherfall",
                         PresentationBinding.TARGET, 0, style.durationTicks, .52,
-                        true, parameters, GESTURE));
+                        true, withParameter(parameters, "radius", .65), GESTURE));
                 case PLACE_LIGHT, CREATE_FORM, TRANSMUTE_BLOCK -> cues.add(cue(trigger,
                         PresentationPhase.CONTACT, PresentationCueKind.SURFACE,
                         "truth/world_change", PresentationBinding.IMPACT_POINT,
@@ -212,6 +212,30 @@ public final class PresentationCompiler {
                         "truth/delay_hold", PresentationBinding.CAST_ORIGIN,
                         0, Math.min(200, Math.max(1, instruction.argument())), .38,
                         true, style.parameters(), GESTURE));
+                case STORE_VARIABLE, LOAD_VARIABLE, WATCH_VARIABLE -> cues.add(cue(
+                        PresentationTrigger.opcode(instruction.opcode()),
+                        PresentationPhase.GATHERING, PresentationCueKind.RUNES,
+                        "truth/shared_memory", PresentationBinding.CAST_ORIGIN,
+                        0, 12, .42, true, style.parameters(), GESTURE));
+                case ITERATOR_BEGIN, ITERATOR_NEXT -> cues.add(cue(
+                        PresentationTrigger.opcode(instruction.opcode()),
+                        PresentationPhase.SUSTAIN, PresentationCueKind.RIBBON,
+                        "truth/sequential_iterator", PresentationBinding.CAST_ORIGIN,
+                        0, 12, .40, true, style.parameters(), GESTURE));
+                case COLLISION -> cues.add(cue(PresentationTrigger.opcode(Opcode.COLLISION),
+                        PresentationPhase.IMPACT, PresentationCueKind.SURFACE,
+                        "truth/collision_result", PresentationBinding.TARGET,
+                        0, 10, .58, true, style.parameters(), GESTURE));
+                case SIGNAL, OUTPUT -> cues.add(cue(
+                        PresentationTrigger.opcode(instruction.opcode()),
+                        PresentationPhase.IMPACT, PresentationCueKind.PARTICLES,
+                        "truth/authoritative_output", PresentationBinding.CAST_ORIGIN,
+                        0, 10, .52, true, style.parameters(), GESTURE));
+                case FORK, JOIN, CANCEL_BRANCH, BRANCH_END -> cues.add(cue(
+                        PresentationTrigger.opcode(instruction.opcode()),
+                        PresentationPhase.SUSTAIN, PresentationCueKind.BEAM,
+                        "truth/logical_branch", PresentationBinding.CAST_ORIGIN,
+                        0, 12, .46, true, style.parameters(), GESTURE));
                 default -> { }
             }
         }
@@ -243,6 +267,14 @@ public final class PresentationCompiler {
         return new PresentationInstruction(trigger, phase, kind,
                 "vector_regnum:" + renderer, binding, offset, Math.max(1, duration),
                 intensity, truth, parameters, cost);
+    }
+
+    private static Map<String, Double> withParameter(
+            Map<String, Double> parameters, String key, double value) {
+        java.util.LinkedHashMap<String, Double> adjusted =
+                new java.util.LinkedHashMap<>(parameters);
+        adjusted.put(key, value);
+        return Map.copyOf(adjusted);
     }
 
     private static String normalizedId(String id) {

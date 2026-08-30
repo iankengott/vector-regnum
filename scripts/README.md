@@ -38,7 +38,7 @@ The wizard does not open, focus, type into, or close Minecraft. It preflights
 the isolated launcher, gives the human an explicit in-game checklist, and then
 verifies permanent natural identity versus mutable channel attunement, Ice
 terminology and visuals, the then-current Field Manual v7 (the repository now
-ships v11), authored/library casts, resource
+ships v12), authored/library casts, resource
 reload, accessible low LOD, the IPv4 endpoint, owned-unit cleanup, and free
 port after the human closes Minecraft normally. It writes the ignored evidence
 record `visual-evidence/main-pc-priority21-visual-attestation.txt` only after
@@ -191,6 +191,17 @@ scripts/hermes-client.sh restart
 scripts/hermes-client.sh logs
 ```
 
+Every actual `start` or `restart` launches the server from a clean generated
+test world. Immediately before `runServer`, the guarded controller runs
+`scripts/hermes-reset-test-world.sh` on Hermes. It deletes only the contents of
+`run/server/vector-regnum-test/` other than `playerdata/`, `advancements/`, and
+`stats/`, so player identity, inventory/progression attachments, advancements,
+and statistics survive while chunks, entities, points of interest, level data,
+SavedData/effect ledgers, dimensions, and staged-block residue do not. The
+reset refuses the wrong host, user, worktree marker, level name, unit state,
+port, path, or any symlinked protected directory. Do not bypass this reset for
+visual evidence: a fresh flat world is part of the reproducibility contract.
+
 Hermes clients use Veil by default. Set `VR_CLIENT_RENDERER=builtin` on the
 client command to prove the dependency-free fallback, for example:
 
@@ -214,17 +225,40 @@ cast wind-up, quoted versus committed upkeep, duration, cadence, and per-cadence
 debit. Instant spells show the configured upkeep quote floor but commit zero
 upkeep because they register no continuing effect.
 
-The 2026-08-29 final expansion gate passed 267 JUnit tests and all 34
-production GameTests. The guarded client logged 20 library spells, Field Manual
-v11, all five expansion programs, and 59 loaded Quasar emitters. Direct
+The 2026-08-29 five-spell expansion checkpoint passed 267 JUnit tests and all
+34 then-current production GameTests. The guarded client logged 20 library
+spells, Field Manual v11, all five expansion programs, and 59 loaded Quasar
+emitters. Direct
 inspection of `visual-evidence/hermes-window-20260829T111619Z.png` showed a
 bounded vertical Stone Aegis ward centered on the staged scene alongside the
 three-contract/12.15 μ escrow status. Both units stopped and port 25575 was
 free.
 
+## Priority-24 shared-control verifier
+
+After a guarded sync, run `scripts/verify-priority24.sh` on Hermes. It checks
+the append-only advanced-control opcode vocabulary, every named VM bound, the
+no-threading ownership rule, Field Manual v12, the live registration-parity
+contract, focused JUnit discovery, JSON, shell syntax, and whitespace. A
+passing candidate reports:
+
+```text
+PRIORITY24_VERIFY_OK junit_classes=3 gametests=5 opcodes=12 guide=12
+```
+
+The guarded priority-24 client must also log
+`VISUAL_CHECKPOINT_READY milestone=priority_24`. The completed pass reports 289
+JUnit tests and all 39 GameTests. An initial video exposed a sustained
+Featherfall cloud volume obscuring the camera in both Veil and built-in
+renderers. Its truth cue is now feet-anchored with a 0.65-block radius, and the
+showcase waits for earlier cast preludes to expire. Direct inspection of
+`visual-evidence/hermes-window-20260829T214514Z.mp4` and its untouched WebM
+source confirmed that the world, staged structure, HUD, and checkpoint text
+remain readable throughout the corrected eight-second run.
+
 ## Production NeoForge GameTests
 
-The ordinary Gradle `test` task runs JUnit and contract tests. The 34 production
+The ordinary Gradle `test` task runs JUnit and contract tests. The 39 production
 NeoForge GameTests must additionally run inside the real isolated GameTest
 server on Hermes when their integration surface changes:
 
@@ -233,15 +267,17 @@ ssh ian-kengott@100.88.229.63 \
   'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-The runner exits after the matrix completes and must report all 34 required
+The runner exits after the matrix completes and must report all 39 required
 tests passed. The tests cover live registration parity, commands, players,
 attachments, media/tablet and crystal block entities, scheduled expiry,
 serialized tick-queue reload, claim/death migration, relay persistence, remote
 ownership, redstone/data automation, safe follow-up VM queueing from a real
 Vector Step cast, live Fireball impact, Tidal Prison's six-target cap, explicit
 duration, and no-target refund, and Teleport destination behavior,
-priority-22 casting/escrow behavior, and priority-23 durable effect ownership,
-reconciliation, collapse, and cleanup. The parity test reads
+priority-22 casting/escrow behavior, priority-23 durable effect ownership,
+reconciliation, collapse, and cleanup, and five priority-24 advanced-control
+cases covering shared-stack branch order, iterators, collision/messages,
+bounds, and lifecycle cancellation. The parity test reads
 `data/vector_regnum/registration_parity.json` and queries the running registry,
 payload, attachment, creative-tab, and command state; update that manifest when
 an intentional registration changes. A true OS-process stop/start remains part
@@ -266,7 +302,8 @@ It writes `.vector-regnum-hermes-worktree`; every later rsync deletion requires
 the expected remote identity, a validated path, and an exact marker match.
 
 The launch controller copies `dev/hermes/eula.txt` and `server.properties` into
-the excluded remote `run/server/` directory, starts `runServer` as
+the excluded remote `run/server/` directory, resets only generated/world state
+while preserving the three player-owned directories documented above, starts `runServer` as
 `vector-regnum-dev-server.service`, waits until its isolated port **25575** is
 listening, and only then starts the client. The client is already configured to
 quick-play `127.0.0.1:25575` and runs as `vector-regnum-dev-client.service`.
@@ -313,6 +350,19 @@ For context around the game, capture the full desktop:
 ```bash
 scripts/hermes-screenshot.sh desktop
 ```
+
+For temporal inspection, focus Minecraft and record the shortest useful clip:
+
+```bash
+scripts/hermes-record-video.sh 12
+```
+
+The recorder accepts 3–30 seconds, requires exactly one matching Minecraft
+client window, focuses it by its verified Xwayland identity, and records only
+that window. It returns both the untouched WebM source and a review-ready MP4
+to the ignored evidence directory. Inspect duration, resolution, frame rate, a
+timestamped contact sheet, and the full-resolution frames around every flagged
+event; model-generated timestamps are leads rather than conclusions.
 
 Screenshots are copied to the repository's ignored `visual-evidence/` directory
 and the evidence directory is excluded from the source sync. A successful

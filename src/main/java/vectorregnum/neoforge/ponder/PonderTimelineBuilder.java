@@ -18,13 +18,18 @@ import vectorregnum.core.circle.Vm2CircleCompilation;
 import vectorregnum.core.vm2.Instruction;
 import vectorregnum.core.vm2.ManaCostModel;
 import vectorregnum.core.vm2.Program;
+import vectorregnum.core.vm2.RuntimeValue;
 import vectorregnum.core.vm2.SourceLocation;
 import vectorregnum.core.vm2.TickResult;
+import vectorregnum.core.vm2.VmMessage;
 import vectorregnum.core.vm2.VmFault;
 import vectorregnum.core.vm2.WorldEffect;
 
 /** Converts actual compiler/runtime results into deterministic teaching cues. */
 public final class PonderTimelineBuilder {
+    private static final int MAX_EFFECT_CUES_PER_STEP = PonderTimeline.MAX_CUES_PER_STEP - 4;
+    private static final int MAX_MESSAGE_CUES_PER_STEP = 8;
+
     private final String id;
     private final String title;
     private final List<PonderTimeline.Step> steps = new ArrayList<>();
@@ -155,8 +160,16 @@ public final class PonderTimelineBuilder {
                     "status", result.status().name(),
                     "instruction_pointer", Integer.toString(result.instructionPointer()),
                     "instructions_executed", Integer.toString(result.instructionsExecuted()))));
+
+            int terminalCueCount = result.fault().isPresent() ? 2 : 0;
+            int traceCapacity = PonderTimeline.MAX_CUES_PER_STEP - 1 - terminalCueCount;
+            boolean compacted = (long) result.effects().size() + result.messages().size()
+                    > traceCapacity;
+            int dynamicCapacity = Math.max(0, traceCapacity - (compacted ? 1 : 0));
+            int shownMessages = Math.min(result.messages().size(),
+                    Math.min(MAX_MESSAGE_CUES_PER_STEP, dynamicCapacity));
             int shownEffects = Math.min(result.effects().size(),
-                    PonderTimeline.MAX_CUES_PER_STEP - 4);
+                    Math.min(MAX_EFFECT_CUES_PER_STEP, dynamicCapacity - shownMessages));
             for (int effectIndex = 0; effectIndex < shownEffects; effectIndex++) {
                 WorldEffect effect = result.effects().get(effectIndex);
                 cues.add(cue(PonderTimeline.CueType.WORLD_EFFECT, at.orElse(null), Map.of(
@@ -164,10 +177,21 @@ public final class PonderTimelineBuilder {
                         "entity", effect.entityId(),
                         "duration_ticks", Integer.toString(effect.durationTicks()))));
             }
-            if (shownEffects < result.effects().size()) {
-                cues.add(cue(PonderTimeline.CueType.TRACE_COMPACTED, at.orElse(null), Map.of(
-                        "omitted_effects", Integer.toString(result.effects().size() - shownEffects),
-                        "reason", "per_step_cue_limit")));
+            for (int messageIndex = 0; messageIndex < shownMessages; messageIndex++) {
+                cues.add(messageCue(result.messages().get(messageIndex)));
+            }
+            int omittedEffects = result.effects().size() - shownEffects;
+            int omittedMessages = result.messages().size() - shownMessages;
+            if (omittedEffects > 0 || omittedMessages > 0) {
+                LinkedHashMap<String, String> compactedData = new LinkedHashMap<>();
+                if (omittedEffects > 0) {
+                    compactedData.put("omitted_effects", Integer.toString(omittedEffects));
+                }
+                if (omittedMessages > 0) {
+                    compactedData.put("omitted_messages", Integer.toString(omittedMessages));
+                }
+                compactedData.put("reason", "per_step_cue_limit");
+                cues.add(cue(PonderTimeline.CueType.TRACE_COMPACTED, at.orElse(null), compactedData));
             }
             result.fault().ifPresent(fault -> cues.add(runtimeFaultCue(fault, order)));
             if (result.status() == TickResult.Status.FAULTED) {
@@ -301,13 +325,83 @@ public final class PonderTimelineBuilder {
     }
 
     private static String executionNarration(TickResult result) {
-        return switch (result.status()) {
+        String base = switch (result.status()) {
             case RUNNING -> "The server VM continues after executing " + result.instructionsExecuted() + " instructions.";
             case WAITING -> "A declared delay pauses execution without blocking the server tick.";
             case BUDGET_YIELD -> "The per-tick work bound yields safely; execution resumes next tick.";
             case HALTED -> "The program reaches its terminal sigil and the cast completes.";
             case FAULTED -> result.fault().map(VmFault::message).orElse("The VM rejects the operation.");
         };
+        if (result.messages().isEmpty()) return base;
+        StringBuilder narration = new StringBuilder(base)
+                .append(" Authoritative message trace: ");
+        int included = 0;
+        for (VmMessage message : result.messages()) {
+            String detail = messageNarration(message);
+            if (narration.length() + detail.length() + 1 > 960) break;
+            if (included > 0) narration.append(' ');
+            narration.append(detail);
+            included++;
+            if (included >= MAX_MESSAGE_CUES_PER_STEP) break;
+        }
+        if (included < result.messages().size()) {
+            narration.append(" ").append(result.messages().size() - included)
+                    .append(" additional message(s) were compacted.");
+        }
+        return boundedText(narration.toString(), PonderTimeline.MAX_NARRATION_LENGTH);
+    }
+
+    private static PonderTimeline.Cue messageCue(VmMessage message) {
+        LinkedHashMap<String, String> data = new LinkedHashMap<>();
+        data.put("trace", "vm_message");
+        data.put("operation", message instanceof VmMessage.Signal ? "SIGNAL" : "OUTPUT");
+        data.put("message", message instanceof VmMessage.Signal ? "signal" : "output");
+        data.put("sequence", Long.toString(message.sequence()));
+        data.put("tick", Long.toString(message.tick()));
+        data.put("branch", Integer.toString(message.branchId()));
+        data.put("order", "global_sequence");
+        data.put("point", pointSummary(message.point()));
+        data.put("range", decimal(message.declaredRange()));
+        data.put("truth", "authoritative_text");
+        if (message instanceof VmMessage.Signal signal) {
+            data.put("channel", signal.channel());
+            data.put("payload", valueSummary(signal.payload()));
+        } else if (message instanceof VmMessage.Output output) {
+            data.put("text", boundedText(output.text(), RuntimeValue.MAX_TEXT_CHARS));
+        }
+        return cue(PonderTimeline.CueType.EXECUTION_CURSOR, null, data);
+    }
+
+    private static String messageNarration(VmMessage message) {
+        String location = "branch " + message.branchId() + ", sequence " + message.sequence()
+                + ", tick " + message.tick();
+        if (message instanceof VmMessage.Signal signal) {
+            return "Signal " + signal.channel() + "=" + valueSummary(signal.payload())
+                    + " (" + location + ").";
+        }
+        VmMessage.Output output = (VmMessage.Output) message;
+        return "Owner output \"" + boundedText(output.text(), 160) + "\" (" + location + ").";
+    }
+
+    private static String valueSummary(RuntimeValue value) {
+        return switch (value) {
+            case RuntimeValue.NumberValue number -> decimal(number.value());
+            case RuntimeValue.BooleanValue bool -> Boolean.toString(bool.value());
+            case RuntimeValue.PointValue point -> "point" + pointSummary(point.value());
+            case RuntimeValue.VectorValue vector -> "vector" + pointSummary(vector.value());
+            case RuntimeValue.EntityValue entity -> boundedText(entity.id(), 96);
+            case RuntimeValue.TextValue text -> boundedText(text.value(), 160);
+            case RuntimeValue.ListValue list -> "list(" + list.values().size() + " items)";
+        };
+    }
+
+    private static String pointSummary(vectorregnum.core.vm2.Vector3 point) {
+        return "(" + decimal(point.x()) + "," + decimal(point.y()) + "," + decimal(point.z()) + ")";
+    }
+
+    private static String boundedText(String text, int maximum) {
+        if (text.length() <= maximum) return text;
+        return text.substring(0, Math.max(1, maximum - 1)) + "…";
     }
 
     private static String decimal(double value) {

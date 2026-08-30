@@ -1,7 +1,7 @@
 {
   "id": "field_manual",
   "title": "Vector-Regnum Field Manual",
-  "version": 11,
+  "version": 12,
   "theme": "brass_ink_and_amethyst",
   "chapters": [
     {
@@ -252,6 +252,32 @@
               "label": "Ponder the real fault",
               "alt": "Display the diagnostic, VM fault, or Wild Magic category carried by the actual result.",
               "metadata": { "scene": "fault_and_miscast", "trace": "actual_fault_events" }
+            }
+          ]
+        },
+        {
+          "id": "shared_memory_control",
+          "title": "Shared Memory and Branches",
+          "body": "Advanced programs can store typed variables, iterate immutable lists one item per server tick, test bounded entity/point collisions, and publish watcher signals or owner-visible output. Logical FORK branches share the same Push/Pop stack and variable map. They advance in stable creation order on the authoritative server tick; shared operations are atomic and traced. JOIN waits for active children and CANCEL_BRANCH is idempotent. Work, lifetime, active and total branches, messages, iterator steps, and stack depth remain hard-capped. Active control state is ephemeral and never resumes after restart. Run /vectorregnum vm control_demo for the bounded teaching program.",
+          "required_unlocks": [],
+          "elements": [
+            {
+              "type": "DIAGRAM",
+              "label": "One tick, one shared order",
+              "alt": "The main path and logical child branches visit one shared stack and variable map in stable creation order, with hard caps around the runtime.",
+              "metadata": { "diagram": "shared_memory_branch_order", "scheduler": "server_tick", "ordering": "creation_sequence", "shared": "stack,variables", "caps": "work,lifetime,branches,messages,iterator_steps,stack" }
+            },
+            {
+              "type": "PONDER",
+              "label": "Ponder shared control",
+              "alt": "Follow authoritative variable, iterator, collision, signal, output, fork, join, and shared Push/Pop events in deterministic order.",
+              "metadata": { "scene": "shared_memory_control", "trace": "priority_24_authoritative_trace" }
+            },
+            {
+              "type": "EXAMPLE",
+              "label": "Run the bounded control demo",
+              "alt": "Launch the server-authored priority 24 program and observe its output and branch order.",
+              "metadata": { "example": "priority_24", "command": "/vectorregnum vm control_demo" }
             }
           ]
         }

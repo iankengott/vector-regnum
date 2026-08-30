@@ -1,6 +1,7 @@
 package vectorregnum.neoforge;
 
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.BlockPos;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -22,6 +23,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import vectorregnum.core.vm2.Instruction;
 import vectorregnum.core.Element;
 import vectorregnum.core.vm2.ManaCostModel;
+import vectorregnum.core.vm2.Priority24ProgramFactory;
 import vectorregnum.core.vm2.Program;
 import vectorregnum.core.vm2.RuntimeValue;
 import vectorregnum.core.vm2.SourceLocation;
@@ -29,7 +31,9 @@ import vectorregnum.core.vm2.SpellVm;
 import vectorregnum.core.vm2.TickResult;
 import vectorregnum.core.vm2.Vector3;
 import vectorregnum.core.vm2.WorldAccess;
+import vectorregnum.core.vm2.WorldAccess.CollisionTarget;
 import vectorregnum.core.vm2.WorldEffect;
+import vectorregnum.core.vm2.VmMessage;
 import vectorregnum.core.casting.CastCost;
 import vectorregnum.core.casting.CastingMethod;
 import vectorregnum.core.casting.ResourceEscrow;
@@ -62,6 +66,11 @@ import java.util.function.Consumer;
 /** Executes vm2 once per server tick and is the only adapter allowed to mutate entities. */
 public final class NeoForgeVmService {
     private static final int PONDER_LIVE_INTERVAL_TICKS = 10;
+    private static final int MAX_MESSAGE_TEXT_CHARS = RuntimeValue.MAX_TEXT_CHARS;
+    private static final float MESSAGE_TRACE_RADIUS = 0.35F;
+    private static final float MESSAGE_TRACE_INTENSITY = 1.0F;
+    private static final int MESSAGE_TRACE_DURATION_TICKS = 4;
+    private static final double COLLISION_EPSILON_SQUARED = 1.0e-6;
     private static final List<ActiveVm> ACTIVE_VMS = new ArrayList<>();
     private static final List<ActiveVm> PENDING_VMS = new ArrayList<>();
     private static final CastAbuseGuard ABUSE_GUARD = new CastAbuseGuard();
@@ -120,6 +129,19 @@ public final class NeoForgeVmService {
         return start(player, syntheticCompilation(program), chargeMana, label,
                 (owner, steps, effects) -> SemanticSpellExecutor.execute(owner, steps, false, effects),
                 CastingMethod.BARE, true, ItemStack.EMPTY, terminal);
+    }
+
+    /** Queues the bounded priority-24 showcase; execution begins on a later server tick. */
+    public static boolean launchPriority24Demo(ServerPlayer player) {
+        return launchPriority24Demo(player, ignored -> { });
+    }
+
+    /** Queues the showcase and reports its authoritative settlement exactly once. */
+    public static boolean launchPriority24Demo(ServerPlayer player,
+            Consumer<ResourceEscrow.Outcome> terminal) {
+        Vector3 origin = toCore(player.position());
+        Program program = Priority24ProgramFactory.create(player.getStringUUID(), origin);
+        return startAuthored(player, program, false, "Priority 24 Demo", terminal);
     }
 
     public static boolean startAuthored(ServerPlayer player,
@@ -182,6 +204,12 @@ public final class NeoForgeVmService {
                 .map(RuntimeValue.ListValue.class::cast)
                 .findFirst().map(value -> value.values().size()).orElse(0);
         return new PerceptionReport(result.status(), count, program.manaCost());
+    }
+
+    /** Narrow server GameTest hook for the read-only Minecraft collision adapter. */
+    public static boolean collisionProbeForTesting(ServerPlayer player,
+            CollisionTarget first, CollisionTarget second, double maximumRange) {
+        return new MinecraftWorldAccess(player).collides(first, second, maximumRange);
     }
 
     /** Shares the burst limiter with compatibility casts that complete immediately. */
@@ -329,6 +357,20 @@ public final class NeoForgeVmService {
                 }
                 TickResult result = active.vm.tick();
                 active.trace.add(result);
+                Optional<ResourceEscrow.Outcome> messageOutcome = messageRejection(
+                        currentOwner, active.world, result.messages());
+                if (messageOutcome.isPresent()) {
+                    ResourceEscrow.Outcome outcome = messageOutcome.orElseThrow();
+                    currentOwner.sendSystemMessage(Component.literal("Cast stopped safely: "
+                                    + outcome.name().toLowerCase(java.util.Locale.ROOT))
+                            .withStyle(ChatFormatting.YELLOW), true);
+                    active.persistentEffects.rollback();
+                    settle(active, outcome);
+                    publishTrace(currentOwner, active);
+                    ABUSE_GUARD.release(active.owner);
+                    vmIterator.remove();
+                    continue vmLoop;
+                }
                 for (WorldEffect effect : result.effects()) {
                     if (effect instanceof WorldEffect.SemanticStep) continue;
                     Optional<ResourceEscrow.Outcome> rejection = effectRejection(
@@ -424,13 +466,19 @@ public final class NeoForgeVmService {
                                     "Persistent-effect commit failed for {}", active.label, exception);
                         }
                     }
+                    if (outcome == ResourceEscrow.Outcome.SUCCESS) {
+                        deliverMessages(active, owner, active.world, result.messages());
+                    }
                     settle(active, outcome);
                     publishTrace(owner, active);
                     ABUSE_GUARD.release(active.owner);
                     vmIterator.remove();
-                } else if (active.trace.size() == 1
-                        || active.trace.size() % PONDER_LIVE_INTERVAL_TICKS == 0) {
-                    publishLiveTrace(server.getPlayerList().getPlayer(active.owner), active);
+                } else {
+                    deliverMessages(active, currentOwner, active.world, result.messages());
+                    if (active.trace.size() == 1
+                            || active.trace.size() % PONDER_LIVE_INTERVAL_TICKS == 0) {
+                        publishLiveTrace(server.getPlayerList().getPlayer(active.owner), active);
+                    }
                 }
             }
         } finally {
@@ -496,6 +544,82 @@ public final class NeoForgeVmService {
             }
         }
         return Optional.empty();
+    }
+
+    /** Validates the complete staged message batch before any message is delivered. */
+    private static Optional<ResourceEscrow.Outcome> messageRejection(
+            ServerPlayer owner, ServerLevel world, List<VmMessage> messages) {
+        if (messages == null) return Optional.of(ResourceEscrow.Outcome.POLICY_REJECTED);
+        Optional<ResourceEscrow.Outcome> firstRejection = Optional.empty();
+        for (VmMessage message : messages) {
+            Optional<ResourceEscrow.Outcome> rejection = messageRejection(owner, world, message);
+            if (firstRejection.isEmpty() && rejection.isPresent()) {
+                firstRejection = rejection;
+            }
+        }
+        return firstRejection;
+    }
+
+    private static Optional<ResourceEscrow.Outcome> messageRejection(
+            ServerPlayer owner, ServerLevel world, VmMessage message) {
+        if (owner == null || world == null || owner.isRemoved() || !owner.isAlive()
+                || owner.serverLevel() != world) {
+            return Optional.of(ResourceEscrow.Outcome.OWNER_LIFECYCLE);
+        }
+        if (message == null || message.point() == null
+                || !finite(message.point()) || !Double.isFinite(message.declaredRange())
+                || message.declaredRange() <= 0.0) {
+            return Optional.of(ResourceEscrow.Outcome.POLICY_REJECTED);
+        }
+        Vec3 point = toMinecraft(message.point());
+        if (!finite(point)) return Optional.of(ResourceEscrow.Outcome.POLICY_REJECTED);
+        double distance = owner.position().distanceTo(point);
+        if (!Double.isFinite(distance) || distance > message.declaredRange() + 1.0e-9) {
+            return Optional.of(ResourceEscrow.Outcome.POLICY_REJECTED);
+        }
+        if (!world.isLoaded(BlockPos.containing(point))) {
+            return Optional.of(ResourceEscrow.Outcome.UNLOADED_TARGET);
+        }
+        if (!world.getWorldBorder().isWithinBounds(point)) {
+            return Optional.of(ResourceEscrow.Outcome.POLICY_REJECTED);
+        }
+        if (message instanceof VmMessage.Output output
+                && (output.text() == null || output.text().isBlank()
+                        || output.text().length() > MAX_MESSAGE_TEXT_CHARS)) {
+            return Optional.of(ResourceEscrow.Outcome.POLICY_REJECTED);
+        }
+        return Optional.empty();
+    }
+
+    /** Delivers already validated messages as bounded, cosmetic truth cues. */
+    private static void deliverMessages(ActiveVm active, ServerPlayer owner,
+            ServerLevel world, List<VmMessage> messages) {
+        if (owner == null || world == null || messages == null) return;
+        for (VmMessage message : messages) {
+            if (!active.deliveredMessageSequences.add(message.sequence())) continue;
+            Vec3 point = toMinecraft(message.point());
+            if (message instanceof VmMessage.Signal) {
+                ServerTraces.burst(world, point, PresentationParticleStyle.SPARK,
+                        PresentationElement.ARCANE, MESSAGE_TRACE_RADIUS,
+                        MESSAGE_TRACE_INTENSITY, MESSAGE_TRACE_DURATION_TICKS);
+            } else if (message instanceof VmMessage.Output output) {
+                owner.sendSystemMessage(Component.literal("Spell output: " + output.text())
+                        .withStyle(ChatFormatting.AQUA), false);
+                ServerTraces.burst(world, point, PresentationParticleStyle.END_ROD,
+                        PresentationElement.ARCANE, MESSAGE_TRACE_RADIUS,
+                        MESSAGE_TRACE_INTENSITY, MESSAGE_TRACE_DURATION_TICKS);
+            }
+        }
+    }
+
+    private static boolean finite(Vector3 point) {
+        return point != null && Double.isFinite(point.x())
+                && Double.isFinite(point.y()) && Double.isFinite(point.z());
+    }
+
+    private static boolean finite(Vec3 point) {
+        return point != null && Double.isFinite(point.x)
+                && Double.isFinite(point.y) && Double.isFinite(point.z);
     }
 
     private static void apply(ServerPlayer owner, ServerLevel world, WorldEffect effect,
@@ -675,6 +799,7 @@ public final class NeoForgeVmService {
         private final SemanticExecution semanticExecutor;
         private final List<SemanticInstruction> semanticSteps;
         private final PersistentEffectService.Batch persistentEffects;
+        private final Set<Long> deliveredMessageSequences = new HashSet<>();
         private CastingResourceService.Reservation reservation;
         private Consumer<ResourceEscrow.Outcome> terminal;
         private boolean terminalNotified;
@@ -758,6 +883,79 @@ public final class NeoForgeVmService {
                                     entity.distanceToSqr(point) <= radius * radius
                                             && matches(entity, filter))
                     .stream().map(this::snapshot).toList();
+        }
+
+        @Override
+        public boolean collides(CollisionTarget first, CollisionTarget second,
+                double maximumRange) {
+            if (first == null || second == null || !Double.isFinite(maximumRange)
+                    || maximumRange < 0.0) return false;
+
+            Entity firstEntity = null;
+            Entity secondEntity = null;
+            Vec3 firstPoint = null;
+            Vec3 secondPoint = null;
+            if (first instanceof CollisionTarget.EntityTarget target) {
+                firstEntity = collisionEntity(target, maximumRange);
+                if (firstEntity == null) return false;
+            } else if (first instanceof CollisionTarget.PointTarget target) {
+                firstPoint = collisionPoint(target, maximumRange);
+                if (firstPoint == null) return false;
+            } else {
+                return false;
+            }
+            if (second instanceof CollisionTarget.EntityTarget target) {
+                secondEntity = collisionEntity(target, maximumRange);
+                if (secondEntity == null) return false;
+            } else if (second instanceof CollisionTarget.PointTarget target) {
+                secondPoint = collisionPoint(target, maximumRange);
+                if (secondPoint == null) return false;
+            } else {
+                return false;
+            }
+
+            if (firstEntity != null && secondEntity != null) {
+                return firstEntity.getBoundingBox().intersects(secondEntity.getBoundingBox());
+            }
+            if (firstEntity != null && secondPoint != null) {
+                return contains(firstEntity.getBoundingBox(), secondPoint);
+            }
+            if (firstPoint != null && secondEntity != null) {
+                return contains(secondEntity.getBoundingBox(), firstPoint);
+            }
+            return firstPoint != null && secondPoint != null
+                    && firstPoint.distanceToSqr(secondPoint) <= COLLISION_EPSILON_SQUARED;
+        }
+
+        private Entity collisionEntity(CollisionTarget.EntityTarget target,
+                double maximumRange) {
+            Entity entity = find(world, target.id());
+            if (entity == null || entity.isRemoved() || entity.level() != world
+                    || !world.isLoaded(entity.blockPosition())
+                    || !finite(entity.position())
+                    || !withinRange(entity.position(), maximumRange)) return null;
+            return world.getWorldBorder().isWithinBounds(entity.getBoundingBox()) ? entity : null;
+        }
+
+        private Vec3 collisionPoint(CollisionTarget.PointTarget target,
+                double maximumRange) {
+            if (target.point() == null || !finite(target.point())) return null;
+            Vec3 point = toMinecraft(target.point());
+            if (!finite(point) || !withinRange(point, maximumRange)
+                    || !world.isLoaded(BlockPos.containing(point))
+                    || !world.getWorldBorder().isWithinBounds(point)) return null;
+            return point;
+        }
+
+        private boolean withinRange(Vec3 point, double maximumRange) {
+            double distance = caster.position().distanceTo(point);
+            return Double.isFinite(distance) && distance <= maximumRange + 1.0e-9;
+        }
+
+        private static boolean contains(AABB bounds, Vec3 point) {
+            return point.x >= bounds.minX && point.x <= bounds.maxX
+                    && point.y >= bounds.minY && point.y <= bounds.maxY
+                    && point.z >= bounds.minZ && point.z <= bounds.maxZ;
         }
 
         private boolean matches(Entity entity, SelectionFilter filter) {

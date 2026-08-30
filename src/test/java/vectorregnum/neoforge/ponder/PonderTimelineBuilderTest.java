@@ -27,6 +27,7 @@ import vectorregnum.core.vm2.SourceLocation;
 import vectorregnum.core.vm2.SpellVm;
 import vectorregnum.core.vm2.TickResult;
 import vectorregnum.core.vm2.Vector3;
+import vectorregnum.core.vm2.VmMessage;
 import vectorregnum.core.vm2.WorldAccess;
 import vectorregnum.core.vm2.WorldEffect;
 
@@ -148,6 +149,61 @@ class PonderTimelineBuilderTest {
         assertTrue(execution.cues().stream().anyMatch(cue ->
                 cue.type() == PonderTimeline.CueType.TRACE_COMPACTED
                         && "52".equals(cue.data().get("omitted_effects"))));
+    }
+
+    @Test
+    void authoritativeVmMessagesRetainGlobalSequenceBranchAndText() {
+        Program program = new Program(List.of(Instruction.halt(at(0))));
+        VmMessage.Signal signal = new VmMessage.Signal(7, 4, 1, "charge",
+                new Vector3(1, 2, 3), new RuntimeValue.NumberValue(2.5), 8);
+        VmMessage.Output output = new VmMessage.Output(8, 4, 0, Vector3.ZERO,
+                "control complete", 8);
+        TickResult result = new TickResult(TickResult.Status.RUNNING, 0, 2, List.of(),
+                List.of(signal, output), Optional.empty());
+
+        PonderTimeline timeline = PonderTimelineBuilder.fromVm2("messages", "Messages",
+                new Vm2CircleCompilation(List.of(sigil(0, 0, "EXECUTE")), program, List.of()),
+                List.of(result));
+        PonderTimeline.Step execution = timeline.steps().stream()
+                .filter(step -> step.phase() == PonderTimeline.Phase.EXECUTION)
+                .findFirst().orElseThrow();
+        List<PonderTimeline.Cue> messages = execution.cues().stream()
+                .filter(cue -> "vm_message".equals(cue.data().get("trace"))).toList();
+
+        assertEquals(List.of("SIGNAL", "OUTPUT"), messages.stream()
+                .map(cue -> cue.data().get("operation")).toList());
+        assertEquals("7", messages.getFirst().data().get("sequence"));
+        assertEquals("1", messages.getFirst().data().get("branch"));
+        assertEquals("charge", messages.getFirst().data().get("channel"));
+        assertEquals("8", messages.getLast().data().get("sequence"));
+        assertEquals("control complete", messages.getLast().data().get("text"));
+        assertTrue(execution.narration().contains("Signal charge=2.5"));
+        assertTrue(execution.narration().contains("Owner output \"control complete\""));
+    }
+
+    @Test
+    void messageBatchIsCompactedWithoutDroppingTheTraceTruthCue() {
+        Program program = new Program(List.of(Instruction.halt(at(0))));
+        List<VmMessage> messages = new ArrayList<>();
+        for (int index = 0; index < 40; index++) {
+            messages.add(new VmMessage.Output(index, index, index % 2, Vector3.ZERO,
+                    "message-" + index, 4));
+        }
+        TickResult result = new TickResult(TickResult.Status.HALTED, 0, 1, List.of(),
+                messages, Optional.empty());
+
+        PonderTimeline timeline = PonderTimelineBuilder.fromVm2("message-limit", "Message limit",
+                new Vm2CircleCompilation(List.of(sigil(0, 0, "EXECUTE")), program, List.of()),
+                List.of(result));
+        PonderTimeline.Step execution = timeline.steps().stream()
+                .filter(step -> step.phase() == PonderTimeline.Phase.EXECUTION)
+                .findFirst().orElseThrow();
+
+        assertTrue(execution.cues().size() <= PonderTimeline.MAX_CUES_PER_STEP);
+        assertTrue(execution.cues().stream().anyMatch(cue ->
+                cue.type() == PonderTimeline.CueType.TRACE_COMPACTED
+                        && "32".equals(cue.data().get("omitted_messages"))));
+        assertTrue(execution.narration().contains("additional message(s) were compacted"));
     }
 
     private static PonderTimeline timeline(String id, int steps) {

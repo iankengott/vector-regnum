@@ -19,11 +19,18 @@ public sealed interface ExecutionEvent permits ExecutionEvent.Started, Execution
         public Started { validate(sequence, tick); }
     }
 
-    record StepExecuted(long sequence, long tick, int instructionPointer,
+    record StepExecuted(long sequence, long tick, int branchId, int instructionPointer,
             int nextInstructionPointer, Opcode opcode, SourceLocation source) implements ExecutionEvent {
+        public StepExecuted(long sequence, long tick, int instructionPointer,
+                int nextInstructionPointer, Opcode opcode, SourceLocation source) {
+            this(sequence, tick, 0, instructionPointer, nextInstructionPointer, opcode, source);
+        }
+
         public StepExecuted {
             validate(sequence, tick);
-            if (instructionPointer < 0 || nextInstructionPointer < 0) throw new IllegalArgumentException("negative pointer");
+            if (branchId < 0 || instructionPointer < 0 || nextInstructionPointer < 0) {
+                throw new IllegalArgumentException("negative branch/pointer");
+            }
             Objects.requireNonNull(opcode, "opcode");
             Objects.requireNonNull(source, "source");
         }

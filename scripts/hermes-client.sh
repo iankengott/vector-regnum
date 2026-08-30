@@ -11,8 +11,10 @@ Usage: scripts/hermes-client.sh ACTION
 
 Control only Vector-Regnum's isolated NeoForge development server and client on
 Hermes. The server is staged from dev/hermes, started on port 25575, and proven
-ready before the quick-play client starts. The client uses Veil by default;
-set VR_CLIENT_RENDERER=builtin to exercise the dependency-free fallback.
+ready before the quick-play client starts. Every newly launched server resets
+the test world's generated/world state while preserving playerdata,
+advancements, and stats. The client uses Veil by default; set
+VR_CLIENT_RENDERER=builtin to exercise the dependency-free fallback.
 
 Actions:
   start       Start the isolated server, wait for 25575, then launch the client.
@@ -174,6 +176,7 @@ start_server() {
     fi
 
     stage_server_config
+    "$remote_dir/scripts/hermes-reset-test-world.sh"
     systemd-run \
         --user \
         --unit="$server_unit" \

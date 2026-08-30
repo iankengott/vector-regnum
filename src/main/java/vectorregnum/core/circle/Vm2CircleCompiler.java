@@ -1,5 +1,6 @@
 package vectorregnum.core.circle;
 
+import vectorregnum.core.vm2.AdvancedOperand;
 import vectorregnum.core.vm2.Instruction;
 import vectorregnum.core.vm2.Program;
 import vectorregnum.core.vm2.RuntimeValue;
@@ -8,6 +9,7 @@ import vectorregnum.core.vm2.StackAnalysis;
 import vectorregnum.core.vm2.StackDiagnostic;
 import vectorregnum.core.vm2.StackTypeAnalyzer;
 import vectorregnum.core.vm2.Vector3;
+import vectorregnum.core.vm2.VmLimits;
 import vectorregnum.core.vm2.WorldAccess;
 import vectorregnum.core.semantic.CreationForm;
 import vectorregnum.core.semantic.CreationMaterial;
@@ -39,7 +41,7 @@ public final class Vm2CircleCompiler {
         for (int index = 0; index < ordered.size(); index++) {
             PlacedSigil sigil = ordered.get(index);
             try {
-                instructions.add(lower(sigil, index, context));
+                instructions.add(lower(sigil, index, ordered.size(), context));
             } catch (CompileFault fault) {
                 diagnostics.add(error(fault.code, fault.getMessage(), sigil.coordinate(), index));
             } catch (RuntimeException exception) {
@@ -82,7 +84,8 @@ public final class Vm2CircleCompiler {
         return circle.sigils().stream().anyMatch(sigil -> sigil.type().startsWith("VM_"));
     }
 
-    private static Instruction lower(PlacedSigil sigil, int index, Context context) {
+    private static Instruction lower(PlacedSigil sigil, int index, int instructionCount,
+            Context context) {
         String type = sigil.type();
         SourceLocation source = new SourceLocation(index, sigil.coordinate().ring() + 1,
                 sigil.coordinate().clockwiseSlot() + 1, type);
@@ -136,12 +139,23 @@ public final class Vm2CircleCompiler {
                 }
                 yield Instruction.push(new RuntimeValue.EntityValue(value.value()), source);
             }
+            case "VM_PUSH_TEXT" -> {
+                requireCount(sigil, 1);
+                String value = textValue(sigil, 0, "text");
+                if (value.isBlank() || value.length() > RuntimeValue.MAX_TEXT_CHARS) {
+                    throw fault("INVALID_TEXT", "VM_PUSH_TEXT needs 1.."
+                            + RuntimeValue.MAX_TEXT_CHARS + " characters");
+                }
+                yield Instruction.push(new RuntimeValue.TextValue(value), source);
+            }
             case "VM_PUSH_POINT_LIST" -> pointList(sigil, source);
-            case "VM_JUMP" -> Instruction.jump(oneInteger(sigil), source);
-            case "VM_JUMP_IF_FALSE" -> Instruction.jumpIfFalse(oneInteger(sigil), source);
+            case "VM_JUMP" -> Instruction.jump(target(sigil, 0, instructionCount, "jump"), source);
+            case "VM_JUMP_IF_FALSE" ->
+                    Instruction.jumpIfFalse(target(sigil, 0, instructionCount, "conditional jump"), source);
             case "VM_LOOP" -> {
                 requireCount(sigil, 2);
-                yield Instruction.loop(integer(sigil, 0), integer(sigil, 1), source);
+                yield Instruction.loop(target(sigil, 0, instructionCount, "loop"),
+                        integer(sigil, 1), source);
             }
             case "VM_DELAY" -> Instruction.delay(oneInteger(sigil), source);
             case "VM_DURATION" -> Instruction.duration(oneInteger(sigil), source);
@@ -164,6 +178,69 @@ public final class Vm2CircleCompiler {
             case "VM_MOVE_TOWARD" -> physics(sigil, source, Physics.MOVE_TOWARD);
             case "VM_KEEP_DISTANCE" -> physics(sigil, source, Physics.KEEP_DISTANCE);
             case "VM_CREATE_FORM" -> creation(sigil, source);
+            case "VM_STORE_VARIABLE" -> {
+                requireCount(sigil, 1);
+                yield Instruction.storeVariable(identifier(sigil, 0, "variable"), source);
+            }
+            case "VM_LOAD_VARIABLE" -> {
+                requireCount(sigil, 1);
+                yield Instruction.loadVariable(identifier(sigil, 0, "variable"), source);
+            }
+            case "VM_ITERATOR_BEGIN" -> {
+                requireCount(sigil, 3);
+                yield Instruction.iteratorBegin(identifier(sigil, 0, "iterator"),
+                        target(sigil, 1, instructionCount, "iterator exit"),
+                        boundedInteger(sigil, 2, VmLimits.DEFAULT.maxIteratorSteps(),
+                                "iterator steps"),
+                        source);
+            }
+            case "VM_ITERATOR_NEXT" -> {
+                requireCount(sigil, 2);
+                yield Instruction.iteratorNext(identifier(sigil, 0, "iterator"),
+                        target(sigil, 1, instructionCount, "iterator body"), source);
+            }
+            case "VM_COLLISION" -> {
+                requireCount(sigil, 2);
+                yield Instruction.collision(positiveRange(sigil, 0),
+                        boundedInteger(sigil, 1, VmLimits.DEFAULT.maxSelectionResults(),
+                                "collision samples"),
+                        source);
+            }
+            case "VM_WATCH_VARIABLE" -> {
+                requireCount(sigil, 2);
+                yield Instruction.watchVariable(identifier(sigil, 0, "variable"),
+                        positiveRange(sigil, 1), source);
+            }
+            case "VM_SIGNAL" -> {
+                requireCount(sigil, 1);
+                yield Instruction.signal(positiveRange(sigil, 0), source);
+            }
+            case "VM_OUTPUT" -> {
+                requireCount(sigil, 1);
+                yield Instruction.output(positiveRange(sigil, 0), source);
+            }
+            case "VM_FORK" -> {
+                requireCount(sigil, 3);
+                int start = target(sigil, 1, instructionCount, "branch start");
+                int end = integer(sigil, 2);
+                if (end > instructionCount || end <= start) {
+                    throw fault("INVALID_BRANCH_RANGE",
+                            "branch end must be after start and within the circle");
+                }
+                yield Instruction.fork(identifier(sigil, 0, "branch"), start, end, source);
+            }
+            case "VM_JOIN", "JOIN" -> {
+                requireCount(sigil, 0);
+                yield Instruction.join(source);
+            }
+            case "VM_CANCEL_BRANCH" -> {
+                requireCount(sigil, 1);
+                yield Instruction.cancelBranch(identifier(sigil, 0, "branch"), source);
+            }
+            case "VM_BRANCH_END", "BRANCH_END" -> {
+                requireCount(sigil, 0);
+                yield Instruction.branchEnd(source);
+            }
             case "EXECUTE" -> {
                 requireCount(sigil, 0);
                 yield Instruction.halt(source);
@@ -221,11 +298,25 @@ public final class Vm2CircleCompiler {
     }
 
     private static String text(PlacedSigil sigil, int index, String name) {
+        return textValue(sigil, index, name);
+    }
+
+    private static String textValue(PlacedSigil sigil, int index, String name) {
         if (!(sigil.parameters().get(index) instanceof CircleValue.TextValue value)) {
-            throw fault("PARAMETER_TYPE", "VM_CREATE_FORM parameter " + (index + 1)
+            throw fault("PARAMETER_TYPE", sigil.type() + " parameter " + (index + 1)
                     + " (" + name + ") must be text");
         }
         return value.value();
+    }
+
+    private static String identifier(PlacedSigil sigil, int index, String name) {
+        String value = textValue(sigil, index, name);
+        try {
+            return AdvancedOperand.checkedName(value);
+        } catch (IllegalArgumentException exception) {
+            throw fault("INVALID_IDENTIFIER", sigil.type() + " parameter " + (index + 1)
+                    + " (" + name + ") " + exception.getMessage());
+        }
     }
 
     private static double number(PlacedSigil sigil, int index) {
@@ -244,6 +335,31 @@ public final class Vm2CircleCompiler {
             throw fault("PARAMETER_TYPE", "Control parameters must be non-negative integers");
         }
         return (int) value;
+    }
+
+    private static int boundedInteger(PlacedSigil sigil, int index, int maximum, String name) {
+        int value = integer(sigil, index);
+        if (value < 1 || value > maximum) {
+            throw fault("PARAMETER_RANGE", name + " must be 1.." + maximum);
+        }
+        return value;
+    }
+
+    private static double positiveRange(PlacedSigil sigil, int index) {
+        double value = number(sigil, index);
+        if (value <= 0 || value > VmLimits.DEFAULT.maxPerceptionRange()) {
+            throw fault("PARAMETER_RANGE", "range must be greater than 0 and at most "
+                    + VmLimits.DEFAULT.maxPerceptionRange());
+        }
+        return value;
+    }
+
+    private static int target(PlacedSigil sigil, int index, int instructionCount, String name) {
+        int value = integer(sigil, index);
+        if (value >= instructionCount) {
+            throw fault("TARGET_OUT_OF_RANGE", name + " target must be within the circle");
+        }
+        return value;
     }
 
     private static int oneInteger(PlacedSigil sigil) {

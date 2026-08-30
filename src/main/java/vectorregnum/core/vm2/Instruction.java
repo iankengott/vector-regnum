@@ -10,8 +10,15 @@ import vectorregnum.core.vm2.WorldAccess.SelectionFilter;
  */
 public record Instruction(Opcode opcode, SourceLocation source, RuntimeValue literal,
         int argument, int secondArgument, SelectionFilter filter, ManaCostModel.Input cost,
-        SemanticInstruction semantic) {
+        SemanticInstruction semantic, AdvancedOperand advanced) {
     public static final int MAX_DURATION_TICKS = 1_200;
+
+    /** Backward-compatible constructor for priorities 1-23 instructions. */
+    public Instruction(Opcode opcode, SourceLocation source, RuntimeValue literal,
+            int argument, int secondArgument, SelectionFilter filter, ManaCostModel.Input cost,
+            SemanticInstruction semantic) {
+        this(opcode, source, literal, argument, secondArgument, filter, cost, semantic, null);
+    }
 
     public Instruction {
         Objects.requireNonNull(opcode, "opcode");
@@ -38,17 +45,34 @@ public record Instruction(Opcode opcode, SourceLocation source, RuntimeValue lit
             }
             case SELECT_RADIUS, RAYCAST_ENTITIES -> Objects.requireNonNull(filter, "selection filter");
             case SEMANTIC -> Objects.requireNonNull(semantic, "semantic instruction");
+            case STORE_VARIABLE, LOAD_VARIABLE, CANCEL_BRANCH ->
+                    requireAdvanced(advanced, AdvancedOperand.Named.class, opcode);
+            case ITERATOR_BEGIN, ITERATOR_NEXT ->
+                    requireAdvanced(advanced, AdvancedOperand.IteratorSpec.class, opcode);
+            case COLLISION, SIGNAL, OUTPUT ->
+                    requireAdvanced(advanced, AdvancedOperand.RangeSpec.class, opcode);
+            case WATCH_VARIABLE ->
+                    requireAdvanced(advanced, AdvancedOperand.WatchSpec.class, opcode);
+            case FORK -> requireAdvanced(advanced, AdvancedOperand.ForkSpec.class, opcode);
             default -> { }
         }
     }
 
+    private static void requireAdvanced(
+            AdvancedOperand operand, Class<? extends AdvancedOperand> expected, Opcode opcode) {
+        if (!expected.isInstance(operand)) {
+            throw new IllegalArgumentException(opcode + " requires " + expected.getSimpleName());
+        }
+    }
+
     private static Instruction simple(Opcode opcode, SourceLocation source) {
-        return new Instruction(opcode, source, null, 0, 0, null, ManaCostModel.Input.ZERO, null);
+        return new Instruction(opcode, source, null, 0, 0, null,
+                ManaCostModel.Input.ZERO, null, null);
     }
 
     public static Instruction push(RuntimeValue value, SourceLocation source) {
         return new Instruction(Opcode.PUSH, source, Objects.requireNonNull(value), 0, 0, null,
-                new ManaCostModel.Input(0, 0, 0, 0, 1, 0, 0), null);
+                new ManaCostModel.Input(0, 0, 0, 0, 1, 0, 0), null, null);
     }
     public static Instruction pop(SourceLocation s) { return simple(Opcode.POP, s); }
     public static Instruction dup(SourceLocation s) { return simple(Opcode.DUP, s); }
@@ -76,16 +100,16 @@ public record Instruction(Opcode opcode, SourceLocation source, RuntimeValue lit
     }
     private static Instruction control(Opcode op, int target, int count, SourceLocation source) {
         return new Instruction(op, source, null, target, count, null,
-                new ManaCostModel.Input(0, 0, 0, 0, 0, 0, Math.max(1, count)), null);
+                new ManaCostModel.Input(0, 0, 0, 0, 0, 0, Math.max(1, count)), null, null);
     }
 
     public static Instruction delay(int ticks, SourceLocation source) {
         return new Instruction(Opcode.DELAY, source, null, ticks, 0, null,
-                new ManaCostModel.Input(0, 0, ticks, 0, 0, 0, 0), null);
+                new ManaCostModel.Input(0, 0, ticks, 0, 0, 0, 0), null, null);
     }
     public static Instruction duration(int ticks, SourceLocation source) {
         return new Instruction(Opcode.SET_DURATION, source, null, ticks, 0, null,
-                new ManaCostModel.Input(0, 0, ticks, 0, 0, 0, 0), null);
+                new ManaCostModel.Input(0, 0, ticks, 0, 0, 0, 0), null, null);
     }
     public static Instruction select(SelectionFilter filter, double declaredRange, int samples,
             SourceLocation source) {
@@ -98,7 +122,7 @@ public record Instruction(Opcode opcode, SourceLocation source, RuntimeValue lit
     private static Instruction perception(Opcode opcode, SelectionFilter filter, double range,
             int samples, SourceLocation source) {
         return new Instruction(opcode, source, null, 0, 0, filter,
-                new ManaCostModel.Input(0, range, 0, 0, 1, samples, 0), null);
+                new ManaCostModel.Input(0, range, 0, 0, 1, samples, 0), null, null);
     }
 
     public static Instruction impulse(double declaredWork, double rarity, SourceLocation source) {
@@ -121,13 +145,85 @@ public record Instruction(Opcode opcode, SourceLocation source, RuntimeValue lit
     }
     private static Instruction physics(Opcode opcode, double work, double rarity, SourceLocation source) {
         return new Instruction(opcode, source, null, 0, 0, null,
-                new ManaCostModel.Input(work, 0, 0, rarity, 0, 0, 0), null);
+                new ManaCostModel.Input(work, 0, 0, rarity, 0, 0, 0), null, null);
     }
 
     /** Loader-neutral semantic step. It consumes no VM stack and emits one ordered effect. */
     public static Instruction semantic(SemanticInstruction instruction, ManaCostModel.Input cost) {
         Objects.requireNonNull(instruction, "instruction");
         return new Instruction(Opcode.SEMANTIC, instruction.source(), null, 0, 0, null,
-                Objects.requireNonNull(cost, "cost"), instruction);
+                Objects.requireNonNull(cost, "cost"), instruction, null);
+    }
+
+    public static Instruction storeVariable(String name, SourceLocation source) {
+        return advanced(Opcode.STORE_VARIABLE, new AdvancedOperand.Named(name), source,
+                new ManaCostModel.Input(0, 0, 0, 0, 1, 0, 0));
+    }
+
+    public static Instruction loadVariable(String name, SourceLocation source) {
+        return advanced(Opcode.LOAD_VARIABLE, new AdvancedOperand.Named(name), source,
+                new ManaCostModel.Input(0, 0, 0, 0, 1, 0, 0));
+    }
+
+    public static Instruction iteratorBegin(String name, int exitTarget, int maximumSteps,
+            SourceLocation source) {
+        return advanced(Opcode.ITERATOR_BEGIN,
+                new AdvancedOperand.IteratorSpec(name, exitTarget, maximumSteps), source,
+                new ManaCostModel.Input(0, 0, 0, 0, 1, 0, maximumSteps));
+    }
+
+    public static Instruction iteratorNext(String name, int bodyTarget, SourceLocation source) {
+        return advanced(Opcode.ITERATOR_NEXT,
+                new AdvancedOperand.IteratorSpec(name, bodyTarget, 1), source,
+                new ManaCostModel.Input(0, 0, 0, 0, 0, 0, 1));
+    }
+
+    public static Instruction collision(double declaredRange, int samples, SourceLocation source) {
+        return advanced(Opcode.COLLISION,
+                new AdvancedOperand.RangeSpec(declaredRange, samples), source,
+                new ManaCostModel.Input(0, declaredRange, 0, 0, 0, samples, 0));
+    }
+
+    public static Instruction watchVariable(String variable, double declaredRange,
+            SourceLocation source) {
+        return advanced(Opcode.WATCH_VARIABLE,
+                new AdvancedOperand.WatchSpec(variable, declaredRange), source,
+                new ManaCostModel.Input(0, declaredRange, 0, 0, 1, 0, 1));
+    }
+
+    public static Instruction signal(double declaredRange, SourceLocation source) {
+        return advanced(Opcode.SIGNAL, new AdvancedOperand.RangeSpec(declaredRange, 1), source,
+                new ManaCostModel.Input(0, declaredRange, 0, 0, 0, 0, 1));
+    }
+
+    public static Instruction output(double declaredRange, SourceLocation source) {
+        return advanced(Opcode.OUTPUT, new AdvancedOperand.RangeSpec(declaredRange, 1), source,
+                new ManaCostModel.Input(0, declaredRange, 0, 0, 1, 0, 1));
+    }
+
+    public static Instruction fork(String name, int start, int endExclusive,
+            SourceLocation source) {
+        return advanced(Opcode.FORK, new AdvancedOperand.ForkSpec(name, start, endExclusive),
+                source, new ManaCostModel.Input(0, 0, 0, 0, 1, 0, 1));
+    }
+
+    public static Instruction join(SourceLocation source) {
+        return new Instruction(Opcode.JOIN, source, null, 0, 0, null,
+                new ManaCostModel.Input(0, 0, 0, 0, 0, 0, 1), null, null);
+    }
+
+    public static Instruction cancelBranch(String name, SourceLocation source) {
+        return advanced(Opcode.CANCEL_BRANCH, new AdvancedOperand.Named(name), source,
+                new ManaCostModel.Input(0, 0, 0, 0, 0, 0, 1));
+    }
+
+    public static Instruction branchEnd(SourceLocation source) {
+        return new Instruction(Opcode.BRANCH_END, source, null, 0, 0, null,
+                new ManaCostModel.Input(0, 0, 0, 0, 0, 0, 1), null, null);
+    }
+
+    private static Instruction advanced(Opcode opcode, AdvancedOperand operand,
+            SourceLocation source, ManaCostModel.Input cost) {
+        return new Instruction(opcode, source, null, 0, 0, null, cost, null, operand);
     }
 }

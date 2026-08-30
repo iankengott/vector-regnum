@@ -20,8 +20,10 @@ grep -Fq '22. [x] **Casting media, reagents, and resource escrow.**' \
     ROADMAP.md || die 'ROADMAP.md does not mark priority 22 complete'
 grep -Fq '23. [x] **Persistent upkeep and natural conclusions.**' \
     ROADMAP.md || die 'ROADMAP.md does not mark priority 23 complete'
-grep -Fq '"version": 11' src/main/resources/assets/vector_regnum/guide/field_manual.json \
-    || die 'Field Manual is not at the current five-spell-expansion version'
+grep -Fq '24. [x] **Advanced shared-memory spell control.**' \
+    ROADMAP.md || die 'ROADMAP.md does not mark priority 24 complete'
+grep -Fq '"version": 12' src/main/resources/assets/vector_regnum/guide/field_manual.json \
+    || die 'Field Manual is not at the current priority-24 version'
 
 grep -Fq '**Execution-host policy (Ian, 2026-08-27):** Hermes is the default' \
     AGENTS.md || die 'AGENTS.md lost the Hermes-first, approval-gated NixOS policy'
@@ -30,6 +32,19 @@ grep -Fq 'Use OpenAI Codex subagents only' AGENTS.md \
 
 [[ -x scripts/hermes-diff-check.sh ]] \
     || die 'Hermes overlay diff checker is missing or not executable'
+[[ -x scripts/hermes-reset-test-world.sh ]] \
+    || die 'Hermes test-world reset helper is missing or not executable'
+[[ -x scripts/hermes-record-video.sh ]] \
+    || die 'Hermes focused-window video recorder is missing or not executable'
+grep -Fq '"$remote_dir/scripts/hermes-reset-test-world.sh"' scripts/hermes-client.sh \
+    || die 'Hermes client startup no longer resets generated test-world state'
+grep -Fq 'the test world'"'"'s generated/world state while preserving playerdata,' \
+    scripts/hermes-client.sh \
+    || die 'Hermes client help no longer states the playerdata preservation rule'
+grep -Fq 'advancements, and stats.' scripts/hermes-client.sh \
+    || die 'Hermes client help no longer states the player-data preservation rule'
+grep -Fq 'a fresh flat world is part of the reproducibility contract' scripts/README.md \
+    || die 'scripts README lost the clean-world visual-evidence rule'
 
 readonly -a LIVE_HANDOFF_DOCS=(
     AGENTS.md
@@ -68,6 +83,13 @@ readonly -a STALE_CLAIMS=(
     'priority 23 remains unfinished'
     'priority 23 is next'
     'priority 23 persistent upkeep and natural conclusions is next'
+    'priority 24 is the first unfinished'
+    'priority 24 remains the first unfinished'
+    'priority 24 is next'
+    'priority 24 advanced shared-memory spell control is next'
+    'captured hermes frame still needs'
+    'awaiting only direct inspection'
+    'field manual v11 with exact crystal/media/infrastructure recipes and commands'
     'priorities 1–20a'
     'priorities 1–21 are checked'
     'priorities 1–22 are checked'
@@ -89,5 +111,5 @@ for stale_claim in "${STALE_CLAIMS[@]}"; do
     fi
 done
 
-printf 'HANDOFF_DOCS_OK priority20a=complete priority21=complete priority22=complete priority23=complete hermes_first=true luna_max=true checked_files=%d\n' \
+printf 'HANDOFF_DOCS_OK priority20a=complete priority21=complete priority22=complete priority23=complete priority24=complete priority25=next hermes_first=true luna_max=true checked_files=%d\n' \
     "${#LIVE_HANDOFF_DOCS[@]}"

@@ -11,7 +11,13 @@ public enum StackType {
     ENTITY("entity"),
     POINT_LIST("list<point>"),
     ENTITY_LIST("list<entity>"),
-    LIST("list<?>");
+    LIST("list<?>"),
+    TEXT("text"),
+    ITERATOR("iterator"),
+    NUMBER_LIST("list<number>"),
+    BOOLEAN_LIST("list<boolean>"),
+    VECTOR_LIST("list<vector>"),
+    TEXT_LIST("list<text>");
 
     private final String displayName;
 
@@ -30,6 +36,7 @@ public enum StackType {
             case RuntimeValue.PointValue ignored -> POINT;
             case RuntimeValue.VectorValue ignored -> VECTOR;
             case RuntimeValue.EntityValue ignored -> ENTITY;
+            case RuntimeValue.TextValue ignored -> TEXT;
             case RuntimeValue.ListValue list -> listType(list.values());
         };
     }
@@ -40,6 +47,18 @@ public enum StackType {
         }
         if (!values.isEmpty() && values.stream().allMatch(RuntimeValue.EntityValue.class::isInstance)) {
             return ENTITY_LIST;
+        }
+        if (!values.isEmpty() && values.stream().allMatch(RuntimeValue.NumberValue.class::isInstance)) {
+            return NUMBER_LIST;
+        }
+        if (!values.isEmpty() && values.stream().allMatch(RuntimeValue.BooleanValue.class::isInstance)) {
+            return BOOLEAN_LIST;
+        }
+        if (!values.isEmpty() && values.stream().allMatch(RuntimeValue.VectorValue.class::isInstance)) {
+            return VECTOR_LIST;
+        }
+        if (!values.isEmpty() && values.stream().allMatch(RuntimeValue.TextValue.class::isInstance)) {
+            return TEXT_LIST;
         }
         return LIST;
     }

@@ -49,6 +49,27 @@ class PonderLessonLibraryTest {
                         || step.narration().toLowerCase().contains("lesson")));
     }
 
+    @Test
+    void sharedMemoryControlLessonTeachesBoundedAuthoritativeTruth() {
+        PonderTimeline lesson = PonderLessonLibrary.sharedMemoryControl();
+        String narration = lesson.steps().stream().map(PonderTimeline.Step::narration)
+                .collect(Collectors.joining(" ")).toLowerCase();
+
+        assertEquals("shared_memory_control", lesson.id());
+        assertTrue(lesson.steps().size() <= PonderTimeline.MAX_STEPS);
+        assertTrue(lesson.steps().stream().allMatch(step ->
+                step.cues().size() <= PonderTimeline.MAX_CUES_PER_STEP));
+        for (String term : Set.of("creation order", "shared", "stack", "variable", "iterator",
+                "collision", "watch", "signal", "output", "join", "cancel", "bound")) {
+            assertTrue(narration.contains(term), "lesson should teach " + term);
+        }
+        assertTrue(lesson.steps().stream().flatMap(step -> step.cues().stream())
+                .anyMatch(cue -> "shared_memory_control".equals(cue.data().get("trace"))
+                        && "textual_authoritative".equals(cue.data().get("truth"))));
+        assertTrue(PonderLessonLibrary.primer().steps().stream().flatMap(step -> step.cues().stream())
+                .anyMatch(cue -> "shared_memory_control".equals(cue.data().get("trace"))));
+    }
+
     private static boolean hasCue(PonderTimeline timeline, PonderTimeline.CueType type) {
         return timeline.steps().stream().flatMap(step -> step.cues().stream())
                 .anyMatch(cue -> cue.type() == type);

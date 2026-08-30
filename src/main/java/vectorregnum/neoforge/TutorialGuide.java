@@ -16,8 +16,8 @@ import java.util.List;
 /** Gives each player a persistent first-join field manual and starter tome. */
 public final class TutorialGuide {
     public static final String FIELD_MANUAL_TITLE_PREFIX = "Vector-Regnum Field Manual v";
-    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "11";
-    private static final int CURRENT_GUIDE_VERSION = 11;
+    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "12";
+    private static final int CURRENT_GUIDE_VERSION = 12;
     private TutorialGuide() {
     }
 
@@ -110,6 +110,9 @@ public final class TutorialGuide {
                 page("THE TICKED VM\n\n"
                         + "The new runtime has typed numbers, booleans, points, vectors, entities, and lists; Push/Pop memory; delay/duration; branches; and bounded loops.\n\n"
                         + "Load an editable typed example with /vectorregnum circle vm_starter. Use circle params for comma-separated vector/list/control parameters. VM_CREATE_FORM adds bounded material forms. It yields safely at per-tick limits."),
+                page("SHARED CONTROL\n\n"
+                        + "Advanced programs can store typed variables, walk lists one item per tick, test entity/point collisions, and publish bounded watcher signals or owner output.\n\n"
+                        + "Logical branches share Push/Pop memory. They advance in stable server-tick order; every shared operation is atomic and traced. Work, lifetime, branches, messages, and stack depth remain hard-capped. Try /vectorregnum vm control_demo."),
                 page("PERCEPTION & PHYSICS\n\n"
                         + "The VM can select and raycast entities, then emit validated impulse, acceleration, damping, path, move-toward, and keep-distance effects.\n\n"
                         + "Typed sigils use the VM_ prefix and EXECUTE ends the program. Cost names physical work, range, duration, rarity, memory, perception, and control flow."),

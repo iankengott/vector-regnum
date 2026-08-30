@@ -23,27 +23,28 @@ end-to-end alpha passes, but still need balance and hardening.
 
 ## Current handoff checkpoint
 
-As of 2026-08-29, priority 23 is checked. The current NeoForge 1.21.1 tree has
-267 passing JUnit tests and 34 passing production GameTests. Its 20-program
-library includes bounded Fireball, Storm Arc, Tidal Prison, Stone Aegis, and
-safe loaded-destination Teleport spells. Continuing status,
-force, and temporary-block effects register bounded per-dimension SavedData
-contracts with versioned ownership, program identity, natural and hard
-deadlines, prepaid upkeep, and idempotent cleanup handles. Loaded contracts
-debit exact upkeep; forces remain live during a delayed owning VM and transfer
-only their unexpired remainder at halt. Failed synchronous saves restore and
-re-save the prior ledger. Unloaded chunks pause reconciliation; offline owners
-cannot drive mutations. Natural expiry cleans once, while unpaid or overlong effects
-persist deterministic collapse before bounded Wild Magic and cleanup. Field
-Manual v11 and `/vectorregnum effect status` teach and expose the contract. The
-final Hermes checkpoint loaded all 59 Quasar emitters and reported 20 library
-spells, Field Manual v11, and all five expansion programs. The directly
-inspected frame `visual-evidence/hermes-window-20260829T111619Z.png` showed the
-bounded Stone Aegis ward centered on the staged scene plus three live contracts
-with 12.15 mana escrowed. The closeout was Hermes-only. Both Hermes development
-units stopped and port 25575 was free.
+As of 2026-08-29, priorities 1–24 have coherent end-to-end alpha passes. The
+current NeoForge 1.21.1 tree has 289 passing JUnit tests and 39 passing
+production GameTests. Priority 24 appends bounded typed variables, one-item-per-tick
+iterators, collision queries, watchers, signals, owner-only text output, and
+deterministically scheduled logical branches to vm2 while retaining one atomic
+shared `Push`/`Pop` stack. Program validation and static analysis reject
+cross-branch control flow and non-neutral child stacks; all state and message,
+branch, work, lifetime, range, and text bounds fail closed. Field Manual v12,
+the Priority 24 Ponder, `/vectorregnum vm control_demo`, and authoritative
+presentation cues teach and expose the contract. Video debugging found that a
+sustained Featherfall truth cue was centered at eye height and could obscure
+the camera in both Veil and built-in renderers. The cue is now a bounded
+feet-anchored volume, and the shared-control showcase waits for earlier cast
+preludes to clear. The directly inspected eight-second Hermes recording
+`visual-evidence/hermes-window-20260829T214514Z.mp4` keeps the world, staged
+structure, HUD, and checkpoint text readable throughout. The final candidate
+passed the complete build, 39 GameTests, focused verifier, overlay diff, and
+guarded 59-emitter client run. Test starts now recreate generated world state
+while preserving `playerdata`, `advancements`, and `stats`. Both Hermes
+development units stopped and port 25575 was free.
 
-Priority 24 is the first unfinished canonical item. Always re-read
+Priority 25 is the first unfinished canonical item. Always re-read
 `ROADMAP.md` before reporting or implementing work because it supersedes this
 dated checkpoint whenever the queue changes.
 
@@ -108,7 +109,7 @@ not complete without the full NeoForge ladder.
    check from `scripts/README.md`; it uses a fresh public clone so
    `git diff --check` covers the candidate tree without running on NixOS.
 
-   The GameTest process must report all 34 required tests passed. Its live
+   The GameTest process must report all 39 required tests passed. Its live
    parity test validates registry IDs, attachments, payload directions,
    creative-tab membership, and the command root against
    `data/vector_regnum/registration_parity.json`.

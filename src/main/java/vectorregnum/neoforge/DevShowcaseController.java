@@ -212,8 +212,7 @@ public final class DevShowcaseController {
         CircleAuthoringService.loadVmStarter(player);
         var circle = CircleAuthoringService.session(player).current();
         var typedCompilation = CircleAuthoringService.compile(player);
-        if (typedCompilation.hasErrors()
-                || !NeoForgeVmService.launchVectorStep(player, false, 250, 0.25)) {
+        if (typedCompilation.hasErrors()) {
             throw new IllegalStateException("typed authored circle visual preflight failed");
         }
 
@@ -230,7 +229,10 @@ public final class DevShowcaseController {
                 || !LibrarySpellService.castForShowcase(player, "redstone_oracle")) {
             throw new IllegalStateException("priority-23 persistent-effect visual preflight failed");
         }
-        PENDING_PERSISTENT.put(player.getUUID(), 40);
+        // The priority-24 proof launches from the delayed persistent checkpoint,
+        // after the earlier invocation preludes have expired. Staging every cue
+        // on one tick makes the test obscure its own truth telegraphs.
+        PENDING_PERSISTENT.put(player.getUUID(), 60);
         // Let the bounded spell/circle cues finish before presenting the
         // canonical grid. This makes the automated visual proof repeatable.
         PENDING_PALETTE.put(player.getUUID(),
@@ -247,7 +249,7 @@ public final class DevShowcaseController {
                         + "persistence_claim={} player_schema={} unlocks_added={} create_renderer_probe={} "
                         + "element_palette_count=14 affinity_matrix=100,75,50,25 opposed_floor=25 "
                         + "natural_element=server_authoritative channel_attunement={} "
-                        + "casting_methods=6 reagent_kinds=4 ritual_offering=quartz field_manual=11 "
+                        + "casting_methods=6 reagent_kinds=4 ritual_offering=quartz field_manual=12 "
                         + "persistent_contracts=queued five_spell_expansion=5",
                 player.getGameProfile().getName(),
                 circle.sigils().size(),
@@ -261,6 +263,28 @@ public final class DevShowcaseController {
                 unlocksAdded,
                 createRendererProbe,
                 ManaData.channelAffinity(player).getSerializedName());
+    }
+
+    private static void launchPriority24Showcase(ServerPlayer player) {
+        if (!NeoForgeVmService.launchPriority24Demo(player, outcome -> {
+            if (outcome != vectorregnum.core.casting.ResourceEscrow.Outcome.SUCCESS) {
+                throw new IllegalStateException(
+                        "priority-24 shared-control visual demo settled as " + outcome);
+            }
+            player.sendSystemMessage(Component.literal(
+                            "VECTOR-REGNUM • PRIORITY 24 SHARED CONTROL CHECKPOINT")
+                    .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), false);
+            VectorRegnumMod.LOGGER.info(
+                    "VISUAL_CHECKPOINT_READY milestone=priority_24 player={} "
+                            + "shared_stack=atomic branch_order=stable_server_tick "
+                            + "variables=64 iterators=16 iterator_steps=1024 "
+                            + "active_branches=8 total_branches=32 signals=128 "
+                            + "outputs=64 output_chars=256 field_manual=12 "
+                            + "command=\"/vectorregnum vm control_demo\"",
+                    player.getGameProfile().getName());
+        })) {
+            throw new IllegalStateException("priority-24 shared-control visual preflight failed");
+        }
     }
 
     private static void tickPersistentCheckpoint(MinecraftServer server) {
@@ -289,9 +313,10 @@ public final class DevShowcaseController {
                     .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), false);
             VectorRegnumMod.LOGGER.info(
                     "PERSISTENT_EFFECT_CHECKPOINT_READY player={} contracts={} upkeep_remaining={} "
-                            + "saved_data={} field_manual=11 command=\"/vectorregnum effect status\"",
+                            + "saved_data={} field_manual=12 command=\"/vectorregnum effect status\"",
                     player.getGameProfile().getName(), contracts.size(), upkeep,
                     vectorregnum.neoforge.effect.PersistentEffectSavedData.FILE_ID);
+            launchPriority24Showcase(player);
         }
     }
 

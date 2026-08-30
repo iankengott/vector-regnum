@@ -61,6 +61,21 @@ class PresentationCompilerTest {
     }
 
     @Test
+    void featherfallUsesCameraSafeBoundedTruthVolume() {
+        var vm = SemanticVmLowerer.lowerChecked(
+                LibrarySemanticAdapter.adapt(ProgressionSpellLibrary.BY_ID.get("featherfall")),
+                new LoweringContext("featherfall", 17L, Map.of()));
+        PresentationInstruction cue = PresentationCompiler.compile("featherfall", 17L, vm)
+                .instructions().stream()
+                .filter(instruction -> instruction.rendererId().equals(
+                        "vector_regnum:truth/featherfall"))
+                .findFirst().orElseThrow();
+        assertEquals(PresentationBinding.TARGET, cue.binding());
+        assertEquals(.65, cue.parameters().get("radius"));
+        assertTrue(cue.truthLayer());
+    }
+
+    @Test
     void lodAndAccessibilityReduceDetailWithoutDroppingTruth() {
         PresentationInstruction truth = instruction(true, PresentationCueKind.SURFACE);
         PresentationInstruction haze = instruction(false, PresentationCueKind.FOG);
