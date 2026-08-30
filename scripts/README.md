@@ -281,9 +281,26 @@ structure and HUD remained readable after the opening particle flash. The
 GNOME screenshot portal did not expose its Share button, so the video is the
 visual artifact for this pass.
 
+## Priority-26 recovered-mechanic checks
+
+Run the focused capability-policy, semantic opcode, accessibility codec, guide,
+Ponder, JSON, shell, and whitespace gate with:
+
+```bash
+scripts/verify-priority26.sh
+```
+
+The production GameTest matrix includes three priority-26 cases for the shared
+server policy, deterministic bounded Wild Magic envelopes, and the render-only
+capability under disabled PvP. The guarded client checkpoint must keep the
+attention warning and other mechanics-derived truth cues visible while reduced
+motion, photosensitive, density, camera, or audio controls remove only optional
+expression. Sensory preferences are versioned and local; they never change
+server outcomes.
+
 ## Production NeoForge GameTests
 
-The ordinary Gradle `test` task runs JUnit and contract tests. The 44 production
+The ordinary Gradle `test` task runs JUnit and contract tests. The 47 production
 NeoForge GameTests must additionally run inside the real isolated GameTest
 server on Hermes when their integration surface changes:
 
@@ -292,7 +309,7 @@ ssh ian-kengott@100.88.229.63 \
   'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-The runner exits after the matrix completes and must report all 44 required
+The runner exits after the matrix completes and must report all 47 required
 tests passed. The tests cover live registration parity, commands, players,
 attachments, media/tablet and crystal block entities, scheduled expiry,
 serialized tick-queue reload, claim/death migration, relay persistence, remote

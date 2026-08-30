@@ -1,0 +1,7 @@
+decision	why	evidence	result
+curated capability enum	Dangerous recovered mechanics need an explicit reviewable boundary rather than a generic force flag	MechanicCapability, MechanicSecurityPolicy, Priority26SecurityTest	Render-only, disruption, attention, and Wild Magic paths have distinct gates
+render-only outline	Visual reveal must not grant gameplay status or bypass permissions	SemanticSpellExecutor particles path and source verifier	Outline emits bounded trace payloads and never applies GLOWING
+disruption contract	Reverse-unwriting is safe only for an active spell with an intentional stance, weapon, and timing window	SpellDisruptionService plus authoritative NeoForgeVmService cancellation	A valid hit settles as genuine spell fault and emits bounded Wild Magic; invalid hits do nothing
+forced attention	Camera coercion must be short, gradual, range-limited, and readable without client post-processing	ForcedAttentionService, attention policy, guide/Ponder contract	Server tick applies at most three degrees per tick and emits an accessible truth ring
+deterministic Wild Magic envelope	Random fallout must reproduce after retries and stay within hard caps	WildMagicResolver and envelope GameTest	Category/seed resolve to stable bounded radius, magnitude, duration, and target count
+client sensory settings	Accessibility choices must persist locally without affecting authoritative outcomes	PresentationAccessibilityCodec and client runtime tests	Versioned settings round-trip; optional layers can be reduced while truth cues remain

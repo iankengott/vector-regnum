@@ -45,5 +45,8 @@ public enum LibraryOpcode {
     ELEMENT_SOUND,
     SET_TARGET_LIMIT,
     APPLY_EXPLOSION,
-    TELEPORT_CASTER
+    TELEPORT_CASTER,
+    // Priority 26 recovered mechanics. Appended for serialized ordinal stability.
+    RENDER,
+    FORCE_ATTENTION
 }

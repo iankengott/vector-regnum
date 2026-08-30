@@ -94,6 +94,12 @@ class SemanticVmLowererTest {
             case BREAK_BLOCKS -> text(opcode, "mode", "safe", source);
             case TRANSMUTE_BLOCK -> text(opcode, "into", "minecraft:stone", source);
             case EMIT_PARTICLES -> text(opcode, "style", "outline", source);
+            case RENDER -> text(opcode, "style", "outline", source);
+            case FORCE_ATTENTION -> new SemanticInstruction(opcode,
+                    Map.of("range", new SemanticValue.NumberValue(8),
+                            "angle", new SemanticValue.NumberValue(30),
+                            "strength", new SemanticValue.NumberValue(.5),
+                            "ticks", new SemanticValue.NumberValue(20)), source);
             case CREATE_FORM -> SemanticInstruction.creation(new CreationSpec(
                     CreationMaterial.LIGHT, CreationForm.FIELD, 1, 20, false), source);
             default -> SemanticInstruction.simple(opcode, source);

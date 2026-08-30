@@ -22,6 +22,8 @@ import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import vectorregnum.core.vm2.Instruction;
 import vectorregnum.core.Element;
+import vectorregnum.core.EffectCommand;
+import vectorregnum.core.WildMagicCategory;
 import vectorregnum.core.vm2.ManaCostModel;
 import vectorregnum.core.vm2.Priority24ProgramFactory;
 import vectorregnum.core.vm2.Program;
@@ -55,6 +57,7 @@ import vectorregnum.neoforge.multiplayer.SpellLeasePolicy;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
@@ -76,6 +79,8 @@ public final class NeoForgeVmService {
     private static final List<ActiveVm> PENDING_VMS = new ArrayList<>();
     private static final CastAbuseGuard ABUSE_GUARD = new CastAbuseGuard();
     private static final Set<UUID> CANCELLED_OWNERS = new HashSet<>();
+    private static final java.util.Map<UUID, ResourceEscrow.Outcome> CANCELLATION_OUTCOMES = new HashMap<>();
+    private static final java.util.Map<UUID, String> CANCELLATION_REASONS = new HashMap<>();
     private static boolean tickingVms;
     private static boolean initialized;
 
@@ -99,6 +104,8 @@ public final class NeoForgeVmService {
         PENDING_VMS.clear();
         ABUSE_GUARD.clear();
         CANCELLED_OWNERS.clear();
+        CANCELLATION_OUTCOMES.clear();
+        CANCELLATION_REASONS.clear();
         tickingVms = false;
         initialized = false;
     }
@@ -371,8 +378,26 @@ public final class NeoForgeVmService {
                 ActiveVm active = vmIterator.next();
                 ServerPlayer currentOwner = server.getPlayerList().getPlayer(active.owner);
                 if (CANCELLED_OWNERS.contains(active.owner) || !validLifecycle(currentOwner, active)) {
+                    ResourceEscrow.Outcome cancellation = CANCELLATION_OUTCOMES.getOrDefault(
+                            active.owner, ResourceEscrow.Outcome.OWNER_LIFECYCLE);
+                    String reason = CANCELLATION_REASONS.getOrDefault(active.owner,
+                            "owner lifecycle ended");
                     active.persistentEffects.rollback();
-                    settle(active, ResourceEscrow.Outcome.OWNER_LIFECYCLE);
+                    if (cancellation == ResourceEscrow.Outcome.GENUINE_SPELL_FAULT
+                            && currentOwner != null) {
+                        EffectCommand.WildMagic wild = new EffectCommand.WildMagic(
+                                currentOwner.getStringUUID(), WildMagicCategory.VIOLENT_MISCAST,
+                                Optional.of(new vectorregnum.core.Vec3(currentOwner.getX(),
+                                        currentOwner.getY(), currentOwner.getZ())), Optional.of(Element.VOID),
+                                Optional.empty(), 0, reason,
+                                currentOwner.serverLevel().getGameTime()
+                                        ^ active.owner.getLeastSignificantBits());
+                        SpellVisualManager.apply(currentOwner, wild);
+                        currentOwner.sendSystemMessage(Component.literal(
+                                        "Spell disrupted: bounded Wild Magic backlash")
+                                .withStyle(ChatFormatting.LIGHT_PURPLE));
+                    }
+                    settle(active, cancellation);
                     ABUSE_GUARD.release(active.owner);
                     vmIterator.remove();
                     continue;
@@ -529,6 +554,8 @@ public final class NeoForgeVmService {
         }
 
         CANCELLED_OWNERS.clear();
+        CANCELLATION_OUTCOMES.clear();
+        CANCELLATION_REASONS.clear();
     }
 
     private static boolean validLifecycle(ServerPlayer owner, ActiveVm active) {
@@ -542,9 +569,29 @@ public final class NeoForgeVmService {
         long pending = java.util.stream.Stream.concat(ACTIVE_VMS.stream(), PENDING_VMS.stream())
                 .filter(active -> active.owner.equals(owner)).count();
         CANCELLED_OWNERS.add(owner);
+        CANCELLATION_OUTCOMES.put(owner, ResourceEscrow.Outcome.OWNER_LIFECYCLE);
+        CANCELLATION_REASONS.put(owner, reason == null || reason.isBlank()
+                ? "owner lifecycle ended" : reason);
         ABUSE_GUARD.clear(owner);
         if (pending > 0) VectorRegnumMod.LOGGER.info("Cancelling {} spell VM(s) for {}: {}",
                 pending, owner, reason);
+    }
+
+    /** Returns whether an owner currently has a live or queued spell. */
+    public static boolean hasActiveSpell(UUID owner) {
+        if (owner == null) return false;
+        return java.util.stream.Stream.concat(ACTIVE_VMS.stream(), PENDING_VMS.stream())
+                .anyMatch(active -> active.owner.equals(owner));
+    }
+
+    /** Requests one bounded reverse-unwriting cancellation on the authoritative tick. */
+    public static boolean disruptOwner(UUID owner, String reason) {
+        if (owner == null || !hasActiveSpell(owner) || CANCELLED_OWNERS.contains(owner)) return false;
+        CANCELLED_OWNERS.add(owner);
+        CANCELLATION_OUTCOMES.put(owner, ResourceEscrow.Outcome.GENUINE_SPELL_FAULT);
+        CANCELLATION_REASONS.put(owner, reason == null || reason.isBlank()
+                ? "spell disrupted" : reason);
+        return true;
     }
 
     /** Cancels only VMs carrying one exact cooperative ritual label. */

@@ -13,6 +13,7 @@ import vectorregnum.neoforge.automation.AutomationService;
 import vectorregnum.neoforge.effect.PersistentEffectService;
 import vectorregnum.neoforge.multiplayer.MultiplayerLifecycleService;
 import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
+import vectorregnum.neoforge.multiplayer.ForcedAttentionService;
 import vectorregnum.neoforge.progression.ManaAffinity;
 import vectorregnum.neoforge.progression.PlayerManaBridge;
 import vectorregnum.neoforge.progression.ProgressionContent;
@@ -71,6 +72,7 @@ public final class VectorRegnumMod {
         NeoForge.EVENT_BUS.register(SpellVisualManager.class);
         NeoForge.EVENT_BUS.register(AutomationService.class);
         NeoForge.EVENT_BUS.register(SpellSecurityPolicy.class);
+        NeoForge.EVENT_BUS.register(ForcedAttentionService.class);
         NeoForge.EVENT_BUS.register(VectorRegnumGameplayEvents.class);
         NeoForge.EVENT_BUS.addListener(VectorRegnumCommands::register);
 

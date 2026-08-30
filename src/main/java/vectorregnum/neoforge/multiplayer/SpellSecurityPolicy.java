@@ -8,14 +8,26 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.level.BlockEvent;
+import vectorregnum.core.security.MechanicLimits;
 
 /** One server-authoritative permission boundary for every spell world mutation. */
 public final class SpellSecurityPolicy {
     private SpellSecurityPolicy() { }
 
     public static boolean canAffectEntity(ServerPlayer caster, Entity target) {
+        return canAffectEntity(caster, target, MechanicLimits.MAX_RANGE);
+    }
+
+    /** Entity policy with an explicit bounded cast envelope. */
+    public static boolean canAffectEntity(ServerPlayer caster, Entity target, double maxRange) {
         if (caster == null || target == null || target.isRemoved() || target.level() != caster.level()
-                || !caster.serverLevel().isLoaded(target.blockPosition())) return false;
+                || !caster.serverLevel().isLoaded(target.blockPosition())
+                || !Double.isFinite(maxRange) || maxRange < 0.0
+                || caster.distanceToSqr(target) > maxRange * maxRange) return false;
+        ClaimLedger.ClaimKey key = MultiplayerLifecycleService.key(caster.serverLevel(),
+                target.blockPosition());
+        if (!MultiplayerLifecycleService.claims(caster.serverLevel()).permits(key,
+                caster.getUUID(), teamName(caster), caster.hasPermissions(2))) return false;
         if (!(target instanceof ServerPlayer other) || other == caster) return true;
         if (!caster.getServer().isPvpAllowed() || other.isSpectator()) return false;
         var casterTeam = caster.getTeam();

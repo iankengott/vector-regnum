@@ -170,6 +170,20 @@ public final class PresentationCompiler {
                         PresentationCueKind.PARTICLES, "truth/resonance_reveal",
                         PresentationBinding.TARGET_SET, 0, 24, .52, true,
                         parameters, GESTURE));
+                case RENDER -> cues.add(cue(trigger, PresentationPhase.SUSTAIN,
+                        PresentationCueKind.RUNES, "cosmetic/render_only",
+                        PresentationBinding.AFFECTED_AREA, 0, 24, .38, false,
+                        parameters, MICRO));
+                case FORCE_ATTENTION -> {
+                    cues.add(cue(trigger, PresentationPhase.TENSION,
+                            PresentationCueKind.RUNES, "truth/attention_warning",
+                            PresentationBinding.TARGET, 0, 10, .82, true,
+                            parameters, GESTURE));
+                    cues.add(cue(trigger, PresentationPhase.SUSTAIN,
+                            PresentationCueKind.SPATIAL_SOUND, "sound/attention_warning",
+                            PresentationBinding.TARGET, 0, 1, .30, false,
+                            parameters, SOUND));
+                }
                 case EMIT_REDSTONE -> cues.add(cue(trigger, PresentationPhase.RELEASE,
                         PresentationCueKind.BEAM, "truth/redstone_pulse",
                         PresentationBinding.AFFECTED_AREA, 0, 14, .60, true,

@@ -33,6 +33,7 @@ import vectorregnum.core.casting.ResourceEscrow;
 import vectorregnum.core.presentation.PresentationElement;
 import vectorregnum.core.presentation.PresentationParticleStyle;
 import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
+import vectorregnum.neoforge.multiplayer.ForcedAttentionService;
 import vectorregnum.neoforge.presentation.ServerTraces;
 import vectorregnum.neoforge.effect.PersistentEffectService;
 
@@ -138,7 +139,7 @@ public final class SemanticSpellExecutor {
         private final boolean force;
         private final PersistentEffectService.Batch persistentEffects;
         private double radius = 8, magnitude = 1;
-        private int duration = 1, repeat = 128, targetLimit = 128;
+        private int duration = 1, repeat = 16, targetLimit = 16;
         private boolean durationConfigured;
         private String element = "none", shape = "aura", filter = "any";
         private BlockHitResult block;
@@ -201,9 +202,11 @@ public final class SemanticSpellExecutor {
                 case TRANSMUTE_BLOCK -> runRepeatable(() -> transmute(SemanticSchema.text(step.operands(), "into")));
                 case CREATE_FORM -> runRepeatable(() -> SemanticCreationExecutor.create(
                         player, step.creationSpec(), persistentEffects));
-                case EMIT_PARTICLES -> runRepeatable(() -> particles(SemanticSchema.text(step.operands(), "style")));
+                case EMIT_PARTICLES, RENDER -> runRepeatable(() -> particles(
+                        SemanticSchema.text(step.operands(), "style")));
                 case EMIT_REDSTONE -> runRepeatable(() -> redstone(SemanticSchema.integer(step.operands(), "strength")));
                 case TELEPORT_CASTER -> teleportCaster();
+                case FORCE_ATTENTION -> forceAttention(step);
             }
             if (step.opcode() == SemanticOpcode.EXECUTE && shape.equals("barrier")) barrier();
         }
@@ -378,8 +381,14 @@ public final class SemanticSpellExecutor {
 
         private void particles(String style) {
             if (style.equals("outline")) {
-                livingTargets().forEach(entity ->
-                        applyStatus(entity, MobEffects.GLOWING, Math.max(duration, 200), 0));
+                // Render-only output cannot mutate target status, mana, or world state.
+                List<Vec3> points = livingTargets().stream()
+                        .filter(entity -> SpellSecurityPolicy.canAffectEntity(player, entity))
+                        .limit(targetLimit)
+                        .map(entity -> entity.position().add(0, entity.getBbHeight() * .5, 0))
+                        .toList();
+                ServerTraces.burstAll(world, points, PresentationParticleStyle.SPARK,
+                        PresentationElement.ARCANE, 0.35F, 0.8F, 12);
             } else if (style.equals("vein_trace")) {
                 List<Vec3> ores = new ArrayList<>(32);
                 BlockPos center = player.blockPosition(); int r = Math.min(12, (int) radius);
@@ -391,6 +400,27 @@ public final class SemanticSpellExecutor {
                 }
                 ServerTraces.burstAll(world, ores, PresentationParticleStyle.SPARK,
                         PresentationElement.ARCANE, 0.35F, 0.7F, 14);
+            } else {
+                // All other Render styles are deliberately cosmetic and bounded.
+                ServerTraces.ring(world, player.position().add(0, .05, 0),
+                        (float) Math.clamp(radius, 0.5, 12.0),
+                        PresentationElement.ARCANE, Math.min(duration, 40), .55F);
+            }
+        }
+
+        private void forceAttention(SemanticInstruction step) {
+            double range = SemanticSchema.number(step.operands(), "range");
+            double angle = SemanticSchema.number(step.operands(), "angle");
+            double strength = SemanticSchema.number(step.operands(), "strength");
+            int ticks = SemanticSchema.integer(step.operands(), "ticks");
+            List<ServerPlayer> targets = world.getEntitiesOfClass(ServerPlayer.class,
+                    player.getBoundingBox().inflate(range), target -> target != player
+                            && target.isAlive() && SpellSecurityPolicy.canAffectEntity(player, target))
+                    .stream().sorted(Comparator.comparingDouble(target -> target.distanceToSqr(player)))
+                    .limit(1).toList();
+            if (targets.isEmpty()) rejectUnloaded("forced-attention target disappeared during cast");
+            if (!ForcedAttentionService.apply(player, targets.getFirst(), range, angle, strength, ticks)) {
+                rejectPolicy("forced-attention target is protected by server policy");
             }
         }
 

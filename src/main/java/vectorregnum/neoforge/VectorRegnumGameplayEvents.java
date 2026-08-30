@@ -7,7 +7,9 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.entity.player.PlayerInteractEvent;
+import net.neoforged.neoforge.event.entity.player.AttackEntityEvent;
 import vectorregnum.neoforge.progression.ProgressionSync;
+import vectorregnum.neoforge.multiplayer.SpellDisruptionService;
 
 /** Common game-bus integration that preserves the Fabric alpha's item behavior. */
 public final class VectorRegnumGameplayEvents {
@@ -42,6 +44,16 @@ public final class VectorRegnumGameplayEvents {
         if (artifact.getResult() != InteractionResult.PASS) {
             finish(event, artifact.getResult());
         }
+    }
+
+    /** Enchanted crouch attacks provide the narrow built-in disruption proof. */
+    @SubscribeEvent
+    public static void onAttack(AttackEntityEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer attacker)
+                || !(event.getTarget() instanceof ServerPlayer target)
+                || attacker.level().isClientSide()) return;
+        SpellDisruptionService.tryDisrupt(attacker, target,
+                attacker.getMainHandItem(), 0);
     }
 
     private static void finish(PlayerInteractEvent.RightClickItem event, InteractionResult result) {

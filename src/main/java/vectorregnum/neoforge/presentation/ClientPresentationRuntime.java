@@ -6,6 +6,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.SplittableRandom;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.ParticleStatus;
@@ -24,6 +27,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import vectorregnum.core.presentation.PresentationAccessibility;
+import vectorregnum.core.presentation.PresentationAccessibilityCodec;
 import vectorregnum.core.presentation.PresentationCueKind;
 import vectorregnum.core.presentation.PresentationElement;
 import vectorregnum.core.presentation.PresentationInstruction;
@@ -67,6 +71,7 @@ public final class ClientPresentationRuntime {
     public static void initialize() {
         if (initialized) return;
         initialized = true;
+        loadAccessibility();
         OptionalPresentationBackend.initialize();
         NeoForge.EVENT_BUS.addListener(ClientPresentationRuntime::onClientTick);
         NeoForge.EVENT_BUS.addListener(ClientPresentationRuntime::onRenderGui);
@@ -140,6 +145,7 @@ public final class ClientPresentationRuntime {
 
     public static void setAccessibility(PresentationAccessibility settings) {
         accessibility = settings == null ? PresentationAccessibility.DEFAULT : settings;
+        saveAccessibility();
     }
 
     public static void cycleQuality(Minecraft client) {
@@ -163,7 +169,7 @@ public final class ClientPresentationRuntime {
             PresentationProgram program = PresentationProgramCodec.decode(payload.encodedProgram());
             if (INSTANCES.size() >= MAX_INSTANCES) {
                 Iterator<Long> iterator = INSTANCES.keySet().iterator();
-                if (iterator.hasNext()) { iterator.next(); iterator.remove(); }
+                if (iterator.hasNext()) { removeInstance(iterator.next()); }
             }
             Vec3 origin = new Vec3(payload.originX(), payload.originY(), payload.originZ());
             Vec3 direction = new Vec3(payload.directionX(), payload.directionY(), payload.directionZ());
@@ -226,6 +232,46 @@ public final class ClientPresentationRuntime {
         ACTIVE_CUES.clear();
         ClientCirclePreviews.clear();
         OptionalPresentationBackend.clear();
+    }
+
+    private static void removeInstance(long instanceId) {
+        Instance removed = INSTANCES.remove(instanceId);
+        if (removed == null) return;
+        Iterator<ActiveCue> cues = ACTIVE_CUES.iterator();
+        while (cues.hasNext()) {
+            ActiveCue cue = cues.next();
+            if (cue.instance == removed) {
+                cue.endBackend();
+                cues.remove();
+            }
+        }
+    }
+
+    private static Path accessibilityPath() {
+        Minecraft client = Minecraft.getInstance();
+        return client.gameDirectory.toPath().resolve("vector-regnum-accessibility.txt");
+    }
+
+    private static void loadAccessibility() {
+        try {
+            Path path = accessibilityPath();
+            if (Files.isRegularFile(path)) {
+                accessibility = PresentationAccessibilityCodec.decode(
+                        Files.readString(path, StandardCharsets.UTF_8));
+            }
+        } catch (RuntimeException | java.io.IOException ignored) {
+            accessibility = PresentationAccessibility.DEFAULT;
+        }
+    }
+
+    private static void saveAccessibility() {
+        try {
+            Files.writeString(accessibilityPath(),
+                    PresentationAccessibilityCodec.encode(accessibility),
+                    StandardCharsets.UTF_8);
+        } catch (RuntimeException | java.io.IOException ignored) {
+            // Preferences are optional; a failed write cannot affect gameplay.
+        }
     }
 
     private static void renderHud(GuiGraphics context, DeltaTracker ignored) {
@@ -342,6 +388,13 @@ public final class ClientPresentationRuntime {
             PresentationElement element = PresentationElement.fromParameter(parameter("element", 0));
             PresentationParticleStyle style = style();
             ParticleOptions primary = particle(style, element);
+            if (instruction.truthLayer() && OptionalPresentationBackend.veilActive()
+                    && !VanillaParticleAllowlist.mayEmit(primary)) {
+                // Active Veil owns expressive particles, but truth must remain visible at
+                // minimal LOD and in photosensitive/reduced-motion modes.
+                primary = ParticleTypes.ENCHANT;
+            }
+            if (accessibility.reducedMotion() && !instruction.truthLayer()) return;
             double radius = Math.clamp(parameter("radius", 2), .5, 32);
             double progress = (localAge + 1.0) / duration;
             String renderer = instruction.rendererId();

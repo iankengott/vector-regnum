@@ -1,5 +1,6 @@
 package vectorregnum.neoforge.progression;
 
+import vectorregnum.core.semantic.SemanticOpcode;
 import vectorregnum.core.vm2.ManaCostModel;
 
 /** Quotes curated semantic programs through the same named vm2 cost dimensions. */
@@ -49,6 +50,14 @@ public final class LibrarySpellCostModel {
             case BREAK_BLOCKS -> work = 60.0;
             case TRANSMUTE_BLOCK -> rarity = 4.0;
             case EMIT_PARTICLES -> perception = 1;
+            case RENDER -> perception = 1;
+            case FORCE_ATTENTION -> {
+                range = operand(instruction, "range", 0.0);
+                duration = boundedInt(instruction, "ticks");
+                perception = 2;
+                control = 2;
+                rarity = 2.0;
+            }
             case EMIT_REDSTONE -> rarity = 1.0;
             case REPEAT_BOUNDED -> {
                 int count = boundedInt(instruction, "count");

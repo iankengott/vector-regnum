@@ -1,7 +1,7 @@
 {
   "id": "field_manual",
   "title": "Vector-Regnum Field Manual",
-  "version": 13,
+  "version": 14,
   "theme": "brass_ink_and_amethyst",
   "chapters": [
     {
@@ -278,6 +278,32 @@
               "label": "Run the bounded control demo",
               "alt": "Launch the server-authored priority 24 program and observe its output and branch order.",
               "metadata": { "example": "priority_24", "command": "/vectorregnum vm control_demo" }
+            }
+          ]
+        },
+        {
+          "id": "recovered_mechanic_security",
+          "title": "Bounded Recovered Mechanics",
+          "body": "Recovered dangerous magic is explicit and bounded. Render-only cues never grant glowing or alter the world. Disruption requires a live spell, a crouching stance, an enchanted netherite sword, line of sight, and a four-block timing window. Forced attention is a short server-tick effect with a 32-block range, 45-degree cone, three-degree step, and a visible rune warning. Claims, dimensions, loaded chunks, PvP, teams, and target counts are checked before gameplay changes. Wild Magic carries a deterministic seed, a bounded envelope, and a cleanup deadline. Client reduced-motion, photosensitive, density, camera, and audio controls may remove expression but never the truth telegraph.",
+          "required_unlocks": [],
+          "elements": [
+            {
+              "type": "DIAGRAM",
+              "label": "Capability gates",
+              "alt": "A recovered mechanic passes through capability, lifecycle, permission, range, target, and deterministic-randomness gates before a bounded result.",
+              "metadata": { "diagram": "priority_26_capability_gates", "capabilities": "render_only,spell_disruption,forced_attention,wild_magic", "range": "32", "targets": "16", "duration_ticks": "1200" }
+            },
+            {
+              "type": "PONDER",
+              "label": "Ponder the safety envelope",
+              "alt": "Follow a render-only cue, disruption rejection, attention telegraph, and deterministic Wild Magic envelope through the server policy boundary.",
+              "metadata": { "scene": "recovered_mechanic_security", "trace": "priority_26_policy_decisions" }
+            },
+            {
+              "type": "EXAMPLE",
+              "label": "Tune sensory controls",
+              "alt": "Open client accessibility controls to reduce motion, flash, particles, camera movement, or audio while retaining truth cues.",
+              "metadata": { "example": "presentation_accessibility", "settings": "reduced_motion,photosensitive,particle_density,camera_movement,audio_intensity" }
             }
           ]
         }

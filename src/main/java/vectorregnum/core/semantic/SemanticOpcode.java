@@ -48,5 +48,8 @@ public enum SemanticOpcode {
     // Bounded library expansion operations. Keep appended for wire ordinal stability.
     SET_TARGET_LIMIT,
     APPLY_EXPLOSION,
-    TELEPORT_CASTER
+    TELEPORT_CASTER,
+    // Priority 26 recovered mechanics. Appended to preserve persisted ordinals.
+    RENDER,
+    FORCE_ATTENTION
 }

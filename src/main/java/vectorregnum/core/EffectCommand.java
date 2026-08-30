@@ -2,6 +2,8 @@ package vectorregnum.core;
 
 import java.util.Objects;
 import java.util.Optional;
+import vectorregnum.core.security.WildMagicEnvelope;
+import vectorregnum.core.security.WildMagicResolver;
 
 /** Loader-neutral commands for the Fabric adapter to apply server-side. */
 public sealed interface EffectCommand
@@ -60,6 +62,11 @@ public sealed interface EffectCommand
             if (sourceIndex < 0) {
                 throw new IllegalArgumentException("sourceIndex must be non-negative");
             }
+        }
+
+        /** Resolves deterministic, bounded fallout for this command. */
+        public WildMagicEnvelope envelope() {
+            return WildMagicResolver.resolve(category, variationSeed);
         }
     }
 

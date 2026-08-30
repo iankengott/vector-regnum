@@ -10,7 +10,7 @@ public final class SemanticCostModel {
         return switch (opcode) {
             case APPLY_DAMAGE, APPLY_EXPLOSION, APPLY_IMPULSE, APPLY_SLOW, APPLY_FEATHERFALL, PLACE_LIGHT,
                     BREAK_BLOCKS, TRANSMUTE_BLOCK, CREATE_FORM, EMIT_PARTICLES,
-                    EMIT_REDSTONE -> true;
+                    EMIT_REDSTONE, RENDER, FORCE_ATTENTION -> true;
             default -> false;
         };
     }
@@ -52,6 +52,13 @@ public final class SemanticCostModel {
                 duration = SemanticSchema.integer(instruction.operands(), "ticks"); control = 1;
             }
             case TELEPORT_CASTER -> { work = 100; rarity = 3; }
+            case RENDER -> perception = 1;
+            case FORCE_ATTENTION -> {
+                range = SemanticSchema.number(instruction.operands(), "range");
+                duration = SemanticSchema.integer(instruction.operands(), "ticks");
+                control = 2;
+                rarity = 2;
+            }
             default -> { }
         }
         return new ManaCostModel.Input(work, range, duration, rarity, memory, perception, control);

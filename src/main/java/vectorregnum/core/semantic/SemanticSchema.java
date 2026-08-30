@@ -39,6 +39,15 @@ public final class SemanticSchema {
             case EMIT_REDSTONE -> integer(opcode, operands, "strength", 0, 15);
             case REPEAT_BOUNDED -> integer(opcode, operands, "count", 1, 1_024);
             case WAIT_TICKS -> integer(opcode, operands, "ticks", 0, 1_200);
+            case RENDER -> text(opcode, operands, "style",
+                    Set.of("outline", "illusion", "telegraph", "ward"));
+            case FORCE_ATTENTION -> {
+                exact(opcode, operands, Set.of("range", "angle", "strength", "ticks"));
+                boundedNumber(opcode, operands, "range", 0.0, 32.0, true);
+                boundedNumber(opcode, operands, "angle", 0.0, 45.0, false);
+                boundedNumber(opcode, operands, "strength", 0.0, 1.0, false);
+                boundedInteger(opcode, operands, "ticks", 1, 40);
+            }
             case APPLY_IMPULSE -> oneText(opcode, operands, Set.of("direction", "target"),
                     Set.of("down", "away", "caster"));
             case BREAK_BLOCKS -> text(opcode, operands, "mode", Set.of("safe", "mature_crops"));
@@ -77,9 +86,28 @@ public final class SemanticSchema {
         }
     }
 
+    private static void boundedNumber(SemanticOpcode opcode, Map<String, SemanticValue> operands,
+            String key, double minimum, double maximum, boolean inclusiveMinimum) {
+        double value = number(operands, key);
+        if ((inclusiveMinimum ? value < minimum : value <= minimum) || value > maximum) {
+            throw new IllegalArgumentException(opcode + " operand '" + key
+                    + "' is outside its safety bound");
+        }
+    }
+
     private static void integer(SemanticOpcode opcode, Map<String, SemanticValue> operands,
             String key, int minimum, int maximum) {
         exact(opcode, operands, Set.of(key));
+        boundedIntegerValue(opcode, operands, key, minimum, maximum);
+    }
+
+    private static void boundedInteger(SemanticOpcode opcode, Map<String, SemanticValue> operands,
+            String key, int minimum, int maximum) {
+        boundedIntegerValue(opcode, operands, key, minimum, maximum);
+    }
+
+    private static void boundedIntegerValue(SemanticOpcode opcode,
+            Map<String, SemanticValue> operands, String key, int minimum, int maximum) {
         double value = number(operands, key);
         if (value != Math.rint(value) || value < minimum || value > maximum) {
             throw new IllegalArgumentException(opcode + " operand '" + key + "' must be an integer "

@@ -18,6 +18,7 @@ import net.neoforged.neoforge.event.tick.ServerTickEvent;
 import vectorregnum.core.EffectCommand;
 import vectorregnum.core.Element;
 import vectorregnum.core.WildMagicCategory;
+import vectorregnum.core.security.WildMagicEnvelope;
 import vectorregnum.core.circle.CircleDiagnostic;
 import vectorregnum.core.circle.MagicCircle;
 import vectorregnum.core.circle.PlacedSigil;
@@ -43,6 +44,7 @@ import java.util.stream.Collectors;
  */
 public final class SpellVisualManager {
     static final int DEV_SHOWCASE_DURATION_TICKS = 300;
+    static final int MAX_ACTIVE_VISUALS = 96;
     private static final int MAX_PREVIEW_SIGILS = CirclePreviewPayload.MAX_SIGILS;
     private static final List<ActiveVisual> ACTIVE = new ArrayList<>();
     private static boolean initialized;
@@ -68,6 +70,7 @@ public final class SpellVisualManager {
     }
 
     public static void apply(ServerPlayer caster, EffectCommand command) {
+        if (caster == null || command == null || ACTIVE.size() >= MAX_ACTIVE_VISUALS) return;
         switch (command) {
             case EffectCommand.Projectile projectile -> {
                 ACTIVE.add(new ProjectileVisual(caster, projectile));
@@ -374,12 +377,14 @@ public final class SpellVisualManager {
         private final SplittableRandom random;
         private final Vec3 origin;
         private final Vec3 violentDirection;
+        private final WildMagicEnvelope envelope;
         private int age;
 
         private WildMagicVisual(ServerPlayer caster, EffectCommand.WildMagic command) {
             this.caster = caster;
             this.world = caster.serverLevel();
             this.command = command;
+            this.envelope = command.envelope();
             this.random = new SplittableRandom(command.variationSeed());
             this.origin = command.origin().map(SpellVisualManager::toMinecraft)
                     .orElse(caster.getEyePosition());
@@ -388,13 +393,13 @@ public final class SpellVisualManager {
 
         @Override
         public boolean tick() {
-            if (age++ >= 50 || !casterAvailable(caster, world)) {
+            if (age++ >= envelope.durationTicks() || !casterAvailable(caster, world)) {
                 return false;
             }
             if (age == 1 && command.category() == WildMagicCategory.INTERNAL_MANA_DETONATION) {
-                caster.hurt(world.damageSources().magic(), 4.0F);
+                caster.hurt(world.damageSources().magic(), (float) envelope.magnitude());
                 ServerTraces.burst(world, origin, PresentationParticleStyle.EXPLOSION_EMITTER,
-                        PresentationElement.ARCANE, 2.0F, 1.0F, 15);
+                        PresentationElement.ARCANE, (float) envelope.radius(), 1.0F, 15);
             }
             if (age % CADENCE_TICKS != 0) {
                 return true;
@@ -406,16 +411,17 @@ public final class SpellVisualManager {
                         PresentationParticleStyle.TOTEM, PresentationElement.ARCANE,
                         1.2F, 0.9F, 8);
                 case UNSTRUCTURED_ELEMENT_BURST -> {
-                    List<Vec3> points = new ArrayList<>(16);
-                    for (int i = 0; i < 16; i++) {
+                    List<Vec3> points = new ArrayList<>(envelope.targetLimit());
+                    for (int i = 0; i < envelope.targetLimit(); i++) {
                         points.add(origin.add(randomDirection(random)
-                                .scale(0.4 + random.nextDouble() * 3.5)));
+                                .scale(0.4 + random.nextDouble() * envelope.radius())));
                     }
                     ServerTraces.burstAll(world, points, PresentationParticleStyle.WITCH,
                             PresentationElement.VOID, 0.25F, 0.7F, 10);
                 }
                 case VIOLENT_MISCAST -> {
-                    Vec3 tip = origin.add(violentDirection.scale(age * 0.48));
+                    Vec3 tip = origin.add(violentDirection.scale(
+                            Math.min(envelope.radius(), age * 0.48)));
                     ServerTraces.beam(world, origin, tip,
                             PresentationParticleStyle.LARGE_SMOKE, PresentationElement.VOID,
                             0.3F, 10, 0.8F);
@@ -423,6 +429,9 @@ public final class SpellVisualManager {
                             PresentationParticleStyle.MOTES, PresentationElement.FIRE,
                             0.15F, 10, 0.6F);
                 }
+                case COERCIVE_ATTENTION -> ServerTraces.ring(world,
+                        origin.add(0, -.8, 0), (float) envelope.radius(),
+                        PresentationElement.ARCANE, 10, .8F);
             }
             return true;
         }

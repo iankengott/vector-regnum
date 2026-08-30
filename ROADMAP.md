@@ -16,7 +16,7 @@ art, UX, or production hardening is complete.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Ice Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 296 JUnit/contract tests, 44 production NeoForge GameTests, plus real
+- [x] 305 JUnit/contract tests, 47 production NeoForge GameTests, plus real
   Hermes server/client boots and direct visual/video inspection through
   priority 25.
 
@@ -299,11 +299,21 @@ acceptance scope.
     exact approval, atomic escrow, and the five-GameTest multiplayer evidence;
     live two-player split and replicate execution are covered by the
     production GameTests rather than misrepresented by the one-client visual.
-26. [ ] **Recovered-mechanic security and accessibility hardening.** Preserve
+26. [x] **Recovered-mechanic security and accessibility hardening.** Preserve
     dangerous magic, render-only constructs, spell disruption, forced-attention
     effects, and Wild Magic through curated bounded capabilities, claim/team/PvP
     checks, deterministic randomness, rate/range/lifetime limits, mandatory
-    telegraphs, client sensory controls, and atomic cleanup.
+    telegraphs, client sensory controls, and atomic cleanup. The completed pass
+    adds a curated loader-neutral capability policy, bounded render-only and
+    forced-attention semantic operations, stance/weapon/window disruption with
+    authoritative tick cancellation, deterministic Wild Magic envelopes,
+    claim/team/PvP/range/lifecycle checks, capped visual state, and versioned
+    local sensory preferences. It adds three production GameTests, 305 JUnit
+    tests, Field Manual v14, the recovered-mechanic Ponder, and a guarded Hermes
+    Veil recording whose checkpoint and truth telegraph remained readable. The
+    screenshot portal's Share control was unavailable, so the recording is the
+    visual artifact; both Hermes development units were stopped and loopback
+    port 25575 was free.
 27. [ ] **Versioned SMP integration API.** Expose narrow optional hooks for the
     separate Origins, Combat, Progression, World/Story, Administration, and
     modpack repositories without absorbing those systems or making them hard
@@ -339,7 +349,7 @@ acceptance scope.
 - [x] Command-based server-authoritative editor and persistent draft.
 - [x] Save, inspect, validate, copy into media, and recover via checksums.
 - [x] Animated actual circle topology with compiler order/error highlighting.
-- [x] Versioned Field Manual v13 with exact crystal/media/infrastructure/ritual recipes and commands,
+- [x] Versioned Field Manual v14 with exact crystal/media/infrastructure/ritual recipes and commands,
   data-driven visual elements, search/history/bookmarks/scaling/scrolling,
   progression gating, live recipe/item rendering, and a native Ponder action.
 - [x] Illustrated custom Field Manual inspired by Patchouli/Lexica Botania and

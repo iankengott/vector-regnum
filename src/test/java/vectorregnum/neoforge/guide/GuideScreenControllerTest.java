@@ -12,7 +12,7 @@ class GuideScreenControllerTest {
     @Test
     void defaultManualLoadsVisualMetadataAndValidLinks() throws IOException {
         GuideBook book = GuideDataLoader.loadDefault(getClass().getClassLoader());
-        assertEquals(13, book.version());
+        assertEquals(14, book.version());
         assertTrue(book.chapters().size() >= 4);
         assertTrue(book.page("mana_sources").orElseThrow().elements().stream()
                 .anyMatch(element -> element.type() == GuideElement.Type.RECIPE

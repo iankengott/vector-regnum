@@ -249,7 +249,7 @@ public final class DevShowcaseController {
                         + "persistence_claim={} player_schema={} unlocks_added={} create_renderer_probe={} "
                         + "element_palette_count=14 affinity_matrix=100,75,50,25 opposed_floor=25 "
                         + "natural_element=server_authoritative channel_attunement={} "
-                        + "casting_methods=6 reagent_kinds=4 ritual_offering=quartz field_manual=13 "
+                        + "casting_methods=6 reagent_kinds=4 ritual_offering=quartz field_manual=14 "
                         + "persistent_contracts=queued five_spell_expansion=5",
                 player.getGameProfile().getName(),
                 circle.sigils().size(),
@@ -279,7 +279,7 @@ public final class DevShowcaseController {
                             + "shared_stack=atomic branch_order=stable_server_tick "
                             + "variables=64 iterators=16 iterator_steps=1024 "
                             + "active_branches=8 total_branches=32 signals=128 "
-                            + "outputs=64 output_chars=256 field_manual=13 "
+                            + "outputs=64 output_chars=256 field_manual=14 "
                             + "command=\"/vectorregnum vm control_demo\"",
                     player.getGameProfile().getName());
             launchPriority25Showcase(player);
@@ -302,8 +302,29 @@ public final class DevShowcaseController {
                 "VISUAL_CHECKPOINT_READY milestone=priority_25 player={} source=authored_contract "
                         + "minimum_participants=2 modes=split,replicate exact_terms=true "
                         + "atomic_escrow=true restart_safe=true prestart_refund=exactly_once "
-                        + "multiplayer_execution_proof=5_gametests field_manual=13 "
+                        + "multiplayer_execution_proof=5_gametests field_manual=14 "
                         + "command=\"/vectorregnum ritual status\"",
+                player.getGameProfile().getName());
+        launchPriority26Showcase(player);
+    }
+
+    private static void launchPriority26Showcase(ServerPlayer player) {
+        player.sendSystemMessage(Component.literal(
+                        "VECTOR-REGNUM • PRIORITY 26 RECOVERED-MECHANIC SAFETY")
+                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
+        player.sendSystemMessage(Component.literal(
+                        "RENDER-ONLY • DISRUPTION • ATTENTION • DETERMINISTIC WILD MAGIC")
+                .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), false);
+        player.sendSystemMessage(Component.literal(
+                        "Truth telegraphs remain visible when optional sensory layers are reduced")
+                .withStyle(ChatFormatting.GRAY), false);
+        VectorRegnumMod.LOGGER.info(
+                "VISUAL_CHECKPOINT_READY milestone=priority_26 player={} "
+                        + "capabilities=render_only,spell_disruption,forced_attention,wild_magic "
+                        + "range=32 duration_ticks=1200 targets=16 attention_ticks=40 "
+                        + "disruption_window=10 deterministic=true truth_telegraph=true "
+                        + "accessibility=local_versioned field_manual=14 "
+                        + "gametest_proof=3 command=\"/vectorregnum ritual status\"",
                 player.getGameProfile().getName());
     }
 
@@ -333,7 +354,7 @@ public final class DevShowcaseController {
                     .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), false);
             VectorRegnumMod.LOGGER.info(
                     "PERSISTENT_EFFECT_CHECKPOINT_READY player={} contracts={} upkeep_remaining={} "
-                            + "saved_data={} field_manual=13 command=\"/vectorregnum effect status\"",
+                    + "saved_data={} field_manual=14 command=\"/vectorregnum effect status\"",
                     player.getGameProfile().getName(), contracts.size(), upkeep,
                     vectorregnum.neoforge.effect.PersistentEffectSavedData.FILE_ID);
             launchPriority24Showcase(player);
