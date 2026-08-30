@@ -466,7 +466,8 @@ after it, and 65-104 h after the adversarial review. Each revision found work
 that was real rather than speculative: the package rename, `ClaimLedger` moving
 to `SavedData`, the parity manifest, and the GameTest infrastructure.
 
-`core` still needs no changes at all, so the mapping work remains the easy half.
+At the original migration checkpoint, `core` needed no changes at all, so the
+mapping work remained the easy half.
 The loader semantics are the hard half, and the existing suite cannot verify
 them, so phases 4 through 10 each carry a manual gate that costs real time.
 
@@ -477,7 +478,15 @@ Priority 20a's initial optional Veil and target-pack gates passed on 2026-08-20,
 and its complete Veil ownership migration and repeated verification ladder
 passed on 2026-08-21. The final Main-PC attestation exercised authored and
 library casts, F3+T reload, accessible low LOD, and normal cleanup on the final
-artifact. Priorities 20a–24 are checked. Priority 24 passed 289 JUnit tests, 39
+artifact. Priorities 20a–25 are checked. Priority 25 passed 296 JUnit tests, 44
+production GameTests, its focused verifier, the overlay diff, and a directly
+inspected Hermes contract video. It implements exact per-contributor consent,
+checksummed player escrow, a versioned ritual ledger, and bounded split and
+replicate execution, including unused-upkeep refunds and durable cleanup of
+already-committed copies when a later copy makes the batch refundable. Stable
+ritual/contributor effect IDs and retryable batch finalization preserve that
+cleanup across restart and synchronous persistence failure. Priority
+24 passed 289 JUnit tests, 39
 production GameTests, its focused verifier, the overlay diff, and a directly
 inspected corrected Hermes video after a backend-independent camera-occluding
 Featherfall cue was bounded and moved to the player's feet. Priority 23's

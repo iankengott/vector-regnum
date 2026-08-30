@@ -70,6 +70,24 @@ class PonderLessonLibraryTest {
                 .anyMatch(cue -> "shared_memory_control".equals(cue.data().get("trace"))));
     }
 
+    @Test
+    void cooperativeRitualLessonTeachesConsentReservationModesAndRefunds() {
+        PonderTimeline lesson = PonderLessonLibrary.cooperativeRitual();
+        String narration = lesson.steps().stream().map(PonderTimeline.Step::narration)
+                .collect(Collectors.joining(" ")).toLowerCase();
+
+        assertEquals("cooperative_ritual", lesson.id());
+        for (String term : Set.of("exact maximum mana", "reagent", "upkeep", "approval",
+                "split", "replicate", "refund", "restart", "exactly once")) {
+            assertTrue(narration.contains(term), "lesson should teach " + term);
+        }
+        assertTrue(lesson.steps().stream().flatMap(step -> step.cues().stream())
+                .anyMatch(cue -> "cooperative_ritual".equals(cue.data().get("trace"))
+                        && "textual_authoritative".equals(cue.data().get("truth"))));
+        assertTrue(PonderLessonLibrary.primer().steps().stream().flatMap(step -> step.cues().stream())
+                .anyMatch(cue -> "cooperative_ritual".equals(cue.data().get("trace"))));
+    }
+
     private static boolean hasCue(PonderTimeline timeline, PonderTimeline.CueType type) {
         return timeline.steps().stream().flatMap(step -> step.cues().stream())
                 .anyMatch(cue -> cue.type() == type);

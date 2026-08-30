@@ -22,8 +22,10 @@ grep -Fq '23. [x] **Persistent upkeep and natural conclusions.**' \
     ROADMAP.md || die 'ROADMAP.md does not mark priority 23 complete'
 grep -Fq '24. [x] **Advanced shared-memory spell control.**' \
     ROADMAP.md || die 'ROADMAP.md does not mark priority 24 complete'
-grep -Fq '"version": 12' src/main/resources/assets/vector_regnum/guide/field_manual.json \
-    || die 'Field Manual is not at the current priority-24 version'
+grep -Fq '25. [x] **Cooperative rituals and multicasting.**' \
+    ROADMAP.md || die 'ROADMAP.md does not mark priority 25 complete'
+grep -Fq '"version": 13' src/main/resources/assets/vector_regnum/guide/field_manual.json \
+    || die 'Field Manual is not at the current priority-25 version'
 
 grep -Fq '**Execution-host policy (Ian, 2026-08-27):** Hermes is the default' \
     AGENTS.md || die 'AGENTS.md lost the Hermes-first, approval-gated NixOS policy'
@@ -36,6 +38,8 @@ grep -Fq 'Use OpenAI Codex subagents only' AGENTS.md \
     || die 'Hermes test-world reset helper is missing or not executable'
 [[ -x scripts/hermes-record-video.sh ]] \
     || die 'Hermes focused-window video recorder is missing or not executable'
+[[ -x scripts/verify-priority25.sh ]] \
+    || die 'priority-25 verifier is missing or not executable'
 grep -Fq '"$remote_dir/scripts/hermes-reset-test-world.sh"' scripts/hermes-client.sh \
     || die 'Hermes client startup no longer resets generated test-world state'
 grep -Fq 'the test world'"'"'s generated/world state while preserving playerdata,' \
@@ -87,6 +91,10 @@ readonly -a STALE_CLAIMS=(
     'priority 24 remains the first unfinished'
     'priority 24 is next'
     'priority 24 advanced shared-memory spell control is next'
+    'priority 25 is the first unfinished'
+    'priority 25 remains the first unfinished'
+    'priority 25 is next'
+    'priority 25 explicitly approved cooperative rituals are next'
     'captured hermes frame still needs'
     'awaiting only direct inspection'
     'field manual v11 with exact crystal/media/infrastructure recipes and commands'
@@ -111,5 +119,5 @@ for stale_claim in "${STALE_CLAIMS[@]}"; do
     fi
 done
 
-printf 'HANDOFF_DOCS_OK priority20a=complete priority21=complete priority22=complete priority23=complete priority24=complete priority25=next hermes_first=true luna_max=true checked_files=%d\n' \
+printf 'HANDOFF_DOCS_OK priority20a=complete priority21=complete priority22=complete priority23=complete priority24=complete priority25=complete priority26=next hermes_first=true luna_max=true checked_files=%d\n' \
     "${#LIVE_HANDOFF_DOCS[@]}"

@@ -2,11 +2,13 @@ package vectorregnum.neoforge;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.DoubleArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.commands.arguments.coordinates.BlockPosArgument;
+import net.minecraft.commands.arguments.EntityArgument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -17,6 +19,7 @@ import vectorregnum.core.circle.SpellMedium;
 import vectorregnum.core.casting.CastingMethod;
 import vectorregnum.core.casting.ReagentKind;
 import vectorregnum.core.effect.PersistentEffectContract;
+import vectorregnum.core.ritual.CooperativeRitual;
 import vectorregnum.core.automation.AutomationRule;
 import vectorregnum.neoforge.automation.AutomationContent;
 import vectorregnum.neoforge.automation.AutomationRelayBlockEntity;
@@ -27,6 +30,7 @@ import vectorregnum.neoforge.progression.ProgressionContent;
 import vectorregnum.neoforge.progression.ProgressionData;
 import vectorregnum.neoforge.progression.ProgressionSpellLibrary;
 import vectorregnum.neoforge.progression.ProgressionUnlock;
+import vectorregnum.neoforge.ritual.CooperativeRitualService;
 
 import java.util.List;
 import java.util.Map;
@@ -84,6 +88,7 @@ public final class VectorRegnumCommands {
                 .executes(context -> giveGuide(context.getSource())));
         root.then(circleCommands());
         root.then(reagentCommands());
+        root.then(ritualCommands());
         root.then(libraryCommands());
         root.then(researchCommands());
         root.then(vmCommands());
@@ -188,6 +193,64 @@ public final class VectorRegnumCommands {
                                 IntegerArgumentType.getInteger(context, "count")))));
         reagents.then(stage);
         return reagents;
+    }
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack>
+            ritualCommands() {
+        var ritual = Commands.literal("ritual")
+                .executes(context -> ritualStatus(context.getSource()));
+        var create = Commands.literal("create");
+        for (CooperativeRitual.Mode mode : CooperativeRitual.Mode.values()) {
+            create.then(Commands.literal(mode.stableId())
+                    .then(termsArguments(context -> createRitual(context.getSource(), mode,
+                            DoubleArgumentType.getDouble(context, "max_mana"),
+                            IntegerArgumentType.getInteger(context, "max_reagents"),
+                            DoubleArgumentType.getDouble(context, "max_upkeep")))));
+        }
+        ritual.then(create);
+        ritual.then(Commands.literal("invite")
+                .then(Commands.argument("id", StringArgumentType.word())
+                        .then(Commands.argument("player", EntityArgument.player())
+                                .then(termsArguments(context -> inviteRitual(context.getSource(),
+                                        StringArgumentType.getString(context, "id"),
+                                        EntityArgument.getPlayer(context, "player"),
+                                        DoubleArgumentType.getDouble(context, "max_mana"),
+                                        IntegerArgumentType.getInteger(context, "max_reagents"),
+                                        DoubleArgumentType.getDouble(context, "max_upkeep")))))));
+        ritual.then(ritualIdCommand("approve", (player, id) ->
+                CooperativeRitualService.approve(player, id)));
+        ritual.then(ritualIdCommand("decline", (player, id) ->
+                CooperativeRitualService.decline(player, id)));
+        ritual.then(ritualIdCommand("cancel", (player, id) ->
+                CooperativeRitualService.cancel(player, id)));
+        ritual.then(ritualIdCommand("start", (player, id) ->
+                CooperativeRitualService.start(player, id)));
+        ritual.then(Commands.literal("status")
+                .executes(context -> ritualStatus(context.getSource())));
+        return ritual;
+    }
+
+    private static com.mojang.brigadier.builder.RequiredArgumentBuilder<CommandSourceStack, Double>
+            termsArguments(com.mojang.brigadier.Command<CommandSourceStack> command) {
+        return Commands.argument("max_mana", DoubleArgumentType.doubleArg(0.0,
+                        CooperativeRitual.MAX_COMMITMENT_MANA))
+                .then(Commands.argument("max_reagents", IntegerArgumentType.integer(0,
+                                CooperativeRitual.MAX_COMMITMENT_REAGENTS))
+                        .then(Commands.argument("max_upkeep", DoubleArgumentType.doubleArg(0.0,
+                                        CooperativeRitual.MAX_COMMITMENT_MANA))
+                                .executes(command)));
+    }
+
+    private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack>
+            ritualIdCommand(String literal, RitualCommand command) {
+        return Commands.literal(literal)
+                .then(Commands.argument("id", StringArgumentType.word())
+                        .executes(context -> {
+                            ServerPlayer player = targetPlayer(context.getSource());
+                            if (player == null) return noPlayer(context.getSource());
+                            return command.run(player, StringArgumentType.getString(context, "id"))
+                                    ? 1 : 0;
+                        }));
     }
 
     private static com.mojang.brigadier.builder.LiteralArgumentBuilder<CommandSourceStack>
@@ -447,6 +510,37 @@ public final class VectorRegnumCommands {
         if (player == null) return noPlayer(source);
         CastingResourceService.clearStaged(player);
         return 1;
+    }
+
+    private static int createRitual(CommandSourceStack source, CooperativeRitual.Mode mode,
+            double maxMana, int maxReagents, double maxUpkeep) {
+        ServerPlayer player = targetPlayer(source);
+        if (player == null) return noPlayer(source);
+        try {
+            return CooperativeRitualService.create(player, mode,
+                    new CooperativeRitual.Terms(maxMana, maxReagents, maxUpkeep)).isPresent() ? 1 : 0;
+        } catch (IllegalArgumentException exception) {
+            source.sendFailure(Component.literal(exception.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int inviteRitual(CommandSourceStack source, String id,
+            ServerPlayer contributor, double maxMana, int maxReagents, double maxUpkeep) {
+        ServerPlayer leader = targetPlayer(source);
+        if (leader == null) return noPlayer(source);
+        try {
+            return CooperativeRitualService.invite(leader, id, contributor,
+                    new CooperativeRitual.Terms(maxMana, maxReagents, maxUpkeep)) ? 1 : 0;
+        } catch (IllegalArgumentException exception) {
+            source.sendFailure(Component.literal(exception.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int ritualStatus(CommandSourceStack source) {
+        ServerPlayer player = targetPlayer(source);
+        return player == null ? noPlayer(source) : CooperativeRitualService.status(player);
     }
 
     private static int undoCircle(CommandSourceStack source) {
@@ -710,5 +804,10 @@ public final class VectorRegnumCommands {
         return source.getServer().getPlayerList().getPlayers().stream()
                 .findFirst()
                 .orElse(null);
+    }
+
+    @FunctionalInterface
+    private interface RitualCommand {
+        boolean run(ServerPlayer player, String id);
     }
 }

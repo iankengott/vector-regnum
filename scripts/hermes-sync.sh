@@ -48,6 +48,7 @@ rsync_args=(
     --itemize-changes
     --delete-delay
     --exclude=/.git/
+    --exclude=/.audit/
     --exclude=/.gradle/
     --exclude=/build/
     --exclude=/run/

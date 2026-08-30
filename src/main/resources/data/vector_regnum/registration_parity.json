@@ -55,6 +55,7 @@
     "vector_regnum:progression_unlocks",
     "vector_regnum:authored_circle",
     "vector_regnum:staged_reagents",
+    "vector_regnum:ritual_escrows",
     "vector_regnum:received_tutorial_guide",
     "vector_regnum:tutorial_guide_version",
     "vector_regnum:player_data_schema"

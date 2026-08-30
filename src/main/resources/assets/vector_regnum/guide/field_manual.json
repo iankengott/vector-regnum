@@ -1,7 +1,7 @@
 {
   "id": "field_manual",
   "title": "Vector-Regnum Field Manual",
-  "version": 12,
+  "version": 13,
   "theme": "brass_ink_and_amethyst",
   "chapters": [
     {
@@ -324,7 +324,7 @@
         {
           "id": "spell_media",
           "title": "Scroll, Book, and Tablet",
-          "body": "Choose one of six casting methods. BARE casts use no medium. RITUAL casts use a staged offering pool. ENGRAVING accepts construction materials into an anchored spell circle. SPELLBOOK is reusable portable media. SCROLL is committed at activation and burns on a successful cast or genuine spell fault. INSTALLED_CIRCLE is anchored and reusable. Success and genuine spell fault/Wild Magic consume escrow and scroll; policy, unloaded-target, rate, shutdown, and internal failures refund escrow or never withdraw it. Books and both anchored forms, an engraved spell circle and an installed circle, remain reusable. Engraving materials are committed at accepted binding with /vectorregnum circle bind engraving. Solo ritual offerings can be staged now; cooperative consent remains priority 25.",
+          "body": "Choose one of six casting methods. BARE casts use no medium. RITUAL casts use a staged offering pool. ENGRAVING accepts construction materials into an anchored spell circle. SPELLBOOK is reusable portable media. SCROLL is committed at activation and burns on a successful cast or genuine spell fault. INSTALLED_CIRCLE is anchored and reusable. Success and genuine spell fault/Wild Magic consume escrow and scroll; policy, unloaded-target, rate, shutdown, and internal failures refund escrow or never withdraw it. Books and both anchored forms, an engraved spell circle and an installed circle, remain reusable. Engraving materials are committed at accepted binding with /vectorregnum circle bind engraving. Solo offerings use the circle ritual command; cooperative split and replicate rituals use the separate ritual command family.",
           "required_unlocks": ["crystal_harvest"],
           "elements": [
             {
@@ -386,7 +386,7 @@
         {
           "id": "resource_escrow",
           "title": "Quotes, reagents, and escrow",
-          "body": "The compiler shows the undiscounted quote, each reagent contribution, requested and applied discounts, clipping, and the final bounded quote before approval. Stage discount reagents with /vectorregnum reagents stage mana|casting_time|upkeep|instability <count>. Stage quartz separately with /vectorregnum reagents stage offering <count>; quartz=ritual_offering and grants no discount. Use /vectorregnum reagents clear to remove both pools. The discount mappings are amethyst_shard=mana, sugar=casting_time (casting time), glowstone_dust=upkeep, and fermented_spider_eye=instability. /vectorregnum circle quote <method> inspects BARE, RITUAL, ENGRAVING, SPELLBOOK, SCROLL, or INSTALLED_CIRCLE, while /vectorregnum circle ritual requires the staged solo offering. Bind accepted construction materials with /vectorregnum circle bind engraving. Escrow reserves resources before execution. Success and genuine spell fault/Wild Magic consume escrow and scroll. Policy, unloaded-target, rate, shutdown, owner-lifecycle, and internal failures refund or never withdraw it. A SPELLBOOK and both anchored forms remain reusable; cooperative ritual consent waits for priority 25.",
+          "body": "The compiler shows the undiscounted quote, each reagent contribution, requested and applied discounts, clipping, and the final bounded quote before approval. Stage discount reagents with /vectorregnum reagents stage mana|casting_time|upkeep|instability <count>. Stage quartz separately with /vectorregnum reagents stage offering <count>; quartz=ritual_offering and grants no discount. Use /vectorregnum reagents clear to remove both pools. The discount mappings are amethyst_shard=mana, sugar=casting_time (casting time), glowstone_dust=upkeep, and fermented_spider_eye=instability. /vectorregnum circle quote <method> inspects BARE, RITUAL, ENGRAVING, SPELLBOOK, SCROLL, or INSTALLED_CIRCLE, while /vectorregnum circle ritual requires the staged solo offering. Bind accepted construction materials with /vectorregnum circle bind engraving. Escrow reserves resources before execution. Success and genuine spell fault/Wild Magic consume escrow and scroll. Policy, unloaded-target, rate, shutdown, owner-lifecycle, and internal failures refund or never withdraw it. A SPELLBOOK and both anchored forms remain reusable. Cooperative approval transfers each contributor's exact bounded commitment into a separate checksummed ritual escrow.",
           "required_unlocks": ["crystal_harvest"],
           "elements": [
             {
@@ -406,6 +406,38 @@
               "label": "Return to spell media",
               "alt": "Return to the six casting methods and the engraved-circle recipe.",
               "metadata": { "target": "spell_media" }
+            }
+          ]
+        },
+        {
+          "id": "cooperative_rituals",
+          "title": "Cooperative Rituals",
+          "body": "A leader creates SPLIT or REPLICATE from one frozen compiled circle with /vectorregnum ritual create <mode> <max_mana> <max_reagents> <max_upkeep>. Invite each named contributor with /vectorregnum ritual invite <id> <player> <max_mana> <max_reagents> <max_upkeep>. Those values are that contributor's exact maximum commitment for this ritual only. Each contributor stages their exact typed reagent loadout and explicitly runs /vectorregnum ritual approve <id>. Status lists the short ID, mode, state, terms, and reservation. Nothing starts until everyone approves. SPLIT combines the approved pool into one execution. REPLICATE launches one bounded copy per contributor in stable order. Approval is checksummed and retry-safe. A pre-start decline, disconnect, expiry, policy failure, invalid launch, or restart mismatch cancels and refunds every reservation exactly once. Use /vectorregnum ritual decline|cancel|start <id> and /vectorregnum ritual status.",
+          "required_unlocks": ["crystal_harvest"],
+          "elements": [
+            {
+              "type": "DIAGRAM",
+              "label": "Consent and escrow lifecycle",
+              "alt": "Every contributor approves exact mana, reagent, and upkeep maxima before split or replicate execution; any pre-start failure refunds all reservations exactly once.",
+              "metadata": { "diagram": "cooperative_ritual_lifecycle", "stages": "freeze,invite,approve,reserve,ready,start,settle", "consent": "per_contributor_per_ritual", "prestart_refund": "exactly_once", "restart": "saved_data_reconcile" }
+            },
+            {
+              "type": "EXAMPLE",
+              "label": "Create and approve",
+              "alt": "Create a split ritual with explicit maxima, invite a named contributor with their own exact maxima, stage each loadout, approve, inspect, and start.",
+              "metadata": { "example": "cooperative_ritual_commands", "create": "/vectorregnum ritual create split <max_mana> <max_reagents> <max_upkeep>", "invite": "/vectorregnum ritual invite <id> <player> <max_mana> <max_reagents> <max_upkeep>", "approve": "/vectorregnum ritual approve <id>", "status": "/vectorregnum ritual status", "start": "/vectorregnum ritual start <id>" }
+            },
+            {
+              "type": "PONDER",
+              "label": "Ponder cooperative consent",
+              "alt": "Follow a frozen circle through exact per-contributor consent, atomic reservation, split and replicate allocation, and restart-safe pre-start refund.",
+              "metadata": { "scene": "cooperative_ritual", "trace": "authoritative_ritual_state_and_authored_lesson" }
+            },
+            {
+              "type": "LINK",
+              "label": "Return to resource escrow",
+              "alt": "Return to solo quotes, reagents, and settlement.",
+              "metadata": { "target": "resource_escrow" }
             }
           ]
         }

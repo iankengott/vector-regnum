@@ -132,6 +132,7 @@ public final class PonderLessonLibrary {
                 "A late failure has enough compiled structure to become a violent, displaced result. Server bounds and the ward contain this lesson.",
                 "violent_miscast");
         sharedMemoryControlSteps(steps);
+        cooperativeRitualSteps(steps);
         add(steps, 30, PonderTimeline.Phase.COMPILATION, "Now replay your own trace",
                 "Cast or compile a circle, then press K. This authored primer is replaced by the latest bounded server trace, live while a VM is running.",
                 cue(PonderTimeline.CueType.SET_PIECE, null,
@@ -146,6 +147,58 @@ public final class PonderLessonLibrary {
         List<PonderTimeline.Step> steps = new ArrayList<>();
         sharedMemoryControlSteps(steps);
         return new PonderTimeline("shared_memory_control", "Shared Memory Control Ponder", steps);
+    }
+
+    /** Authored, bounded primer for the priority-25 cooperative ritual contract. */
+    public static PonderTimeline cooperativeRitual() {
+        List<PonderTimeline.Step> steps = new ArrayList<>();
+        cooperativeRitualSteps(steps);
+        return new PonderTimeline("cooperative_ritual", "Cooperative Ritual Ponder", steps);
+    }
+
+    private static void cooperativeRitualSteps(List<PonderTimeline.Step> steps) {
+        add(steps, 32, PonderTimeline.Phase.COMPILATION,
+                "The leader freezes one circle",
+                "Creating a cooperative ritual snapshots the leader's compiled circle, its mode, and its deadline. Later edits cannot change what contributors were asked to approve.",
+                ritualCue("FROZEN_CIRCLE", Map.of("circle", "immutable_snapshot",
+                        "modes", "split_or_replicate", "deadline", "bounded")),
+                cue(PonderTimeline.CueType.FOCUS_CIRCLE, null, Map.of("sigils", "frozen")));
+        add(steps, 36, PonderTimeline.Phase.MANA,
+                "Every contributor sees exact maxima",
+                "Each invitation names that contributor's exact maximum mana, reagent count, and upkeep. Approval is per ritual and cannot be reused for another ritual or a larger commitment.",
+                ritualCue("EXACT_TERMS", Map.of("mana", "exact_maximum",
+                        "reagents", "exact_typed_loadout", "upkeep", "exact_maximum",
+                        "consent", "per_contributor_per_ritual")),
+                cue(PonderTimeline.CueType.CAST_QUOTE, null,
+                        Map.of("scope", "named_contributor", "approval", "explicit")));
+        add(steps, 34, PonderTimeline.Phase.MANA,
+                "Approval reserves atomically",
+                "The server moves only the approved maximum mana, upkeep, and staged reagent loadout into a checksummed player escrow. Retrying approval cannot reserve a second copy.",
+                ritualCue("ATOMIC_RESERVATION", Map.of("storage", "player_attachment",
+                        "checksum", "required", "retry", "idempotent")),
+                cue(PonderTimeline.CueType.ESCROW_STATE, null,
+                        Map.of("state", "reserved", "owner", "server", "scope", "ritual")));
+        add(steps, 36, PonderTimeline.Phase.EXECUTION,
+                "Split combines the approved pool",
+                "Split mode allocates the combined approved mana, upkeep, and exact reagent loadouts to one frozen circle. The server starts it only after every invited contributor has approved.",
+                ritualCue("SPLIT", Map.of("copies", "one", "resources", "combined",
+                        "start_gate", "all_approved")),
+                cue(PonderTimeline.CueType.MANA_FLOW, null,
+                        Map.of("from", "contributors", "to", "one_circle", "amount", "bounded_sum")));
+        add(steps, 36, PonderTimeline.Phase.EXECUTION,
+                "Replicate starts stable copies",
+                "Replicate mode allocates each contributor's reservation to one bounded copy of the frozen circle. Copies start in stable participant order and still run on the authoritative tick thread.",
+                ritualCue("REPLICATE", Map.of("copies", "one_per_contributor",
+                        "order", "stable_participant_order", "thread", "server_tick")),
+                cue(PonderTimeline.CueType.WORLD_EFFECT, null,
+                        Map.of("effect", "ReplicatedCircle", "bounded", "true")));
+        add(steps, 38, PonderTimeline.Phase.FAULT,
+                "Pre-start failure refunds exactly once",
+                "A decline, disconnect, expiry, restart mismatch, failed policy check, or invalid launch cancels before execution and refunds every reservation exactly once. The durable ritual record makes that settlement auditable and retry-safe.",
+                ritualCue("PRESTART_REFUND", Map.of("settlement", "exactly_once",
+                        "record", "saved_data", "restart", "reconcile")),
+                cue(PonderTimeline.CueType.ESCROW_STATE, null,
+                        Map.of("state", "refunded", "reason", "prestart_failure")));
     }
 
     private static void sharedMemoryControlSteps(List<PonderTimeline.Step> steps) {
@@ -253,6 +306,15 @@ public final class PonderLessonLibrary {
         data.put("truth", "textual_authoritative");
         data.putAll(details);
         return cue(PonderTimeline.CueType.EXECUTION_CURSOR, null, data);
+    }
+
+    private static PonderTimeline.Cue ritualCue(String operation, Map<String, String> details) {
+        java.util.LinkedHashMap<String, String> data = new java.util.LinkedHashMap<>();
+        data.put("trace", "cooperative_ritual");
+        data.put("operation", operation);
+        data.put("truth", "textual_authoritative");
+        data.putAll(details);
+        return cue(PonderTimeline.CueType.CASTING_METHOD, null, data);
     }
 
     private static PonderTimeline.SourceRef source(int index, int ring, int slot, String sigil) {

@@ -16,9 +16,9 @@ art, UX, or production hardening is complete.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Ice Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 289 JUnit/contract tests, 39 production NeoForge GameTests, plus real
+- [x] 296 JUnit/contract tests, 44 production NeoForge GameTests, plus real
   Hermes server/client boots and direct visual/video inspection through
-  priority 24.
+  priority 25.
 
 ## Priorities 1–10 milestone
 
@@ -273,11 +273,32 @@ acceptance scope.
     world geometry, HUD, staged blocks, and checkpoint text throughout. Every
     Hermes test start now resets generated world state while preserving player
     data, advancements, and statistics.
-25. [ ] **Cooperative rituals and multicasting.** Split/replicate circles and
+25. [x] **Cooperative rituals and multicasting.** Split/replicate circles and
     combine mana without implicit consent. Every contributor must approve each
     ritual's exact maximum mana, reagent, and upkeep commitment; reservations
     are atomic, auditable, restart-safe, and refunded if pre-start approval or
-    funding fails.
+    funding fails. The completed alpha freezes the exact compiled circle and
+    per-contributor terms in a bounded versioned ledger, stores each exact
+    mana/upkeep/reagent reservation in a checksummed player attachment, and
+    reconciles or refunds idempotently across retries, disconnects, expiry,
+    invalid launch, shutdown, and restart. Split allocates the combined pool to
+    one execution; replicate starts one copy per contributor in stable order on
+    the server tick thread. Only upkeep actually transferred into durable
+    continuing effects is consumed; unused upkeep refunds, and a refundable
+    batch failure durably concludes any earlier successful persistent copies
+    before releasing contributor escrows. Stable ritual/contributor effect IDs
+    make that cleanup recoverable across a crash before the copy callback, and
+    failed finalization remains registered for bounded server-tick retry.
+    `/vectorregnum ritual` exposes
+    create, invite, approve, decline, cancel, start, and status. Field Manual
+    v13 and the cooperative Ponder teach the consent boundary. The final Hermes ladder
+    passed 296 JUnit tests, all 44 production GameTests, the focused verifier,
+    overlay diff, and a guarded 59-emitter client run. Direct inspection of
+    `visual-evidence/hermes-window-20260830T042821Z.mp4` confirmed that the
+    authored single-client contract checkpoint clearly labels both modes,
+    exact approval, atomic escrow, and the five-GameTest multiplayer evidence;
+    live two-player split and replicate execution are covered by the
+    production GameTests rather than misrepresented by the one-client visual.
 26. [ ] **Recovered-mechanic security and accessibility hardening.** Preserve
     dangerous magic, render-only constructs, spell disruption, forced-attention
     effects, and Wild Magic through curated bounded capabilities, claim/team/PvP
@@ -318,7 +339,7 @@ acceptance scope.
 - [x] Command-based server-authoritative editor and persistent draft.
 - [x] Save, inspect, validate, copy into media, and recover via checksums.
 - [x] Animated actual circle topology with compiler order/error highlighting.
-- [x] Versioned Field Manual v12 with exact crystal/media/infrastructure recipes and commands,
+- [x] Versioned Field Manual v13 with exact crystal/media/infrastructure/ritual recipes and commands,
   data-driven visual elements, search/history/bookmarks/scaling/scrolling,
   progression gating, live recipe/item rendering, and a native Ponder action.
 - [x] Illustrated custom Field Manual inspired by Patchouli/Lexica Botania and

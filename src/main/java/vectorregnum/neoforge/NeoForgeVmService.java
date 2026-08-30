@@ -57,6 +57,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -162,6 +163,17 @@ public final class NeoForgeVmService {
                 method, useStaged, mediumStack, terminal);
     }
 
+    /** Starts one VM copy against its exact slice of the centrally funded ritual quote. */
+    public static boolean startCooperative(ServerPlayer player,
+            Vm2CircleCompilation compilation, String label, CastCost approvedCost, UUID effectId,
+            Consumer<CooperativeCopyResult> terminal) {
+        if (compilation.hasErrors() || compilation.compiledProgram().isEmpty()) return false;
+        return start(player, compilation, false, label,
+                (owner, steps, effects) -> SemanticSpellExecutor.execute(owner, steps, false, effects),
+                CastingMethod.RITUAL, false, ItemStack.EMPTY, ignored -> { },
+                CastingResourceService.cooperativeCopyReservation(approvedCost), terminal, effectId);
+    }
+
     /** Queues a lowered semantic program and applies its ordered plan only at EXECUTE. */
     public static boolean startSemantic(ServerPlayer player, Program program,
             boolean chargeMana, String label,
@@ -224,6 +236,13 @@ public final class NeoForgeVmService {
         return true;
     }
 
+    /** Read-only preflight for an atomic cooperative ritual start. */
+    public static boolean canStartCooperative(ServerPlayer player) {
+        return player != null && player.isAlive() && !player.isRemoved()
+                && player.serverLevel().isLoaded(player.blockPosition())
+                && ABUSE_GUARD.preview(player.getUUID(), player.serverLevel().getGameTime()).accepted();
+    }
+
     public static Program impulseProgram(
             String entityId, Vector3 impulse, int delayTicks, int durationTicks) {
         List<Instruction> instructions = new ArrayList<>();
@@ -245,14 +264,16 @@ public final class NeoForgeVmService {
     private static boolean start(ServerPlayer player, Vm2CircleCompilation compilation,
             boolean chargeMana, String label) {
         return start(player, compilation, chargeMana, label, (SemanticExecution) null,
-                CastingMethod.BARE, true, ItemStack.EMPTY, ignored -> { });
+                CastingMethod.BARE, true, ItemStack.EMPTY, ignored -> { }, null, null, null);
     }
 
     private static boolean start(ServerPlayer player, Vm2CircleCompilation compilation,
             boolean chargeMana, String label,
             BiConsumer<ServerPlayer, List<SemanticInstruction>> semanticExecutor) {
-        return start(player, compilation, chargeMana, label, semanticExecutor,
-                CastingMethod.BARE, true, ItemStack.EMPTY, ignored -> { });
+        return start(player, compilation, chargeMana, label,
+                semanticExecutor == null ? null
+                        : (owner, steps, effects) -> semanticExecutor.accept(owner, steps),
+                CastingMethod.BARE, true, ItemStack.EMPTY, ignored -> { }, null, null, null);
     }
 
     private static boolean start(ServerPlayer player, Vm2CircleCompilation compilation,
@@ -263,7 +284,7 @@ public final class NeoForgeVmService {
         return start(player, compilation, chargeMana, label,
                 semanticExecutor == null ? null
                         : (owner, steps, effects) -> semanticExecutor.accept(owner, steps),
-                method, useStaged, mediumStack, terminal);
+                method, useStaged, mediumStack, terminal, null, null, null);
     }
 
     private static boolean start(ServerPlayer player, Vm2CircleCompilation compilation,
@@ -271,6 +292,18 @@ public final class NeoForgeVmService {
             SemanticExecution semanticExecutor,
             CastingMethod method, boolean useStaged, ItemStack mediumStack,
             Consumer<ResourceEscrow.Outcome> terminal) {
+        return start(player, compilation, chargeMana, label, semanticExecutor,
+                method, useStaged, mediumStack, terminal, null, null, null);
+    }
+
+    private static boolean start(ServerPlayer player, Vm2CircleCompilation compilation,
+            boolean chargeMana, String label,
+            SemanticExecution semanticExecutor,
+            CastingMethod method, boolean useStaged, ItemStack mediumStack,
+            Consumer<ResourceEscrow.Outcome> terminal,
+            CastingResourceService.Reservation prepaidReservation,
+            Consumer<CooperativeCopyResult> cooperativeTerminal,
+            UUID cooperativeEffectId) {
         Program program = compilation.compiledProgram().orElseThrow();
         CastAbuseGuard.Admission admission = ABUSE_GUARD.acquire(
                 player.getUUID(), player.serverLevel().getGameTime());
@@ -285,15 +318,20 @@ public final class NeoForgeVmService {
             ABUSE_GUARD.release(player.getUUID());
             return false;
         }
-        Element spellElement = spellElement(compilation);
-        double adjustedMana = ManaData.adjustedCost(player, program.manaCost().total(), spellElement);
-        double adjustedUpkeep = ManaData.adjustedUpkeep(player,
-                program.manaCost().duration(), spellElement);
-        CastCost baseline = CastingResourceService.baseline(method, adjustedMana,
-                program.instructions().size(), adjustedUpkeep,
-                ManaData.instability(player, spellElement));
-        Optional<CastingResourceService.Reservation> reserved = CastingResourceService.begin(
-                player, method, baseline, chargeMana, useStaged, mediumStack);
+        Optional<CastingResourceService.Reservation> reserved;
+        if (prepaidReservation != null) {
+            reserved = Optional.of(prepaidReservation);
+        } else {
+            Element spellElement = spellElement(compilation);
+            double adjustedMana = ManaData.adjustedCost(player, program.manaCost().total(), spellElement);
+            double adjustedUpkeep = ManaData.adjustedUpkeep(player,
+                    program.manaCost().duration(), spellElement);
+            CastCost baseline = CastingResourceService.baseline(method, adjustedMana,
+                    program.instructions().size(), adjustedUpkeep,
+                    ManaData.instability(player, spellElement));
+            reserved = CastingResourceService.begin(
+                    player, method, baseline, chargeMana, useStaged, mediumStack);
+        }
         if (reserved.isEmpty()) {
             ABUSE_GUARD.release(player.getUUID());
             return false;
@@ -303,8 +341,10 @@ public final class NeoForgeVmService {
                 ^ player.serverLevel().getGameTime() ^ program.instructions().hashCode();
         VmPresentationBridge presentation = new VmPresentationBridge(player,
                 PresentationCompiler.compile(label, presentationSeed, program));
-        PersistentEffectService.Batch persistentEffects = PersistentEffectService.begin(
-                player, program, reservation, presentationSeed);
+        PersistentEffectService.Batch persistentEffects = cooperativeEffectId == null
+                ? PersistentEffectService.begin(player, program, reservation, presentationSeed)
+                : PersistentEffectService.beginCooperative(
+                        player, program, reservation, presentationSeed, cooperativeEffectId);
         ActiveVm active = new ActiveVm(player.getUUID(), player.serverLevel(),
                 new SpellVm(program, new MinecraftWorldAccess(player), presentation), label,
                 chargeMana,
@@ -313,6 +353,7 @@ public final class NeoForgeVmService {
         active.reservation = reservation;
         active.remainingCastTicks = reservation.castingTicks();
         active.terminal = terminal;
+        active.cooperativeTerminal = cooperativeTerminal;
         (tickingVms ? PENDING_VMS : ACTIVE_VMS).add(active);
         publishLiveTrace(player, active);
         player.displayClientMessage(Component.literal(String.format(
@@ -506,12 +547,45 @@ public final class NeoForgeVmService {
                 pending, owner, reason);
     }
 
+    /** Cancels only VMs carrying one exact cooperative ritual label. */
+    public static int cancelLabel(String label, String reason) {
+        Objects.requireNonNull(label, "label");
+        int cancelled = cancelLabel(ACTIVE_VMS, label);
+        cancelled += cancelLabel(PENDING_VMS, label);
+        if (cancelled > 0) VectorRegnumMod.LOGGER.info(
+                "Cancelling {} spell VM(s) labelled {}: {}", cancelled, label, reason);
+        return cancelled;
+    }
+
+    private static int cancelLabel(List<ActiveVm> activeVms, String label) {
+        int cancelled = 0;
+        Iterator<ActiveVm> iterator = activeVms.iterator();
+        while (iterator.hasNext()) {
+            ActiveVm active = iterator.next();
+            if (!active.label.equals(label)) continue;
+            active.persistentEffects.rollback();
+            settle(active, ResourceEscrow.Outcome.ENGINE_FAILURE);
+            ABUSE_GUARD.release(active.owner);
+            iterator.remove();
+            cancelled++;
+        }
+        return cancelled;
+    }
+
     private static void settle(ActiveVm active, ResourceEscrow.Outcome outcome) {
         CastingResourceService.settle(active.reservation, outcome);
         if (active.terminalNotified) return;
         active.terminalNotified = true;
         try {
-            active.terminal.accept(outcome);
+            if (active.cooperativeTerminal != null) {
+                active.cooperativeTerminal.accept(new CooperativeCopyResult(
+                        active.owner, outcome,
+                        active.persistentEffects.committed()
+                                ? active.persistentEffects.effectId() : null,
+                        active.persistentEffects.committedUpkeep()));
+            } else {
+                active.terminal.accept(outcome);
+            }
         } catch (RuntimeException exception) {
             VectorRegnumMod.LOGGER.error("Casting terminal callback failed for {}", active.label,
                     exception);
@@ -781,6 +855,20 @@ public final class NeoForgeVmService {
             TickResult.Status status, int entityCount, ManaCostModel.Breakdown cost) {
     }
 
+    public record CooperativeCopyResult(UUID ownerId, ResourceEscrow.Outcome outcome,
+            UUID persistentEffectId, double committedUpkeep) {
+        public CooperativeCopyResult {
+            Objects.requireNonNull(ownerId, "ownerId");
+            Objects.requireNonNull(outcome, "outcome");
+            if (!Double.isFinite(committedUpkeep) || committedUpkeep < 0.0) {
+                throw new IllegalArgumentException("committed upkeep must be finite and non-negative");
+            }
+            if (persistentEffectId == null && committedUpkeep > 1.0e-9) {
+                throw new IllegalArgumentException("upkeep cannot commit without a persistent effect");
+            }
+        }
+    }
+
     @FunctionalInterface
     public interface SemanticExecution {
         void accept(ServerPlayer owner, List<SemanticInstruction> steps,
@@ -802,6 +890,7 @@ public final class NeoForgeVmService {
         private final Set<Long> deliveredMessageSequences = new HashSet<>();
         private CastingResourceService.Reservation reservation;
         private Consumer<ResourceEscrow.Outcome> terminal;
+        private Consumer<CooperativeCopyResult> cooperativeTerminal;
         private boolean terminalNotified;
         private int remainingCastTicks;
 

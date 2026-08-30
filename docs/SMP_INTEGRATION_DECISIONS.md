@@ -153,6 +153,16 @@ follow the same spell-fault versus engine-failure consumption rules as solo
 casting. Contributor identity, limits, revocation window, and resulting effect
 ownership remain auditable after restart.
 
+The priority-25 alpha implements this as a versioned overworld ritual ledger
+plus a checksummed escrow attachment on each contributor. The invitation
+freezes the compiled circle, split/replicate mode, deadline, and exact maxima.
+Approval snapshots the contributor's exact typed staged loadout and moves the
+maximum mana and upkeep beside that escrow in the same player save. Split
+allocates the combined pool to one execution; replicate launches one copy per
+contributor in stable participant order. Only the server tick thread starts or
+settles copies. Pre-start cancellation and recovery are idempotent, and a
+missing or inconsistent durable half fails closed and refunds the valid half.
+
 ## Security and accessibility constraints
 
 Recovered mechanics keep their core idea while passing through these common

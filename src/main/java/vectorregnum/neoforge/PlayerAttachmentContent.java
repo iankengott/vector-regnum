@@ -79,6 +79,13 @@ public final class PlayerAttachmentContent {
                     .copyOnDeath()
                     .build());
 
+    /** Checksummed, bounded cooperative-ritual reservations saved atomically with player mana. */
+    public static final DeferredHolder<AttachmentType<?>, AttachmentType<String>> RITUAL_ESCROWS =
+            ATTACHMENTS.register("ritual_escrows", () -> AttachmentType.<String>builder(() -> "")
+                    .serialize(Codec.STRING)
+                    .copyOnDeath()
+                    .build());
+
     public static final DeferredHolder<AttachmentType<?>, AttachmentType<Boolean>> RECEIVED_TUTORIAL_GUIDE =
             ATTACHMENTS.register("received_tutorial_guide", () -> AttachmentType.<Boolean>builder(() -> false)
                     .serialize(Codec.BOOL)

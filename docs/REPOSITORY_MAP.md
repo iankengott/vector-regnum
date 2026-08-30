@@ -6,7 +6,7 @@ paths below were verified when the repositories were created.
 
 | Repository | Responsibility | Main-PC local location | Status |
 |---|---|---|---|
-| [`vector-regnum`](https://github.com/iankengott/vector-regnum) | Active NeoForge 1.21.1 magic mod; priorities 1-23 have coherent alpha passes, the library contains 20 playable spells, and `ROADMAP.md` controls current work | `/home/iank/Desktop/my mods/mods-editing/vector-regnum` | Active |
+| [`vector-regnum`](https://github.com/iankengott/vector-regnum) | Active NeoForge 1.21.1 magic mod; priorities 1-25 have coherent alpha passes, the library contains 20 playable spells, and `ROADMAP.md` controls current work | `/home/iank/Desktop/my mods/mods-editing/vector-regnum` | Active |
 | [`vector-regnum-fabric-legacy`](https://github.com/iankengott/vector-regnum-fabric-legacy) | Frozen verified Fabric 1.21.1 alpha | `/home/iank/Desktop/my mods/mods-editing/vector-regnum-fabric-legacy` | Archived/deprecated/read-only |
 | [`regnum-origins`](https://github.com/iankengott/regnum-origins) | Origins, Homunculus, body traits, permanent natural-element assignment | `/home/iank/Desktop/my mods/mods-editing/regnum-origins` | Scaffolded |
 | [`regnum-combat`](https://github.com/iankengott/regnum-combat) | Precision melee, combos, stances, parries, interrupts, reverse-unwriting | `/home/iank/Desktop/my mods/mods-editing/regnum-combat` | Scaffolded |

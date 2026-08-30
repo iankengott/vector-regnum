@@ -47,6 +47,7 @@ import vectorregnum.neoforge.ponder.PonderTraceNetworking;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -245,6 +246,31 @@ public final class CircleAuthoringService {
         return Optional.of(CastingResourceService.quoteAndReport(player, method, baseline, true));
     }
 
+    /** Produces the exact pre-reagent ritual baseline for a frozen circle and one contributor. */
+    public static Optional<CastCost> cooperativeBaseline(ServerPlayer player, MagicCircle circle) {
+        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(circle, "circle");
+        if (Vm2CircleCompiler.isVm2Circle(circle)) {
+            Vm2CircleCompilation compilation = Vm2CircleCompiler.compile(circle,
+                    vmContext(player, player.getEyePosition()));
+            if (compilation.hasErrors()) return Optional.empty();
+            var program = compilation.compiledProgram().orElseThrow();
+            Element element = spellElement(compilation.executionOrder());
+            return Optional.of(CastingResourceService.baseline(CastingMethod.RITUAL,
+                    ManaData.adjustedCost(player, program.manaCost().total(), element),
+                    program.instructions().size(),
+                    ManaData.adjustedUpkeep(player, program.manaCost().duration(), element),
+                    ManaData.instability(player, element)));
+        }
+        CircleCompilation compilation = CircleAuthoringCompiler.compile(circle);
+        if (compilation.hasErrors()) return Optional.empty();
+        Element element = spellElement(compilation.executionOrder());
+        return Optional.of(CastingResourceService.baseline(CastingMethod.RITUAL,
+                ManaData.adjustedCost(player, compilation.compiledSpell().totalManaCost(), element),
+                compilation.compiledSpell().instructionCount(), 0.0,
+                ManaData.instability(player, element)));
+    }
+
     public static void show(ServerPlayer player) {
         MagicCircle circle = session(player).current();
         player.sendSystemMessage(Component.literal(circle.name() + " • " + circle.ringCount() + " rings • "
@@ -355,6 +381,36 @@ public final class CircleAuthoringService {
     public static boolean activateCircleAt(ServerPlayer player, MagicCircle circle,
             boolean chargeMana, Vec3 origin, CastingMethod method, boolean useStaged,
             ItemStack mediumStack, Consumer<ResourceEscrow.Outcome> terminal) {
+        return activateCircleAt(player, circle, chargeMana, origin, method, useStaged,
+                mediumStack, circle.name(), terminal);
+    }
+
+    /** Starts one already-funded cooperative copy with a unique cancellation label. */
+    public static boolean activateCooperativeCopy(ServerPlayer player, MagicCircle circle,
+            Vec3 origin, String executionLabel, CastCost approvedCost, UUID effectId,
+            Consumer<NeoForgeVmService.CooperativeCopyResult> terminal) {
+        if (Vm2CircleCompiler.isVm2Circle(circle)) {
+            Vm2CircleCompilation compilation = Vm2CircleCompiler.compile(circle, vmContext(player, origin));
+            sendVmCompilation(player, compilation);
+            SpellVisualManager.showAuthoredCircleAt(player, circle, compilation.diagnostics(), origin);
+            if (compilation.hasErrors()) {
+                PonderTraceNetworking.publishCompilation(player, "server-compiler-fault",
+                        circle.name() + " — compiler fault", compilation);
+                return false;
+            }
+            return NeoForgeVmService.startCooperative(player, compilation, executionLabel,
+                    approvedCost, effectId, terminal);
+        }
+        return activateCircleAt(player, circle, false, origin, CastingMethod.BARE, false,
+                ItemStack.EMPTY, executionLabel, outcome -> terminal.accept(
+                        new NeoForgeVmService.CooperativeCopyResult(
+                                player.getUUID(), outcome, null, 0.0)));
+    }
+
+    private static boolean activateCircleAt(ServerPlayer player, MagicCircle circle,
+            boolean chargeMana, Vec3 origin, CastingMethod method, boolean useStaged,
+            ItemStack mediumStack, String executionLabel,
+            Consumer<ResourceEscrow.Outcome> terminal) {
         if (Vm2CircleCompiler.isVm2Circle(circle)) {
             Vm2CircleCompilation compilation = Vm2CircleCompiler.compile(circle, vmContext(player, origin));
             sendVmCompilation(player, compilation);
@@ -364,7 +420,7 @@ public final class CircleAuthoringService {
                         circle.name() + " — compiler fault", compilation);
             }
             return !compilation.hasErrors() && NeoForgeVmService.startAuthored(player,
-                    compilation, chargeMana, circle.name(), method, useStaged,
+                    compilation, chargeMana, executionLabel, method, useStaged,
                     mediumStack, terminal);
         }
         CircleCompilation compilation = CircleAuthoringCompiler.compile(circle);

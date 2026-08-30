@@ -28,6 +28,8 @@ import vectorregnum.core.casting.ReagentContribution;
 import vectorregnum.core.casting.ReagentKind;
 import vectorregnum.core.casting.ReagentLoadout;
 import vectorregnum.core.casting.ResourceEscrow;
+import vectorregnum.core.ritual.CooperativeRitual;
+import vectorregnum.neoforge.ritual.RitualEscrowStore;
 
 /** Server-thread inventory and mana adapter for the loader-neutral priority-22 escrow. */
 public final class CastingResourceService {
@@ -243,6 +245,15 @@ public final class CastingResourceService {
         }
     }
 
+    /** Exact already-funded slice used by one cooperative VM copy. */
+    public static Reservation cooperativeCopyReservation(CastCost approvedCost) {
+        Objects.requireNonNull(approvedCost, "approvedCost");
+        CastQuote quote = new CastQuote(CastingMethod.RITUAL, approvedCost,
+                ReagentLoadout.empty(), List.of(), approvedCost);
+        return new Reservation(null, quote,
+                Math.max(1, (int) Math.ceil(approvedCost.castingTime())), false);
+    }
+
     public static Settlement settle(ServerPlayer player, Reservation reservation,
             ResourceEscrow.Outcome outcome) {
         Objects.requireNonNull(player, "player");
@@ -372,6 +383,119 @@ public final class CastingResourceService {
         return ACTIVE.size();
     }
 
+    /** Moves one contributor's exact approved maximum into player-NBT ritual escrow. */
+    public static Optional<RitualEscrowStore.Escrow> reserveRitual(
+            ServerPlayer player, CooperativeRitual ritual,
+            CooperativeRitual.Participant participant) {
+        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(ritual, "ritual");
+        Objects.requireNonNull(participant, "participant");
+        if (!participant.playerId().equals(player.getUUID()) || !ritual.includes(player.getUUID())) {
+            throw new IllegalArgumentException("ritual contributor mismatch");
+        }
+        RitualEscrowStore store = ritualEscrows(player);
+        RitualEscrowStore.Escrow existing = store.get(ritual.ritualId());
+        if (existing != null) {
+            if (approximately(existing.reservedMana(), participant.terms().maxMana())
+                    && approximately(existing.reservedUpkeep(), participant.terms().maxUpkeep())) {
+                return Optional.of(existing);
+            }
+            throw new IllegalStateException("ritual reservation retry changed its approved maximum");
+        }
+        ReagentLoadout exactLoadout = staged(player);
+        int exactUnits = Math.addExact(exactLoadout.totalUnits(), exactLoadout.offeringUnits());
+        if (exactUnits > participant.terms().maxReagentUnits()) {
+            player.sendSystemMessage(Component.literal("Staged reagent loadout has " + exactUnits
+                            + " unit(s), above the approved maximum of "
+                            + participant.terms().maxReagentUnits())
+                    .withStyle(ChatFormatting.RED), false);
+            return Optional.empty();
+        }
+        double total = participant.terms().maxMana() + participant.terms().maxUpkeep();
+        if (!Double.isFinite(total) || !ManaData.ensureAvailable(player, total)
+                || !ManaData.trySpend(player, total)) {
+            player.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
+                            "Ritual approval reserves at most %.2f μ plus %.2f μ upkeep; only %.2f μ is available",
+                            participant.terms().maxMana(), participant.terms().maxUpkeep(),
+                            ManaData.available(player)))
+                    .withStyle(ChatFormatting.RED), false);
+            return Optional.empty();
+        }
+        RitualEscrowStore.Escrow escrow = new RitualEscrowStore.Escrow(ritual.ritualId(),
+                participant.terms().maxMana(), participant.terms().maxUpkeep(), exactLoadout);
+        try {
+            String encodedStore = store.put(escrow).encode();
+            player.setData(PlayerAttachmentContent.RITUAL_ESCROWS, encodedStore);
+            persistStaged(player, ReagentLoadout.empty());
+            return Optional.of(escrow);
+        } catch (RuntimeException exception) {
+            try {
+                player.setData(PlayerAttachmentContent.RITUAL_ESCROWS, store.encode());
+            } catch (RuntimeException rollbackFailure) {
+                exception.addSuppressed(rollbackFailure);
+                throw exception;
+            }
+            if (!ManaData.tryCreditExact(player, total)) {
+                VectorRegnumMod.LOGGER.error("Could not roll back ritual reservation for {}",
+                        player.getUUID());
+            }
+            throw exception;
+        }
+    }
+
+    /** Settles a player-NBT ritual escrow once. Missing entries make retries no-ops. */
+    public static boolean settleRitual(ServerPlayer player, UUID ritualId,
+            ResourceEscrow.Outcome outcome, double allocatedMana, double allocatedUpkeep) {
+        Objects.requireNonNull(player, "player");
+        Objects.requireNonNull(ritualId, "ritualId");
+        Objects.requireNonNull(outcome, "outcome");
+        RitualEscrowStore store = ritualEscrows(player);
+        RitualEscrowStore.Escrow escrow = store.get(ritualId);
+        if (escrow == null) return false;
+        if (!Double.isFinite(allocatedMana) || allocatedMana < 0.0
+                || allocatedMana > escrow.reservedMana() + 1.0e-9
+                || !Double.isFinite(allocatedUpkeep) || allocatedUpkeep < 0.0
+                || allocatedUpkeep > escrow.reservedUpkeep() + 1.0e-9) {
+            throw new IllegalArgumentException("ritual settlement exceeds the contributor escrow");
+        }
+        double refund = outcome.consumesResources()
+                ? escrow.reservedMana() - allocatedMana
+                        + escrow.reservedUpkeep() - allocatedUpkeep
+                : escrow.totalMana();
+        RitualEscrowStore remaining = store.remove(ritualId);
+        player.setData(PlayerAttachmentContent.RITUAL_ESCROWS, remaining.encode());
+        if (refund > 0.0 && !ManaData.tryCreditExact(player, refund)) {
+            player.setData(PlayerAttachmentContent.RITUAL_ESCROWS, store.encode());
+            throw new IllegalStateException("ritual refund no longer fits payer capacity");
+        }
+        if (!outcome.consumesResources()) returnReagents(player, escrow.loadout());
+        player.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
+                        "Ritual escrow %s • %s • %.2f μ returned",
+                        ritualId.toString().substring(0, 8),
+                        outcome.consumesResources() ? "committed" : "refunded", refund))
+                .withStyle(outcome.consumesResources()
+                        ? ChatFormatting.LIGHT_PURPLE : ChatFormatting.GREEN), false);
+        return true;
+    }
+
+    public static RitualEscrowStore ritualEscrows(ServerPlayer player) {
+        try {
+            return RitualEscrowStore.decode(
+                    player.getData(PlayerAttachmentContent.RITUAL_ESCROWS), policy());
+        } catch (RuntimeException exception) {
+            VectorRegnumMod.LOGGER.error("Rejected corrupt ritual escrow attachment for {}",
+                    player.getUUID(), exception);
+            throw new IllegalStateException("Ritual escrow data is corrupt; refusing resource mutation",
+                    exception);
+        }
+    }
+
+    /** Mana kept out of the spendable pool so every durable ritual escrow can refund exactly. */
+    public static double reservedRitualMana(ServerPlayer player) {
+        return ritualEscrows(player).escrows().values().stream()
+                .mapToDouble(RitualEscrowStore.Escrow::totalMana).sum();
+    }
+
     public static Item reagentItem(ReagentKind kind) {
         return REAGENT_ITEMS.get(Objects.requireNonNull(kind, "kind"));
     }
@@ -417,6 +541,10 @@ public final class CastingResourceService {
 
     private static String format(double value) {
         return String.format(Locale.ROOT, "%.2f", value);
+    }
+
+    private static boolean approximately(double left, double right) {
+        return Math.abs(left - right) <= 1.0e-9;
     }
 
     private static int inventoryCount(ServerPlayer player, Item item) {

@@ -243,7 +243,7 @@ contract, focused JUnit discovery, JSON, shell syntax, and whitespace. A
 passing candidate reports:
 
 ```text
-PRIORITY24_VERIFY_OK junit_classes=3 gametests=5 opcodes=12 guide=12
+PRIORITY24_VERIFY_OK junit_classes=3 gametests=5 opcodes=12 guide=13
 ```
 
 The guarded priority-24 client must also log
@@ -256,9 +256,34 @@ showcase waits for earlier cast preludes to expire. Direct inspection of
 source confirmed that the world, staged structure, HUD, and checkpoint text
 remain readable throughout the corrected eight-second run.
 
+## Priority-25 cooperative ritual verifier
+
+After a guarded sync, run `scripts/verify-priority25.sh` on Hermes. It checks
+the bounded ritual domain and NeoForge service, explicit exact-term commands,
+split and replicate modes, the checksummed player escrow attachment and live
+registration manifest, Field Manual v13, the cooperative Ponder, five
+production GameTests, the no-threading ownership rule, focused JUnit classes,
+JSON, shell syntax, and whitespace. A passing candidate reports:
+
+```text
+PRIORITY25_VERIFY_OK junit_classes=5 gametests=5 guide=13 modes=2
+```
+
+The guarded client must log
+`VISUAL_CHECKPOINT_READY milestone=priority_25`. The checkpoint is explicitly
+an authored contract lesson because the guarded visual workflow has one real
+client and cooperative execution requires at least two players. It labels both
+modes, exact per-contributor approval, atomic escrow, and the five-GameTest
+multiplayer proof. Direct inspection of the 12-second focused-window recording
+`visual-evidence/hermes-window-20260830T042821Z.mp4` found the full contract
+text readable through source second 9 and faded by second 10; the staged
+structure and HUD remained readable after the opening particle flash. The
+GNOME screenshot portal did not expose its Share button, so the video is the
+visual artifact for this pass.
+
 ## Production NeoForge GameTests
 
-The ordinary Gradle `test` task runs JUnit and contract tests. The 39 production
+The ordinary Gradle `test` task runs JUnit and contract tests. The 44 production
 NeoForge GameTests must additionally run inside the real isolated GameTest
 server on Hermes when their integration surface changes:
 
@@ -267,7 +292,7 @@ ssh ian-kengott@100.88.229.63 \
   'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-The runner exits after the matrix completes and must report all 39 required
+The runner exits after the matrix completes and must report all 44 required
 tests passed. The tests cover live registration parity, commands, players,
 attachments, media/tablet and crystal block entities, scheduled expiry,
 serialized tick-queue reload, claim/death migration, relay persistence, remote
@@ -277,7 +302,9 @@ duration, and no-target refund, and Teleport destination behavior,
 priority-22 casting/escrow behavior, priority-23 durable effect ownership,
 reconciliation, collapse, and cleanup, and five priority-24 advanced-control
 cases covering shared-stack branch order, iterators, collision/messages,
-bounds, and lifecycle cancellation. The parity test reads
+bounds, and lifecycle cancellation, plus five priority-25 cases for consent
+round-trip, exact pre-start refund, split resource combination, replicated VM
+copies, and duplicate-safe approval. The parity test reads
 `data/vector_regnum/registration_parity.json` and queries the running registry,
 payload, attachment, creative-tab, and command state; update that manifest when
 an intentional registration changes. A true OS-process stop/start remains part

@@ -249,7 +249,7 @@ public final class DevShowcaseController {
                         + "persistence_claim={} player_schema={} unlocks_added={} create_renderer_probe={} "
                         + "element_palette_count=14 affinity_matrix=100,75,50,25 opposed_floor=25 "
                         + "natural_element=server_authoritative channel_attunement={} "
-                        + "casting_methods=6 reagent_kinds=4 ritual_offering=quartz field_manual=12 "
+                        + "casting_methods=6 reagent_kinds=4 ritual_offering=quartz field_manual=13 "
                         + "persistent_contracts=queued five_spell_expansion=5",
                 player.getGameProfile().getName(),
                 circle.sigils().size(),
@@ -279,12 +279,32 @@ public final class DevShowcaseController {
                             + "shared_stack=atomic branch_order=stable_server_tick "
                             + "variables=64 iterators=16 iterator_steps=1024 "
                             + "active_branches=8 total_branches=32 signals=128 "
-                            + "outputs=64 output_chars=256 field_manual=12 "
+                            + "outputs=64 output_chars=256 field_manual=13 "
                             + "command=\"/vectorregnum vm control_demo\"",
                     player.getGameProfile().getName());
+            launchPriority25Showcase(player);
         })) {
             throw new IllegalStateException("priority-24 shared-control visual preflight failed");
         }
+    }
+
+    private static void launchPriority25Showcase(ServerPlayer player) {
+        player.sendSystemMessage(Component.literal(
+                        "VECTOR-REGNUM • PRIORITY 25 COOPERATIVE RITUAL CONTRACT")
+                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
+        player.sendSystemMessage(Component.literal(
+                        "SPLIT / REPLICATE • exact approval per contributor • atomic escrow")
+                .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), false);
+        player.sendSystemMessage(Component.literal(
+                        "Authored lesson • live multiplayer execution is proven by 5 production GameTests")
+                .withStyle(ChatFormatting.GRAY), false);
+        VectorRegnumMod.LOGGER.info(
+                "VISUAL_CHECKPOINT_READY milestone=priority_25 player={} source=authored_contract "
+                        + "minimum_participants=2 modes=split,replicate exact_terms=true "
+                        + "atomic_escrow=true restart_safe=true prestart_refund=exactly_once "
+                        + "multiplayer_execution_proof=5_gametests field_manual=13 "
+                        + "command=\"/vectorregnum ritual status\"",
+                player.getGameProfile().getName());
     }
 
     private static void tickPersistentCheckpoint(MinecraftServer server) {
@@ -313,7 +333,7 @@ public final class DevShowcaseController {
                     .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), false);
             VectorRegnumMod.LOGGER.info(
                     "PERSISTENT_EFFECT_CHECKPOINT_READY player={} contracts={} upkeep_remaining={} "
-                            + "saved_data={} field_manual=12 command=\"/vectorregnum effect status\"",
+                            + "saved_data={} field_manual=13 command=\"/vectorregnum effect status\"",
                     player.getGameProfile().getName(), contracts.size(), upkeep,
                     vectorregnum.neoforge.effect.PersistentEffectSavedData.FILE_ID);
             launchPriority24Showcase(player);
@@ -392,4 +412,5 @@ public final class DevShowcaseController {
     private record StagedBlock(ServerLevel world, BlockPos pos, BlockState previous,
             Block expected) {
     }
+
 }

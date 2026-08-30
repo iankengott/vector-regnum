@@ -1,10 +1,10 @@
 # Vector-Regnum
 
-> **Platform status (2026-08-29):** this is the active Vector-Regnum NeoForge
+> **Platform status (2026-08-30):** this is the active Vector-Regnum NeoForge
 > 1.21.1 repository. The Fabric implementation is deprecated and frozen in its
-> own archived repository. Priorities 20a–24 have coherent end-to-end alpha
-> passes. Priority 24 passed its complete Hermes automated, runtime, and
-> directly inspected video-debugging gates. Priority 25 is the first unfinished
+> own archived repository. Priorities 20a–25 have coherent end-to-end alpha
+> passes. Priority 25 passed its complete Hermes automated, runtime, and
+> directly inspected video-debugging gates. Priority 26 is the first unfinished
 > item.
 > The frozen Fabric repository and all companion projects are listed in
 > [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
@@ -16,7 +16,7 @@ effects; invalid programs fault at an exact physical sigil and may collapse into
 Wild Magic.
 
 The current build is a substantial playable alpha, not a finished release. It
-implements the first coherent working pass of priorities 1–24: typed/ticked
+implements the first coherent working pass of priorities 1–25: typed/ticked
 execution, authoring and diagnostics,
 safety-bounded control flow, perception, physics, cost accounting, three spell
 media, six quoted casting methods, bounded reagents and escrow, durable upkeep
@@ -24,7 +24,8 @@ and effect conclusions, finite crystal progression, Ponders, the visual Field Ma
 server-backed circle editor, natural crystal progression, GameTests,
 multiplayer/security policy, programmable automation, and compiler-driven
 client presentation, plus bounded shared variables, iterators, collision,
-watchers/signals/output, and deterministic logical branches.
+watchers/signals/output, deterministic logical branches, and explicitly
+approved split/replicate cooperative rituals with durable exact escrow.
 
 ## NeoForge baseline
 
@@ -40,7 +41,7 @@ development unit inactive and port free. The repeatable visual workflow is
 |---|---|
 | Build | NeoForge 21.1.248, ModDevGradle 2.0.141, Mojang official mappings |
 | Loader surface | NeoForge `@Mod`, deferred registries, attachments, SavedData, payloads, events, custom-feature worldgen, client subscribers |
-| Automated suite | 289 JUnit tests and 39 production NeoForge GameTests |
+| Automated suite | 296 JUnit tests and 44 production NeoForge GameTests |
 | Live parity | Registries, payload directions, attachments, creative tab, and command root checked against a manifest |
 | Launch workflow | Guarded NixOS launcher and guarded Hermes server/client mirror on loopback port 25575 |
 
@@ -94,17 +95,18 @@ closed normally, the owned unit unloaded, and port 25575 was free.
 
 - NeoForge 21.1.248, ModDevGradle 2.0.141, official/Parchment mappings,
   Gradle 9.2.1, and Java 21.
-- **289 passing JUnit tests** covering the compatibility engine, typed VM,
+- **296 passing JUnit tests** covering the compatibility engine, typed VM,
   static stack analysis, semantics/presentation, circle authoring, media,
   guide/Ponder models, geology, transport, multiplayer policy, automation
   ownership, progression, spell-library contracts, priority-20a particle
   allowlist/trace wire/Quasar vocabulary, and priority-21 elemental matrix,
   migration, tuning, guide, presentation, casting-method, reagent-quote,
   escrow, persistent-effect ledger, SavedData, and five-spell expansion checks,
-  plus **39 passing
+  plus **44 passing
   production NeoForge GameTests** on an isolated headless server, including a
   real Vector Step follow-up-VM regression, seven priority-23 persistence
-  cases, and live Fireball, Tidal Prison target-cap, and Teleport execution. The separate
+  cases, five priority-25 cooperative consent/escrow/split/replicate cases, and
+  live Fireball, Tidal Prison target-cap, and Teleport execution. The separate
   frozen Fabric alpha at `c7371ca` retains its 170-test/16-GameTest record.
 - A Minecraft-independent `vm2` with numbers, booleans, points, vectors,
   entity references, immutable lists and text, Push/Pop/Dup memory, typed
@@ -134,6 +136,24 @@ closed normally, the owned unit unloaded, and port 25575 was free.
   ritual offering and never grants a discount. Escrow refunds exact mana,
   items, offerings, and scrolls on policy, unloaded-target, owner-lifecycle,
   shutdown, and internal failure, including absent-owner fallback settlement.
+- Cooperative ritual leaders freeze one compiled circle and choose split or
+  replicate. Create and invite commands name exact per-contributor maximum
+  mana, reagent/offering units, and upkeep; every contributor stages their own
+  exact typed loadout and explicitly approves that individual ritual. A
+  versioned SavedData ledger and checksummed player escrow make reservations
+  auditable, retry-safe, and restart-reconcilable. Split combines the approved
+  pool into one execution; replicate starts one bounded copy per contributor
+  in stable server-tick order. Successful copies consume only upkeep actually
+  transferred to durable continuing effects; unused upkeep is refunded. If a
+  later copy makes the batch refundable, any earlier persistent copies enter
+  durable idempotent cleanup before contributor escrows refund. Their effect
+  IDs derive from ritual and contributor identity, so restart reconciliation
+  can find them even if a crash precedes the completion callback; failed
+  finalization remains registered and retries on the authoritative tick.
+  Pre-start
+  decline, disconnect, expiry, policy, invalid launch, shutdown, or
+  inconsistent recovery refunds all valid reservations exactly once. Use
+  `/vectorregnum ritual status` to inspect the ledger.
 - Continuing status, force, and temporary-block effects register one bounded,
   versioned contract per successful cast in per-dimension SavedData. Each
   contract records its owner, program hash, opaque cleanup handles with their
@@ -156,7 +176,7 @@ closed normally, the owned unit unloaded, and port 25575 was free.
   channel does not rewrite identity. The JSON-backed symmetric matrix admits
   only 100/75/50/25% bands, with Arcane neutral, rare Void, and a 25% floor.
 - Crystal/media recipes, seven persistent research discoveries, advancement
-  guidance, and a versioned first-join Field Manual v12. The v12 book opens a
+  guidance, and a versioned first-join Field Manual v13. The v13 book opens a
   searchable, scrollable, progression-aware visual manual with three original
   illustrated plates, contextual links, tooltips, live shaped/shapeless recipe
   grids, bounded recipe-alternative cycling, and item icons. Its Ponder cards
@@ -280,8 +300,8 @@ ssh ian-kengott@100.88.229.63 \
   'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-The automated suite must report 289 JUnit tests and the GameTest server must
-report all 39 production tests passed.
+The automated suite must report 296 JUnit tests and the GameTest server must
+report all 44 production tests passed.
 `scripts/hermes-build.sh` also validates every checked-in JSON file and shell
 script on Hermes. Run `scripts/hermes-diff-check.sh` in the guarded Hermes
 mirror for the overlaid Git whitespace check documented in
@@ -459,9 +479,8 @@ small versioned API. See [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
 ## Still not finished
 
-Priority 25's explicitly approved cooperative rituals are next. Security and
-accessibility hardening and the optional SMP integration API follow.
-Configuration, balancing,
+Priority 26's recovered-mechanic security and accessibility hardening is next;
+the optional SMP integration API follows. Configuration, balancing,
 profiling, full playtests, NeoForge/modpack compatibility, final art,
 localization, and release packaging come afterward; that release milestone also
 owns publishing inspected in-game images to the Regnum Hub.
@@ -476,8 +495,8 @@ ladder, approval-gated NixOS opening rule, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
 [ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priorities
-20a–24 have coherent end-to-end alpha passes. Priority 24's corrected
-eight-second Hermes recording was directly inspected; priority 25 is the first
+20a–25 have coherent end-to-end alpha passes. Priority 25's 12-second Hermes
+contract recording was directly inspected; priority 26 is the first
 unfinished item.
 `AGENTS.md` also records Ian's current subagent rule: use OpenAI Codex Luna at
 max reasoning only. If Luna max is unavailable, keep the work in the parent

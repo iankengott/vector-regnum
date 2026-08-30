@@ -52,7 +52,8 @@ public final class ManaData {
         }
         double current = available(player);
         double capacity = capacity(player);
-        double heldForRefund = CastingResourceService.reservedMana(player.getUUID());
+        double heldForRefund = CastingResourceService.reservedMana(player.getUUID())
+                + CastingResourceService.reservedRitualMana(player);
         if (current + amount + heldForRefund > capacity + 1.0e-9) {
             return false;
         }
@@ -185,6 +186,9 @@ public final class ManaData {
         int offered = ManaDrawRules.offeredMana(ManaCrystalNodeBlock.MANA_PER_CHARGE,
                 distance, state.getValue(ManaCrystalNodeBlock.AFFINITY), channelAffinity(player));
         if (offered <= 0) return false;
+        // Validate durable refund accounting before mutating the source block. The
+        // subsequent credit runs on the same authoritative tick thread.
+        CastingResourceService.reservedRitualMana(player);
         int chargesNeeded = (int) Math.ceil((required - current - 1.0e-9) / offered);
         if (chargesNeeded <= 0 || chargesNeeded > charges) return false;
         double accepted = Math.min((double) offered * chargesNeeded, capacity - current);

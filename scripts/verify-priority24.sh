@@ -89,8 +89,9 @@ require_symbol 'Priority24 GameTest annotation' '@GameTest\b' "$PRIORITY24_GAME_
 require_symbol 'priority_24 Hermes marker' 'priority_24' "$JAVA_SOURCES"
 require_symbol 'VISUAL_CHECKPOINT_READY Hermes marker' 'VISUAL_CHECKPOINT_READY' "$JAVA_SOURCES"
 
-jq -e '.version == 12' "$GUIDE_SOURCE" >/dev/null ||
-    die 'field manual must be version 12'
+guide_version="$(jq -r '.version' "$GUIDE_SOURCE")"
+[[ "$guide_version" =~ ^[0-9]+$ ]] && (( guide_version >= 12 )) ||
+    die 'field manual must retain priority-24 teaching at version 12 or later'
 
 # The runtime contract requires a named, inspectable cap for each bounded
 # shared-memory/branch resource.  The focused JUnit tests below prove the
@@ -182,6 +183,6 @@ if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     git diff --check
 fi
 
-printf 'PRIORITY24_VERIFY_OK junit_classes=%s gametests=%s opcodes=%s guide=12\n' \
+printf 'PRIORITY24_VERIFY_OK junit_classes=%s gametests=%s opcodes=%s guide=%s\n' \
     "${#priority24_test_sources[@]}" "$priority24_game_test_count" \
-    "${#PRIORITY24_OPCODES[@]}"
+    "${#PRIORITY24_OPCODES[@]}" "$guide_version"

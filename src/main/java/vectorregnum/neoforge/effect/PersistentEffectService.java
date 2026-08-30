@@ -57,8 +57,30 @@ public final class PersistentEffectService {
     public static Batch begin(ServerPlayer owner, Program program,
             CastingResourceService.Reservation reservation, long seed) {
         Objects.requireNonNull(program, "program");
-        return new Batch(owner, reservation.funded() ? reservation.id() : UUID.randomUUID(),
+        return begin(owner, program, reservation, seed,
+                reservation.funded() ? reservation.id() : UUID.randomUUID());
+    }
+
+    /** Starts a cooperative batch whose durable effect ID is recoverable after a crash. */
+    public static Batch beginCooperative(ServerPlayer owner, Program program,
+            CastingResourceService.Reservation reservation, long seed, UUID effectId) {
+        Objects.requireNonNull(program, "program");
+        return begin(owner, program, reservation, seed, effectId);
+    }
+
+    private static Batch begin(ServerPlayer owner, Program program,
+            CastingResourceService.Reservation reservation, long seed, UUID effectId) {
+        Objects.requireNonNull(reservation, "reservation");
+        return new Batch(owner, Objects.requireNonNull(effectId, "effectId"),
                 programHash(program), seed);
+    }
+
+    /** Stable cross-ledger key used to reconcile a copy even before its callback persists. */
+    public static UUID cooperativeEffectId(UUID ritualId, UUID ownerId) {
+        Objects.requireNonNull(ritualId, "ritualId");
+        Objects.requireNonNull(ownerId, "ownerId");
+        return UUID.nameUUIDFromBytes(("vector_regnum:cooperative_effect:"
+                + ritualId + ':' + ownerId).getBytes(StandardCharsets.UTF_8));
     }
 
     public static List<PersistentEffectContract> ownedBy(ServerPlayer player) {
@@ -68,6 +90,54 @@ public final class PersistentEffectService {
 
     public static int activeCount(ServerLevel level) {
         return PersistentEffectSavedData.get(level).ledger().entries().size();
+    }
+
+    /**
+     * Durably disables one already-committed cooperative copy before its ritual
+     * escrow is refunded. Cleanup may finish later if a target chunk is unloaded,
+     * but a concluding contract can no longer apply effects or debit upkeep.
+     */
+    public static void cancelCommitted(MinecraftServer server, UUID effectId) {
+        Objects.requireNonNull(server, "server");
+        Objects.requireNonNull(effectId, "effectId");
+        for (ServerLevel level : server.getAllLevels()) {
+            PersistentEffectSavedData data = PersistentEffectSavedData.get(level);
+            PersistentEffectContract current = data.ledger().get(effectId);
+            if (current == null) continue;
+            long effectiveDeadline = current.effectiveDeadlineTick();
+            List<Handle> handles = current.handles().stream()
+                    .map(encoded -> decodeHandle(encoded, effectiveDeadline))
+                    .toList();
+            if (current.state() == PersistentEffectContract.State.ACTIVE) {
+                PersistentEffectLedger.Change concluding = data.ledger().replace(
+                        current.revision(),
+                        current.withState(PersistentEffectContract.State.CONCLUDING));
+                if (!concluding.changed()) {
+                    throw new IllegalStateException("persistent-effect cancellation revision changed");
+                }
+                persistRegistration(data, concluding.ledger(), level.getDataStorage()::save);
+                current = data.ledger().get(effectId);
+            }
+            if (current.state() == PersistentEffectContract.State.CLEANED) {
+                PersistentEffectLedger.Change removed = data.ledger().removeCleaned(effectId);
+                if (removed.changed()) {
+                    persistRegistration(data, removed.ledger(), level.getDataStorage()::save);
+                }
+                return;
+            }
+            if (cleanup(level, handles)) {
+                PersistentEffectLedger.Change cleaned = data.ledger().completeCleanup(effectId);
+                PersistentEffectLedger replacement = cleaned.ledger();
+                if (cleaned.changed()) replacement = replacement.removeCleaned(effectId).ledger();
+                if (!replacement.equals(data.ledger())) {
+                    persistRegistration(data, replacement, level.getDataStorage()::save);
+                }
+            }
+            VectorRegnumMod.LOGGER.info(
+                    "PERSISTENT_EFFECT_COOPERATIVE_CANCEL id={} owner={} cleanup={}",
+                    effectId, current.ownerId(), data.ledger().get(effectId) == null);
+            return;
+        }
     }
 
     /** Exposed for production GameTests; normal runtime reaches this through the tick event. */
@@ -294,6 +364,8 @@ public final class PersistentEffectService {
         private final long seed;
         private final Map<String, Handle> handles = new LinkedHashMap<>();
         private boolean terminal;
+        private boolean committed;
+        private double committedUpkeep;
 
         private Batch(ServerPlayer owner, UUID effectId, String programHash, long seed) {
             this.owner = Objects.requireNonNull(owner, "owner");
@@ -309,6 +381,14 @@ public final class PersistentEffectService {
 
         public boolean hasHandles() {
             return !handles.isEmpty();
+        }
+
+        public boolean committed() {
+            return committed;
+        }
+
+        public double committedUpkeep() {
+            return committedUpkeep;
         }
 
         public void trackBlock(BlockPos pos, Block expected, int durationTicks) {
@@ -458,6 +538,8 @@ public final class PersistentEffectService {
                 CastingResourceService.releaseUpkeepClaim(reservation);
                 throw exception;
             }
+            committed = true;
+            committedUpkeep = upkeep;
             terminal = true;
             owner.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
                             "Persistent effect %s • endpoint %dt • prepaid upkeep %.2f μ",

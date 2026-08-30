@@ -16,8 +16,8 @@ import java.util.List;
 /** Gives each player a persistent first-join field manual and starter tome. */
 public final class TutorialGuide {
     public static final String FIELD_MANUAL_TITLE_PREFIX = "Vector-Regnum Field Manual v";
-    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "12";
-    private static final int CURRENT_GUIDE_VERSION = 12;
+    public static final String FIELD_MANUAL_TITLE = FIELD_MANUAL_TITLE_PREFIX + "13";
+    private static final int CURRENT_GUIDE_VERSION = 13;
     private TutorialGuide() {
     }
 
@@ -103,7 +103,13 @@ public final class TutorialGuide {
                         + "/vectorregnum circle quote <method> shows requested and applied discounts, clipping, and the bounded final quote. /vectorregnum circle ritual requires the staged offering."),
                 page("SETTLEMENT\n\n"
                         + "After admission, mana, staged reagents, and a scroll enter server escrow. Success and genuine spell faults or Wild Magic consume them. Policy, unloaded-target, rate, shutdown, owner-lifecycle, and internal failures refund or never withdraw them.\n\n"
-                        + "Books and world media remain reusable. Cooperative contributor approval belongs to the later ritual system."),
+                        + "Books and world media remain reusable. Cooperative rituals use a separate exact reservation for every contributor."),
+                page("COOPERATIVE RITUALS\n\n"
+                        + "Create a split or replicate ritual from your compiled circle with /vectorregnum ritual create <mode> <max_mana> <max_reagents> <max_upkeep>. The leader invites each named contributor with that contributor's exact maxima.\n\n"
+                        + "Each contributor must stage their own exact reagent loadout and run /vectorregnum ritual approve <id>. Nothing starts until every invite is approved. Use ritual status, decline, cancel, or start with the short ritual ID."),
+                page("RITUAL SAFETY\n\n"
+                        + "Approval moves only that contributor's bounded maxima into checksummed server escrow. Split combines the approved resource pool into one circle. Replicate launches one bounded copy per contributor in stable order.\n\n"
+                        + "A pre-start decline, disconnect, expiry, invalid launch, or restart mismatch cancels and refunds every reservation exactly once. After start, the normal success and genuine-fault settlement rules apply."),
                 page("PERSISTENT MAGIC\n\n"
                         + "Every continuing effect records its owner, program, dimension, endpoint, hard deadline, cleanup handles, and exact prepaid upkeep. Check yours with /vectorregnum effect status.\n\n"
                         + "Unloaded chunks pause reconciliation until loaded; offline owners cannot drive world mutations. Natural conclusions clean exactly once. Unpaid or non-concluding magic collapses into bounded deterministic Wild Magic, then cleans."),

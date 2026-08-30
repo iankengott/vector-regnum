@@ -16,6 +16,7 @@ import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
 import vectorregnum.neoforge.progression.ManaAffinity;
 import vectorregnum.neoforge.progression.PlayerManaBridge;
 import vectorregnum.neoforge.progression.ProgressionContent;
+import vectorregnum.neoforge.ritual.CooperativeRitualService;
 import vectorregnum.neoforge.world.NaturalCrystalWorldgen;
 
 /** NeoForge entrypoint; registration is attached to the real mod event bus. */
@@ -66,6 +67,7 @@ public final class VectorRegnumMod {
         NeoForge.EVENT_BUS.register(MultiplayerLifecycleService.class);
         NeoForge.EVENT_BUS.register(NeoForgeVmService.class);
         NeoForge.EVENT_BUS.register(PersistentEffectService.class);
+        NeoForge.EVENT_BUS.register(CooperativeRitualService.class);
         NeoForge.EVENT_BUS.register(SpellVisualManager.class);
         NeoForge.EVENT_BUS.register(AutomationService.class);
         NeoForge.EVENT_BUS.register(SpellSecurityPolicy.class);

@@ -30,6 +30,7 @@ trap cleanup EXIT
 git clone --depth 1 "$PUBLIC_REMOTE" "$audit_repo"
 rsync -a --delete \
     --exclude='.git' \
+    --exclude='.audit' \
     --exclude='.gradle' \
     --exclude='build' \
     --exclude='run' \

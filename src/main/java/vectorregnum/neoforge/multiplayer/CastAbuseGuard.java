@@ -29,6 +29,21 @@ public final class CastAbuseGuard {
         return new Admission(true, "accepted");
     }
 
+    /** Read-only admission preview used before an atomic multi-caster start. */
+    public Admission preview(UUID actor, long tick) {
+        State state = actors.get(actor);
+        if (state == null || tick < state.windowStart || tick - state.windowStart >= WINDOW_TICKS) {
+            return new Admission(true, "accepted");
+        }
+        if (state.active >= MAX_ACTIVE_PER_PLAYER) {
+            return new Admission(false, "Too many concurrent spells");
+        }
+        if (state.starts >= MAX_STARTS_PER_WINDOW) {
+            return new Admission(false, "Spell start rate exceeded");
+        }
+        return new Admission(true, "accepted");
+    }
+
     public void release(UUID actor) {
         State state = actors.get(actor);
         if (state == null) return;
