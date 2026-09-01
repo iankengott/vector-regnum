@@ -24,8 +24,12 @@ grep -Fq '24. [x] **Advanced shared-memory spell control.**' \
     ROADMAP.md || die 'ROADMAP.md does not mark priority 24 complete'
 grep -Fq '25. [x] **Cooperative rituals and multicasting.**' \
     ROADMAP.md || die 'ROADMAP.md does not mark priority 25 complete'
-grep -Fq '"version": 13' src/main/resources/assets/vector_regnum/guide/field_manual.json \
-    || die 'Field Manual is not at the current priority-25 version'
+grep -Fq '26. [x] **Recovered-mechanic security and accessibility hardening.**' \
+    ROADMAP.md || die 'ROADMAP.md does not mark priority 26 complete'
+grep -Fq '27. [x] **Versioned SMP integration API.**' \
+    ROADMAP.md || die 'ROADMAP.md does not mark priority 27 complete'
+grep -Fq '"version": 14' src/main/resources/assets/vector_regnum/guide/field_manual.json \
+    || die 'Field Manual is not at the current priority-27 version'
 
 grep -Fq '**Execution-host policy (Ian, 2026-08-27):** Hermes is the default' \
     AGENTS.md || die 'AGENTS.md lost the Hermes-first, approval-gated NixOS policy'
@@ -40,6 +44,8 @@ grep -Fq 'Use OpenAI Codex subagents only' AGENTS.md \
     || die 'Hermes focused-window video recorder is missing or not executable'
 [[ -x scripts/verify-priority25.sh ]] \
     || die 'priority-25 verifier is missing or not executable'
+[[ -x scripts/verify-priority27.sh ]] \
+    || die 'priority-27 verifier is missing or not executable'
 grep -Fq '"$remote_dir/scripts/hermes-reset-test-world.sh"' scripts/hermes-client.sh \
     || die 'Hermes client startup no longer resets generated test-world state'
 grep -Fq 'the test world'"'"'s generated/world state while preserving playerdata,' \
@@ -95,6 +101,11 @@ readonly -a STALE_CLAIMS=(
     'priority 25 remains the first unfinished'
     'priority 25 is next'
     'priority 25 explicitly approved cooperative rituals are next'
+    'priority 26 is the first unfinished'
+    'priority 26 remains unfinished'
+    'priority 27 is the first unfinished'
+    'priority 27 remains unfinished'
+    'priority 27 is next'
     'captured hermes frame still needs'
     'awaiting only direct inspection'
     'field manual v11 with exact crystal/media/infrastructure recipes and commands'
@@ -119,5 +130,5 @@ for stale_claim in "${STALE_CLAIMS[@]}"; do
     fi
 done
 
-printf 'HANDOFF_DOCS_OK priority20a=complete priority21=complete priority22=complete priority23=complete priority24=complete priority25=complete priority26=next hermes_first=true luna_max=true checked_files=%d\n' \
+printf 'HANDOFF_DOCS_OK priority20a=complete priority21=complete priority22=complete priority23=complete priority24=complete priority25=complete priority26=complete priority27=complete priority28=next hermes_first=true luna_max=true checked_files=%d\n' \
     "${#LIVE_HANDOFF_DOCS[@]}"

@@ -193,6 +193,10 @@ Vector-Regnum owns the magic language/runtime, circles and casting media, mana
 and affinities, reagents/upkeep, cooperative casting, automation, spell
 presentation, magic security, and versioned integration APIs.
 
+The implemented loader-neutral v1 surface, public bounds, optional registration
+model, and NeoForge authority delegates are specified in
+[`INTEGRATION_API_V1.md`](INTEGRATION_API_V1.md).
+
 It does **not** own the full origins roster, precision melee system, general
 class/profession/skill-tree system, story/dimensions/weather campaign, server
 administration tools, or third-party modpack. Those are separate projects in

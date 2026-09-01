@@ -22,6 +22,8 @@ import vectorregnum.core.circle.CircleCompilation;
 import vectorregnum.core.circle.CircleCoordinate;
 import vectorregnum.core.circle.PlacedSigil;
 import vectorregnum.neoforge.ponder.PonderTraceNetworking;
+import vectorregnum.neoforge.api.v1.VectorRegnumApi;
+import java.util.UUID;
 
 /** Immediate compatibility casting through the same quote and escrow contract as vm2. */
 public final class CastService {
@@ -63,7 +65,8 @@ public final class CastService {
         }
         Element spellElement = spellElement(sigils);
         double adjustedMana = ManaData.adjustedCost(player, program.totalManaCost(), spellElement);
-        CastCost baseline = CastingResourceService.baseline(method, adjustedMana,
+        CastCost baseline = CastingResourceService.integratedBaseline(player,
+                "compatibility", spellElement, method, adjustedMana,
                 program.instructionCount(), 0.0, ManaData.instability(player, spellElement));
         Optional<CastingResourceService.Reservation> reserved = CastingResourceService.begin(
                 player, method, baseline, chargeMana, useStaged, mediumStack);
@@ -74,18 +77,25 @@ public final class CastService {
         long seed = player.serverLevel().getGameTime()
                 ^ player.getUUID().getMostSignificantBits()
                 ^ player.getUUID().getLeastSignificantBits();
+        UUID storyEventId = CastingResourceService.storyEventId(reservation);
+        VectorRegnumApi.publishSpellStartEvent(player, storyEventId,
+                "compatibility", spellElement);
         CastResult result;
         try {
             result = ENGINE.cast(program, new CastContext(player.getStringUUID(),
                     toCore(origin), toCore(direction), seed));
         } catch (RuntimeException exception) {
             CastingResourceService.settle(player, reservation, ResourceEscrow.Outcome.ENGINE_FAILURE);
+            VectorRegnumApi.publishSpellTerminalEvent(player, storyEventId,
+                    "compatibility", spellElement, "engine_failure");
             VectorRegnumMod.LOGGER.error("Compatibility engine threw after escrow", exception);
             return new CastResult.EngineFailure("ENGINE_EXCEPTION", exception.getMessage());
         }
 
         if (result instanceof CastResult.EngineFailure failure) {
             CastingResourceService.settle(player, reservation, ResourceEscrow.Outcome.ENGINE_FAILURE);
+            VectorRegnumApi.publishSpellTerminalEvent(player, storyEventId,
+                    "compatibility", spellElement, "engine_failure");
             VectorRegnumMod.LOGGER.error("Engine failure {}: {}", failure.code(), failure.message());
             player.sendSystemMessage(Component.literal("Vector-Regnum engine fault: " + failure.code())
                     .withStyle(ChatFormatting.DARK_RED), false);
@@ -97,6 +107,8 @@ public final class CastService {
         }
         if (result instanceof CastResult.Success) {
             CastingResourceService.settle(player, reservation, ResourceEscrow.Outcome.SUCCESS);
+            VectorRegnumApi.publishSpellTerminalEvent(player, storyEventId,
+                    "compatibility", spellElement, "success");
             player.sendSystemMessage(Component.literal(String.format(
                             "Spell executed • %.2f μ • %.2f μ remaining",
                             reservation.quote().finalCost().mana(), ManaData.available(player)))
@@ -104,6 +116,8 @@ public final class CastService {
         } else if (result instanceof CastResult.SpellFailure failure) {
             CastingResourceService.settle(player, reservation,
                     ResourceEscrow.Outcome.GENUINE_SPELL_FAULT);
+            VectorRegnumApi.publishSpellTerminalEvent(player, storyEventId,
+                    "compatibility", spellElement, "genuine_spell_fault");
             if (chargeMana) {
                 ManaData.lockChannel(player, ManaData.stabilityLockTicks(
                         100L, reservation.quote().finalCost().instability()));

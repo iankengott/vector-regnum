@@ -16,9 +16,9 @@ art, UX, or production hardening is complete.
 - [x] Compatibility compiler/runtime with exact source faults and Wild Magic.
 - [x] Persistent tutorial guide, Sigil Tome, Firebolt, Ice Nova, effects,
   collision, cooldowns, and finite server-authoritative mana.
-- [x] 305 JUnit/contract tests, 47 production NeoForge GameTests, plus real
+- [x] 320 JUnit/contract tests, 53 production NeoForge GameTests, plus real
   Hermes server/client boots and direct visual/video inspection through
-  priority 25.
+  priority 27.
 
 ## Priorities 1–10 milestone
 
@@ -314,11 +314,27 @@ acceptance scope.
     screenshot portal's Share control was unavailable, so the recording is the
     visual artifact; both Hermes development units were stopped and loopback
     port 25575 was free.
-27. [ ] **Versioned SMP integration API.** Expose narrow optional hooks for the
+27. [x] **Versioned SMP integration API.** Expose narrow optional hooks for the
     separate Origins, Combat, Progression, World/Story, Administration, and
     modpack repositories without absorbing those systems or making them hard
     dependencies. Repository ownership is defined in
-    `docs/REPOSITORY_MAP.md`.
+    `docs/REPOSITORY_MAP.md`. The completed v1 surface separates immutable,
+    loader-neutral records and bounded source-ordered registries from the thin
+    server-thread NeoForge facade. It gives Origins first assignment of a
+    missing permanent element, exposes structured progression grants and
+    player snapshots, composes bounded reputation/patron cast modifiers before
+    reagent escrow, revalidates Combat disruption through existing security,
+    scans only loaded chunk block entities for bounded mana-region summaries,
+    and publishes immutable revisioned story observations. The registration
+    parity manifest advertises the exact six optional domains and public
+    bounds; Vector-Regnum has no companion dependency. The Hermes candidate
+    passed 320 JUnit tests, all 53 production GameTests, the focused priority-27
+    verifier, the public-clone overlay diff, and the guarded client checkpoint.
+    Direct timestamped inspection of
+    `visual-evidence/hermes-window-20260901T053159Z.mp4` found the API-v1 title,
+    all six domains, no-dependency statement, and bounded hook summary readable
+    from source seconds 4–10 over the staged scene. Both guarded units stopped
+    and loopback port 25575 was free.
 28. [ ] Configuration, elemental/reagent/upkeep balancing, profiling,
     survival and multiplayer playtests, abuse testing, and compatibility with
     representative NeoForge mods and the target SMP pack.

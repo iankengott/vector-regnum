@@ -1,11 +1,10 @@
 # Vector-Regnum
 
-> **Platform status (2026-08-30):** this is the active Vector-Regnum NeoForge
+> **Platform status (2026-09-01):** this is the active Vector-Regnum NeoForge
 > 1.21.1 repository. The Fabric implementation is deprecated and frozen in its
-> own archived repository. Priorities 20a–26 have coherent end-to-end alpha
-> passes. Priority 26 passed its complete Hermes automated, runtime, and
-> directly inspected video-debugging gates. Priority 27 is the first unfinished
-> item.
+> own archived repository. Priorities 20a–27 have coherent end-to-end alpha
+> passes. Priority 27 passed its complete Hermes automated, dedicated-server,
+> overlay, and guarded client gates. Priority 28 is the first unfinished item.
 > The frozen Fabric repository and all companion projects are listed in
 > [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
 
@@ -16,7 +15,7 @@ effects; invalid programs fault at an exact physical sigil and may collapse into
 Wild Magic.
 
 The current build is a substantial playable alpha, not a finished release. It
-implements the first coherent working pass of priorities 1–26: typed/ticked
+implements the first coherent working pass of priorities 1–27: typed/ticked
 execution, authoring and diagnostics,
 safety-bounded control flow, perception, physics, cost accounting, three spell
 media, six quoted casting methods, bounded reagents and escrow, durable upkeep
@@ -24,8 +23,9 @@ and effect conclusions, finite crystal progression, Ponders, the visual Field Ma
 server-backed circle editor, natural crystal progression, GameTests,
 multiplayer/security policy, programmable automation, and compiler-driven
 client presentation, plus bounded shared variables, iterators, collision,
-watchers/signals/output, deterministic logical branches, and explicitly
-approved split/replicate cooperative rituals with durable exact escrow.
+watchers/signals/output, deterministic logical branches, explicitly approved
+split/replicate cooperative rituals with durable exact escrow, and a bounded
+optional v1 API for the six separate SMP integration domains.
 
 ## NeoForge baseline
 
@@ -41,8 +41,8 @@ development unit inactive and port free. The repeatable visual workflow is
 |---|---|
 | Build | NeoForge 21.1.248, ModDevGradle 2.0.141, Mojang official mappings |
 | Loader surface | NeoForge `@Mod`, deferred registries, attachments, SavedData, payloads, events, custom-feature worldgen, client subscribers |
-| Automated suite | 305 JUnit tests and 47 production NeoForge GameTests |
-| Live parity | Registries, payload directions, attachments, creative tab, and command root checked against a manifest |
+| Automated suite | 320 JUnit tests and 53 production NeoForge GameTests |
+| Live parity | Registries, payload directions, attachments, creative tab, command root, and integration API metadata checked against a manifest |
 | Launch workflow | Guarded NixOS launcher and guarded Hermes server/client mirror on loopback port 25575 |
 
 The production matrix queries the running game rather than inferring loader
@@ -95,17 +95,18 @@ closed normally, the owned unit unloaded, and port 25575 was free.
 
 - NeoForge 21.1.248, ModDevGradle 2.0.141, official/Parchment mappings,
   Gradle 9.2.1, and Java 21.
-- **305 passing JUnit tests** covering the compatibility engine, typed VM,
+- **320 passing JUnit tests** covering the compatibility engine, typed VM,
   static stack analysis, semantics/presentation, circle authoring, media,
   guide/Ponder models, geology, transport, multiplayer policy, automation
   ownership, progression, spell-library contracts, priority-20a particle
   allowlist/trace wire/Quasar vocabulary, and priority-21 elemental matrix,
   migration, tuning, guide, presentation, casting-method, reagent-quote,
   escrow, persistent-effect ledger, SavedData, and five-spell expansion checks,
-  plus **47 passing
+  plus **53 passing
   production NeoForge GameTests** on an isolated headless server, including a
   real Vector Step follow-up-VM regression, seven priority-23 persistence
-  cases, five priority-25 cooperative consent/escrow/split/replicate cases, and
+  cases, five priority-25 cooperative consent/escrow/split/replicate cases, six
+  priority-27 API metadata/snapshot/provider/disruption/mana/story cases, and
   live Fireball, Tidal Prison target-cap, and Teleport execution. The separate
   frozen Fabric alpha at `c7371ca` retains its 170-test/16-GameTest record.
 - A Minecraft-independent `vm2` with numbers, booleans, points, vectors,
@@ -300,8 +301,8 @@ ssh ian-kengott@100.88.229.63 \
   'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-The automated suite must report 305 JUnit tests and the GameTest server must
-report all 47 production tests passed.
+The automated suite must report 320 JUnit tests and the GameTest server must
+report all 53 production tests passed.
 `scripts/hermes-build.sh` also validates every checked-in JSON file and shell
 script on Hermes. Run `scripts/hermes-diff-check.sh` in the guarded Hermes
 mirror for the overlaid Git whitespace check documented in
@@ -474,15 +475,17 @@ canonical direction is:
   accessibility boundaries.
 
 Origins, precision melee, general progression, story/world systems,
-administration, and the modpack are separate repositories connected through a
-small versioned API. See [docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md).
+administration, and the modpack are separate repositories connected through
+the optional loader-neutral v1 contract in
+[docs/INTEGRATION_API_V1.md](docs/INTEGRATION_API_V1.md). See
+[docs/REPOSITORY_MAP.md](docs/REPOSITORY_MAP.md) for ownership.
 
 ## Still not finished
 
-Priority 27's versioned SMP integration API is next. Configuration, balancing,
-profiling, full playtests, NeoForge/modpack compatibility, final art,
-localization, and release packaging come afterward; that release milestone also
-owns publishing inspected in-game images to the Regnum Hub.
+Priority 28—configuration, balancing, profiling, full playtests, abuse tests,
+and NeoForge/modpack compatibility—is next. Final art, localization, and
+release packaging follow in priority 29; that milestone also owns publishing
+inspected in-game images to the Regnum Hub.
 
 See [ROADMAP.md](ROADMAP.md) for the detailed status.
 
@@ -494,9 +497,13 @@ ladder, approval-gated NixOS opening rule, regression invariants, and
 documentation handoff rules. In a new session, asking for "the next unfinished
 Vector-Regnum priorities" is sufficient; the numbered queue in
 [ROADMAP.md](ROADMAP.md) controls the order. At this handoff, priorities
-20a–26 have coherent end-to-end alpha passes. Priority 26's 12-second Hermes
-recovered-mechanic recording was directly inspected; priority 27 is the first
-unfinished item.
+20a–27 have coherent end-to-end alpha passes. Priority 27's guarded Hermes
+checkpoint verified the optional API contract with no companion mods present;
+all 59 Quasar emitters loaded, and direct timestamped inspection of
+`visual-evidence/hermes-window-20260901T053159Z.mp4` found the API-v1 title, all
+six domains, no-dependency statement, and bounded hook summary readable from
+source seconds 4–10. Both guarded units stopped and port 25575 was free.
+Priority 28 is the first unfinished item.
 `AGENTS.md` also records Ian's current subagent rule: use OpenAI Codex Luna at
 max reasoning only. If Luna max is unavailable, keep the work in the parent
 unless Ian explicitly approves another profile. The parent owns integration,

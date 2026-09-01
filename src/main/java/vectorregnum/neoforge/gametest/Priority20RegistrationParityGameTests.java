@@ -27,6 +27,9 @@ import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 import net.neoforged.neoforge.network.registration.NetworkRegistry;
 import net.neoforged.neoforge.registries.NeoForgeRegistries;
+import vectorregnum.api.v1.IntegrationRegistry;
+import vectorregnum.api.v1.ManaRegionSnapshot;
+import vectorregnum.api.v1.VectorRegnumApiV1;
 import vectorregnum.neoforge.VectorRegnumMod;
 
 /**
@@ -72,6 +75,7 @@ public final class Priority20RegistrationParityGameTests {
         checkPayloads(manifest, failures);
         checkCreativeTabs(context, manifest, failures);
         checkCommands(context, manifest, failures);
+        checkIntegrationApi(manifest, failures);
 
         if (!failures.isEmpty()) {
             context.fail("Priority 20 live registration parity failed: "
@@ -238,6 +242,45 @@ public final class Priority20RegistrationParityGameTests {
             if (id != null && root.getChild(id) == null) {
                 failures.add("missing live command root " + id);
             }
+        }
+    }
+
+    private static void checkIntegrationApi(JsonObject manifest, List<String> failures) {
+        JsonObject expected = object(manifest, "integration_api", failures);
+        if (expected == null) return;
+        if (!expected.has("version") || expected.get("version").getAsInt()
+                != VectorRegnumApiV1.VERSION) {
+            failures.add("integration API version does not match the live contract");
+        }
+        if (!expected.has("optional") || !expected.get("optional").getAsBoolean()
+                || !VectorRegnumApiV1.OPTIONAL) {
+            failures.add("integration API must remain optional");
+        }
+        JsonArray domains = array(expected, "domains", failures);
+        if (domains != null) {
+            List<String> expectedDomains = new ArrayList<>();
+            for (JsonElement element : domains) {
+                String id = stringId(element, "integration domain", failures);
+                if (id != null) expectedDomains.add(id);
+            }
+            if (!expectedDomains.equals(VectorRegnumApiV1.domains())) {
+                failures.add("integration API domains do not match the live contract");
+            }
+        }
+        JsonObject bounds = object(expected, "bounds", failures);
+        if (bounds == null) return;
+        checkBound(bounds, "max_providers", IntegrationRegistry.MAX_CAST_MODIFIER_PROVIDERS,
+                failures);
+        checkBound(bounds, "max_story_listeners", IntegrationRegistry.MAX_STORY_LISTENERS,
+                failures);
+        checkBound(bounds, "max_query_radius", ManaRegionSnapshot.MAX_QUERY_RADIUS, failures);
+        checkBound(bounds, "max_query_entries", ManaRegionSnapshot.MAX_QUERY_ENTRIES, failures);
+    }
+
+    private static void checkBound(JsonObject bounds, String key, int live,
+            List<String> failures) {
+        if (!bounds.has(key) || bounds.get(key).getAsInt() != live) {
+            failures.add("integration API bound " + key + " does not match live value " + live);
         }
     }
 

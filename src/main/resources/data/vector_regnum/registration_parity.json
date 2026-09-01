@@ -1,5 +1,23 @@
 {
   "schema": 1,
+  "integration_api": {
+    "version": 1,
+    "optional": true,
+    "domains": [
+      "origins",
+      "combat",
+      "progression",
+      "world_story",
+      "administration",
+      "modpack"
+    ],
+    "bounds": {
+      "max_providers": 8,
+      "max_story_listeners": 8,
+      "max_query_radius": 64,
+      "max_query_entries": 256
+    }
+  },
   "registries": {
     "blocks": [
       "vector_regnum:mage_light",

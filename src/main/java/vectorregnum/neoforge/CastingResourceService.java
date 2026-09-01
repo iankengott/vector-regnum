@@ -29,6 +29,8 @@ import vectorregnum.core.casting.ReagentKind;
 import vectorregnum.core.casting.ReagentLoadout;
 import vectorregnum.core.casting.ResourceEscrow;
 import vectorregnum.core.ritual.CooperativeRitual;
+import vectorregnum.core.Element;
+import vectorregnum.neoforge.api.v1.VectorRegnumApi;
 import vectorregnum.neoforge.ritual.RitualEscrowStore;
 
 /** Server-thread inventory and mana adapter for the loader-neutral priority-22 escrow. */
@@ -60,6 +62,31 @@ public final class CastingResourceService {
                 Math.max(policy.floors().castingTime(), castingTicks),
                 Math.max(policy.floors().upkeep(), declaredUpkeep),
                 Math.max(policy.floors().instability(), instability));
+    }
+
+    /**
+     * The single companion-modifier boundary used before reagent quoting and
+     * escrow. Callers supply costs after elemental affinity adjustment.
+     */
+    public static CastCost integratedBaseline(ServerPlayer player, String spellId,
+            Element element, CastingMethod method, double mana, int instructionCount,
+            double declaredUpkeep, double instability) {
+        CastCost base = baseline(method, mana, instructionCount, declaredUpkeep, instability);
+        return VectorRegnumApi.applyCastModifiers(player, stableSpellId(spellId), element,
+                method, base);
+    }
+
+    /** One delivery identity per admitted cast, shared by its start and terminal events. */
+    static UUID storyEventId(Reservation reservation) {
+        Objects.requireNonNull(reservation, "reservation");
+        return reservation.id() == null ? UUID.randomUUID() : reservation.id();
+    }
+
+    private static String stableSpellId(String value) {
+        String normalized = value == null ? "spell" : value.toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9._/-]+", "_")
+                .replaceAll("^_+|_+$", "");
+        return "vector_regnum:" + (normalized.isEmpty() ? "spell" : normalized);
     }
 
     public static ReagentLoadout staged(ServerPlayer player) {

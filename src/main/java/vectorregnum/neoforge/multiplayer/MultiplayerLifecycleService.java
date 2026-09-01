@@ -16,6 +16,8 @@ import vectorregnum.core.casting.ResourceEscrow;
 import vectorregnum.neoforge.ManaData;
 import vectorregnum.neoforge.PlayerAttachmentContent;
 import vectorregnum.neoforge.VectorRegnumMod;
+import vectorregnum.core.Element;
+import vectorregnum.neoforge.api.v1.VectorRegnumApi;
 import vectorregnum.neoforge.ponder.PonderTraceNetworking;
 
 /** Death/copy, disconnect, dimension, claim, team, and migration integration. */
@@ -78,6 +80,11 @@ public final class MultiplayerLifecycleService {
 
     private static void migrate(ServerPlayer player, boolean deathCopy) {
         int oldSchema = player.getData(PlayerAttachmentContent.PLAYER_DATA_SCHEMA);
+        String storedNatural = player.getData(PlayerAttachmentContent.NATURAL_ELEMENT);
+        boolean assignedNow = Element.fromId(storedNatural).filter(Element::isNatural).isEmpty();
+        // Origins gets the first authoritative assignment opportunity. The
+        // deterministic selector remains the no-companion fallback.
+        VectorRegnumApi.resolveNaturalElement(player);
         ManaData.migrateAndSanitize(player, deathCopy, oldSchema);
         player.setData(PlayerAttachmentContent.PLAYER_DATA_SCHEMA,
                 PlayerDataMigration.CURRENT_SCHEMA);
@@ -85,6 +92,9 @@ public final class MultiplayerLifecycleService {
                 player.getUUID(), ManaData.naturalElement(player).id(),
                 ManaData.channelAffinity(player).getSerializedName(),
                 PlayerDataMigration.CURRENT_SCHEMA);
+        if (assignedNow) {
+            VectorRegnumApi.publishIdentityEvent(player);
+        }
         if (oldSchema != PlayerDataMigration.CURRENT_SCHEMA) {
             VectorRegnumMod.LOGGER.info("Migrated Vector-Regnum player {} from schema {} to {}",
                     player.getUUID(), oldSchema, PlayerDataMigration.CURRENT_SCHEMA);

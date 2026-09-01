@@ -1,6 +1,7 @@
 package vectorregnum.neoforge;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.UUID;
@@ -74,8 +75,15 @@ class LibrarySpellIntegrationContractTest {
         int listStart = text.indexOf("public static void list(", castStart);
         String castBody = text.substring(castStart, listStart);
         assertTrue(castBody.contains("NeoForgeVmService.startSemantic"));
+        assertTrue(!castBody.contains("integratedBaseline"),
+                "library casts must not evaluate stateful modifiers before VM admission");
         assertTrue(!castBody.contains("ManaData.ensureAvailable"),
                 "library code must not draw source charges before VM admission");
+        var unfunded = CastingResourceService.cooperativeCopyReservation(
+                new vectorregnum.core.casting.CastCost(1.0, 1.0, 1.0, 1.0));
+        assertNotEquals(CastingResourceService.storyEventId(unfunded),
+                CastingResourceService.storyEventId(unfunded),
+                "distinct unfunded casts in one tick need distinct delivery keys");
     }
 
     private static Path locateSource() {

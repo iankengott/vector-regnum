@@ -54,6 +54,7 @@ import vectorregnum.neoforge.ponder.PonderTraceNetworking;
 import vectorregnum.neoforge.multiplayer.CastAbuseGuard;
 import vectorregnum.neoforge.multiplayer.SpellSecurityPolicy;
 import vectorregnum.neoforge.multiplayer.SpellLeasePolicy;
+import vectorregnum.neoforge.api.v1.VectorRegnumApi;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -326,14 +327,15 @@ public final class NeoForgeVmService {
             return false;
         }
         Optional<CastingResourceService.Reservation> reserved;
+        Element spellElement = spellElement(compilation);
         if (prepaidReservation != null) {
             reserved = Optional.of(prepaidReservation);
         } else {
-            Element spellElement = spellElement(compilation);
             double adjustedMana = ManaData.adjustedCost(player, program.manaCost().total(), spellElement);
             double adjustedUpkeep = ManaData.adjustedUpkeep(player,
                     program.manaCost().duration(), spellElement);
-            CastCost baseline = CastingResourceService.baseline(method, adjustedMana,
+            CastCost baseline = CastingResourceService.integratedBaseline(player, label,
+                    spellElement, method, adjustedMana,
                     program.instructions().size(), adjustedUpkeep,
                     ManaData.instability(player, spellElement));
             reserved = CastingResourceService.begin(
@@ -346,6 +348,7 @@ public final class NeoForgeVmService {
         CastingResourceService.Reservation reservation = reserved.orElseThrow();
         long presentationSeed = player.getUUID().getMostSignificantBits()
                 ^ player.serverLevel().getGameTime() ^ program.instructions().hashCode();
+        UUID storyEventId = CastingResourceService.storyEventId(reservation);
         VmPresentationBridge presentation = new VmPresentationBridge(player,
                 PresentationCompiler.compile(label, presentationSeed, program));
         PersistentEffectService.Batch persistentEffects = cooperativeEffectId == null
@@ -356,12 +359,13 @@ public final class NeoForgeVmService {
                 new SpellVm(program, new MinecraftWorldAccess(player), presentation), label,
                 chargeMana,
                 presentation, compilation, new ArrayList<>(), semanticExecutor,
-                new ArrayList<>(), persistentEffects);
+                new ArrayList<>(), persistentEffects, storyEventId, spellElement);
         active.reservation = reservation;
         active.remainingCastTicks = reservation.castingTicks();
         active.terminal = terminal;
         active.cooperativeTerminal = cooperativeTerminal;
         (tickingVms ? PENDING_VMS : ACTIVE_VMS).add(active);
+        VectorRegnumApi.publishSpellStartEvent(player, storyEventId, label, spellElement);
         publishLiveTrace(player, active);
         player.displayClientMessage(Component.literal(String.format(
                         "%s queued in vm2 • %.2f μ • tick-resumable",
@@ -623,6 +627,12 @@ public final class NeoForgeVmService {
         CastingResourceService.settle(active.reservation, outcome);
         if (active.terminalNotified) return;
         active.terminalNotified = true;
+        ServerPlayer actor = active.world.getServer().getPlayerList().getPlayer(active.owner);
+        if (actor != null) {
+            VectorRegnumApi.publishSpellTerminalEvent(actor, active.storyEventId,
+                    active.label, active.storyElement,
+                    outcome.name().toLowerCase(java.util.Locale.ROOT));
+        }
         try {
             if (active.cooperativeTerminal != null) {
                 active.cooperativeTerminal.accept(new CooperativeCopyResult(
@@ -934,6 +944,8 @@ public final class NeoForgeVmService {
         private final SemanticExecution semanticExecutor;
         private final List<SemanticInstruction> semanticSteps;
         private final PersistentEffectService.Batch persistentEffects;
+        private final UUID storyEventId;
+        private final Element storyElement;
         private final Set<Long> deliveredMessageSequences = new HashSet<>();
         private CastingResourceService.Reservation reservation;
         private Consumer<ResourceEscrow.Outcome> terminal;
@@ -946,7 +958,8 @@ public final class NeoForgeVmService {
                 Vm2CircleCompilation compilation, List<TickResult> trace,
                 SemanticExecution semanticExecutor,
                 List<SemanticInstruction> semanticSteps,
-                PersistentEffectService.Batch persistentEffects) {
+                PersistentEffectService.Batch persistentEffects,
+                UUID storyEventId, Element storyElement) {
             this.owner = owner;
             this.world = world;
             this.vm = vm;
@@ -958,6 +971,8 @@ public final class NeoForgeVmService {
             this.semanticExecutor = semanticExecutor;
             this.semanticSteps = semanticSteps;
             this.persistentEffects = persistentEffects;
+            this.storyEventId = storyEventId;
+            this.storyElement = storyElement;
         }
     }
 

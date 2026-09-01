@@ -23,31 +23,25 @@ end-to-end alpha passes, but still need balance and hardening.
 
 ## Current handoff checkpoint
 
-As of 2026-08-30, priorities 1–25 have coherent end-to-end alpha passes. The
-current NeoForge 1.21.1 tree has 296 passing JUnit tests and 44 passing
-production GameTests. Priority 25 adds bounded split and replicate cooperative
-rituals around one frozen compiled circle. Every named contributor must approve
-that ritual's exact maximum mana, staged reagent/offering units, and upkeep.
-The versioned world ledger records invitations, immutable consent, allocation,
-state, revision, and terminal reason; a checksummed player attachment holds the
-exact reservation beside player mana. Approval retries, settlement, restart
-reconciliation, and pre-start refunds are idempotent. Split combines the pool
-into one execution; replicate launches one bounded copy per contributor in
-stable order on the authoritative tick thread. Unused upkeep refunds, and a
-refundable replicate failure durably concludes any already-committed persistent
-copies before releasing contributor escrows. Stable ritual/contributor effect
-IDs recover that cleanup after a crash before callback persistence, and failed
-finalization stays registered for server-tick retry. `/vectorregnum ritual`, Field
-Manual v13, and the cooperative Ponder expose the contract. The final candidate
-passed the complete build, all 44 GameTests, focused verifier, overlay diff,
-and guarded 59-emitter client run. The directly inspected 12-second Hermes
-recording `visual-evidence/hermes-window-20260830T042821Z.mp4` keeps the staged
-structure, HUD, both mode names, exact-consent text, and explicit authored
-lesson/GameTest boundary readable. The screenshot portal did not expose its
-Share button, so the video is the visual artifact. Both Hermes development
-units stopped and port 25575 was free.
+As of 2026-09-01, priorities 1–27 have coherent end-to-end alpha passes. The
+current NeoForge 1.21.1 tree has 320 passing JUnit tests and 53 passing
+production GameTests. Priority 27 adds an optional loader-neutral v1 API for
+Origins, Combat, Progression, World/Story, Administration, and the modpack,
+with a thin server-thread NeoForge facade. It provides Origins-first permanent
+element assignment, immutable player snapshots, structured progression grants,
+bounded source-ordered cast modifiers before reagent escrow, fully revalidated
+disruption requests, loaded-chunk-only mana summaries, and immutable revisioned
+story events. The parity manifest freezes the exact domains and bounds, and the
+active mod has no companion dependency. The final candidate passed the complete
+Hermes build, all 53 GameTests, focused verifier, overlay diff, and guarded
+client checkpoint. Direct timestamped inspection of
+`visual-evidence/hermes-window-20260901T053159Z.mp4` found the API title, six
+domains, no-dependency statement, and bounded hook summary readable from source
+seconds 4–10; both units stopped and port 25575 was free. See
+`docs/INTEGRATION_API_V1.md` and the append-only
+`docs/PRIORITY_27_DECISIONS.tsv` for the public contract and evidence trail.
 
-Priority 26 is the first unfinished canonical item. Always re-read
+Priority 28 is the first unfinished canonical item. Always re-read
 `ROADMAP.md` before reporting or implementing work because it supersedes this
 dated checkpoint whenever the queue changes.
 
@@ -112,7 +106,7 @@ not complete without the full NeoForge ladder.
    check from `scripts/README.md`; it uses a fresh public clone so
    `git diff --check` covers the candidate tree without running on NixOS.
 
-   The GameTest process must report all 44 required tests passed. Its live
+   The GameTest process must report all 53 required tests passed. Its live
    parity test validates registry IDs, attachments, payload directions,
    creative-tab membership, and the command root against
    `data/vector_regnum/registration_parity.json`.

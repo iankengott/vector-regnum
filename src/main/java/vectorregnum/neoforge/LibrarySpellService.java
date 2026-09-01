@@ -9,6 +9,7 @@ import vectorregnum.neoforge.progression.ProgressionState;
 import vectorregnum.neoforge.progression.ProgressionUnlock;
 import vectorregnum.neoforge.progression.SpellDefinition;
 import vectorregnum.core.Element;
+import vectorregnum.core.casting.CastingMethod;
 import vectorregnum.core.semantic.LoweringContext;
 import vectorregnum.core.semantic.SemanticProgram;
 import vectorregnum.core.semantic.SemanticVmLowerer;
@@ -78,11 +79,9 @@ public final class LibrarySpellService {
         if (!SemanticSpellExecutor.preflight(player, semantic.instructions())) return false;
         var program = SemanticVmLowerer.lowerChecked(semantic,
                 new LoweringContext(id, player.getUUID().getLeastSignificantBits(), java.util.Map.of()));
-        double quotedMana = ManaData.adjustedCost(
-                player, program.manaCost().total(), spellElement(semantic));
         // startSemantic owns admission, source draw, and the atomic spend in
-        // that order. Pre-drawing here would debit a crystal before a later
-        // rate/concurrency rejection.
+        // that order, including the one modifier evaluation used for the
+        // displayed and committed quote.
         boolean applied = NeoForgeVmService.startSemanticTracked(player, program, chargeMana,
                 spell.title(),
                 (owner, steps, effects) -> SemanticSpellExecutor.execute(
@@ -91,9 +90,9 @@ public final class LibrarySpellService {
                 net.minecraft.world.item.ItemStack.EMPTY, ignored -> { });
         if (!applied) return false;
         player.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
-                        "%s woven • %.0f μ • %.1f μ remaining",
-                        spell.title(), chargeMana ? quotedMana : 0.0,
-                        ManaData.available(player))).withStyle(ChatFormatting.AQUA), true);
+                        "%s woven • %.1f μ remaining",
+                        spell.title(), ManaData.available(player)))
+                .withStyle(ChatFormatting.AQUA), true);
         return true;
     }
 
@@ -105,9 +104,15 @@ public final class LibrarySpellService {
         for (SpellDefinition spell : ProgressionSpellLibrary.ALL) {
             boolean unlocked = spell.isUnlocked(state);
             SemanticProgram semantic = LibrarySemanticAdapter.adapt(spell);
-            double base = SemanticVmLowerer.lowerChecked(semantic,
-                    new LoweringContext(spell.id(), 0L, java.util.Map.of())).manaCost().total();
-            double quoted = ManaData.adjustedCost(player, base, spellElement(semantic));
+            var program = SemanticVmLowerer.lowerChecked(semantic,
+                    new LoweringContext(spell.id(), 0L, java.util.Map.of()));
+            Element element = spellElement(semantic);
+            double quoted = CastingResourceService.integratedBaseline(player, spell.title(),
+                    element, CastingMethod.BARE,
+                    ManaData.adjustedCost(player, program.manaCost().total(), element),
+                    program.instructions().size(),
+                    ManaData.adjustedUpkeep(player, program.manaCost().duration(), element),
+                    ManaData.instability(player, element)).mana();
             player.sendSystemMessage(Component.literal(String.format(Locale.ROOT,
                             "%s %-18s  T%d  %.0f μ  [%s]",
                             unlocked ? "✓" : "◇", spell.id(), spell.tier(), quoted,

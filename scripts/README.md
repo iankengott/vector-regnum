@@ -298,9 +298,32 @@ motion, photosensitive, density, camera, or audio controls remove only optional
 expression. Sensory preferences are versioned and local; they never change
 server outcomes.
 
+## Priority-27 integration API checks
+
+After a guarded sync, run `scripts/verify-priority27.sh` on Hermes. It checks
+the loader-neutral package boundary, v1 metadata and bounds, absence of hard
+companion dependencies, live registration parity source, six production
+GameTests, four focused JUnit classes, JSON, shell syntax, and whitespace. A
+passing candidate reports:
+
+```text
+PRIORITY27_VERIFY_OK junit_classes=4 gametests=6 api_version=1 domains=6
+```
+
+The guarded client must log `VISUAL_CHECKPOINT_READY milestone=priority_27`
+with API version 1, six optional domains, zero companion dependencies, the
+provider/listener/query bounds, server authority, and the six-GameTest proof.
+The accepted evidence is
+`visual-evidence/hermes-window-20260901T053159Z.mp4`. Its timestamped contact
+sheet and full source frame at second 6 showed the API-v1 title, all
+six domains, the no-dependency statement, and the bounded hook summary
+readable over the staged structure. The earlier
+`hermes-window-20260831T233304Z.mp4` began after the chat faded and is retained
+only as negative timing evidence, not as the acceptance artifact.
+
 ## Production NeoForge GameTests
 
-The ordinary Gradle `test` task runs JUnit and contract tests. The 47 production
+The ordinary Gradle `test` task runs JUnit and contract tests. The 53 production
 NeoForge GameTests must additionally run inside the real isolated GameTest
 server on Hermes when their integration surface changes:
 
@@ -309,7 +332,7 @@ ssh ian-kengott@100.88.229.63 \
   'cd /home/ian-kengott/projects/vector-regnum && env JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64 PATH=/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/bin:/bin ./gradlew --no-daemon runGameTestServer'
 ```
 
-The runner exits after the matrix completes and must report all 47 required
+The runner exits after the matrix completes and must report all 53 required
 tests passed. The tests cover live registration parity, commands, players,
 attachments, media/tablet and crystal block entities, scheduled expiry,
 serialized tick-queue reload, claim/death migration, relay persistence, remote
@@ -321,7 +344,10 @@ reconciliation, collapse, and cleanup, and five priority-24 advanced-control
 cases covering shared-stack branch order, iterators, collision/messages,
 bounds, and lifecycle cancellation, plus five priority-25 cases for consent
 round-trip, exact pre-start refund, split resource combination, replicated VM
-copies, and duplicate-safe approval. The parity test reads
+copies, and duplicate-safe approval, plus six priority-27 cases for API
+metadata, immutable snapshots, ordered providers and cast modifiers,
+policy-preserving disruption, loaded-only mana queries, and isolated story
+listeners. The parity test reads
 `data/vector_regnum/registration_parity.json` and queries the running registry,
 payload, attachment, creative-tab, and command state; update that manifest when
 an intentional registration changes. A true OS-process stop/start remains part

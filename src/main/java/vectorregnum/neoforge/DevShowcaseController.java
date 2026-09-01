@@ -324,7 +324,26 @@ public final class DevShowcaseController {
                         + "range=32 duration_ticks=1200 targets=16 attention_ticks=40 "
                         + "disruption_window=10 deterministic=true truth_telegraph=true "
                         + "accessibility=local_versioned field_manual=14 "
-                        + "gametest_proof=3 command=\"/vectorregnum ritual status\"",
+                            + "gametest_proof=3 command=\"/vectorregnum ritual status\"",
+                player.getGameProfile().getName());
+        launchPriority27Showcase(player);
+    }
+
+    private static void launchPriority27Showcase(ServerPlayer player) {
+        player.sendSystemMessage(Component.literal(
+                        "VECTOR-REGNUM • PRIORITY 27 OPTIONAL SMP API V1")
+                .withStyle(ChatFormatting.GOLD, ChatFormatting.BOLD), false);
+        player.sendSystemMessage(Component.literal(
+                        "ORIGINS • COMBAT • PROGRESSION • WORLD/STORY • ADMIN • MODPACK")
+                .withStyle(ChatFormatting.AQUA, ChatFormatting.BOLD), false);
+        player.sendSystemMessage(Component.literal(
+                        "No companion dependency • bounded snapshots, providers, queries, and events")
+                .withStyle(ChatFormatting.GRAY), false);
+        VectorRegnumMod.LOGGER.info(
+                "VISUAL_CHECKPOINT_READY milestone=priority_27 player={} api_version=1 "
+                        + "domains=6 optional=true companion_dependencies=0 providers=8 "
+                        + "story_listeners=8 query_radius=64 query_entries=256 "
+                        + "server_authoritative=true gametest_proof=6 field_manual=14",
                 player.getGameProfile().getName());
     }
 

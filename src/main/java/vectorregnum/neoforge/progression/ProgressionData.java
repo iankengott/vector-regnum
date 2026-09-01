@@ -4,6 +4,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.ChatFormatting;
 import vectorregnum.neoforge.PlayerAttachmentContent;
+import vectorregnum.neoforge.api.v1.VectorRegnumApi;
 
 /** Persistent, server-authoritative progression discoveries. */
 public final class ProgressionData {
@@ -28,6 +29,7 @@ public final class ProgressionData {
         player.sendSystemMessage(Component.translatable("message.vector_regnum.progression_unlocked",
                 Component.translatable("unlock.vector_regnum." + unlock.id()))
                 .withStyle(ChatFormatting.AQUA));
+        VectorRegnumApi.publishProgressionEvent(player, unlock.id());
         return true;
     }
 

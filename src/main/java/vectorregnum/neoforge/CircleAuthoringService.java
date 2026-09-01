@@ -228,7 +228,8 @@ public final class CircleAuthoringService {
             if (compilation.hasErrors()) return Optional.empty();
             var program = compilation.compiledProgram().orElseThrow();
             Element element = spellElement(compilation.executionOrder());
-            CastCost baseline = CastingResourceService.baseline(method,
+            CastCost baseline = CastingResourceService.integratedBaseline(player,
+                    "authored_circle", element, method,
                     ManaData.adjustedCost(player, program.manaCost().total(), element),
                     program.instructions().size(),
                     ManaData.adjustedUpkeep(player, program.manaCost().duration(), element),
@@ -239,7 +240,8 @@ public final class CircleAuthoringService {
         sendCompilation(player, compilation);
         if (compilation.hasErrors()) return Optional.empty();
         Element element = spellElement(compilation.executionOrder());
-        CastCost baseline = CastingResourceService.baseline(method,
+        CastCost baseline = CastingResourceService.integratedBaseline(player,
+                "authored_circle", element, method,
                 ManaData.adjustedCost(player, compilation.compiledSpell().totalManaCost(), element),
                 compilation.compiledSpell().instructionCount(), 0.0,
                 ManaData.instability(player, element));
@@ -256,7 +258,8 @@ public final class CircleAuthoringService {
             if (compilation.hasErrors()) return Optional.empty();
             var program = compilation.compiledProgram().orElseThrow();
             Element element = spellElement(compilation.executionOrder());
-            return Optional.of(CastingResourceService.baseline(CastingMethod.RITUAL,
+            return Optional.of(CastingResourceService.integratedBaseline(player,
+                    "cooperative_ritual", element, CastingMethod.RITUAL,
                     ManaData.adjustedCost(player, program.manaCost().total(), element),
                     program.instructions().size(),
                     ManaData.adjustedUpkeep(player, program.manaCost().duration(), element),
@@ -265,7 +268,8 @@ public final class CircleAuthoringService {
         CircleCompilation compilation = CircleAuthoringCompiler.compile(circle);
         if (compilation.hasErrors()) return Optional.empty();
         Element element = spellElement(compilation.executionOrder());
-        return Optional.of(CastingResourceService.baseline(CastingMethod.RITUAL,
+        return Optional.of(CastingResourceService.integratedBaseline(player,
+                "cooperative_ritual", element, CastingMethod.RITUAL,
                 ManaData.adjustedCost(player, compilation.compiledSpell().totalManaCost(), element),
                 compilation.compiledSpell().instructionCount(), 0.0,
                 ManaData.instability(player, element)));
